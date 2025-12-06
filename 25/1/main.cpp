@@ -1,0 +1,24 @@
+#include <verilated.h>
+#include <verilated_fst_c.h>
+#include <verilated_vcd_c.h>
+#include "Vuser_logic_tb.h"
+
+int main(int argc, char** argv) {
+    Verilated::commandArgs(argc, argv);
+    Verilated::traceEverOn(true);
+
+    VerilatedFstC* tfp = new VerilatedFstC;
+    Vuser_logic_tb* tb = new Vuser_logic_tb;
+
+    tb->trace(tfp, 99);
+    tfp->open("wave.fst");
+    while (!Verilated::gotFinish()) {
+        tb->eval();
+        tfp->dump(Verilated::time());
+        Verilated::timeInc(1);
+    }
+
+    tfp->close();
+    delete tb;
+    return 0;
+}
