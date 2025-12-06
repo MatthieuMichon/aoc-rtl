@@ -7,7 +7,7 @@
 | 3.1 | ⏳ | ⏳ | ⏳ | Char sweep and comparison
 | 4.1 | ⏳ | ⏳ | ⏳ | Two-dimensional neighboors comparison
 | 5.1 | ⏳ | ⏳ | ⏳ | Comparison of value ranges
-| 6.1 | ⏱ | ⏳ | ⏳ | Arithmetics
+| [6.1](25/6/README.md) | ⏱ | ⏳ | ⏳ | Arithmetics
 
 | Tag | Description
 | --- | ---
