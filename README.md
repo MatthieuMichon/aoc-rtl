@@ -1,9 +1,13 @@
 # 2025 Season Puzzles
 
-| Puzzle | Simulation | Synthesis | On-board |
+| Puzzle | Simulation | Synthesis | On-board | Remarks |
 | ------ | ---------- | --------- | -------- |
 | [1.1](25/1/README.md) | ⭐⭐⭐ Done | ⭐⭐ Done | ⭐ Done |
-| 1.2 | ⏱ | ⏱ | ⏱ |
+| 2.1 | ⏳ | ⏳ | ⏳ | Repeating pattern matching
+| 3.1 | ⏳ | ⏳ | ⏳ | Char sweep and comparison
+| 4.1 | ⏳ | ⏳ | ⏳ | Two-dimensional neighboors comparison
+| 5.1 | ⏳ | ⏳ | ⏳ | Comparison of value ranges
+| 6.1 | ⏱ | ⏳ | ⏳ | Arithmetics
 
 | Tag | Description
 | --- | ---
