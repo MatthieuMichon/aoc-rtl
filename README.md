@@ -1,7 +1,7 @@
 # 2025 Season Puzzles
 
 | Puzzle | Simulation | Synthesis | On-board | Remarks |
-| ------ | ---------- | --------- | -------- |
+| ------ | ---------- | --------- | -------- | ------- |
 | [1.1](25/1/README.md) | ⭐⭐⭐ Done | ⭐⭐ Done | ⭐ Done |
 | 2.1 | ⏳ | ⏳ | ⏳ | Repeating pattern matching
 | 3.1 | ⏳ | ⏳ | ⏳ | Char sweep and comparison
