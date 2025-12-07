@@ -50,6 +50,10 @@ Latency is however a concern on the computation proper since the operand are non
 
 I had to rework the implementation after discovering the extra argument row in the custom input contents. The results obtained in simulation were correct however I feel that this design will have trouble being synthesized for the target FPGA. The implementation is likely to require some rework.
 
+The resulting schematics says it all:
+
+![](arith_unit_yosys.png)
+
 ## Grand Total
 
 The final stage of the computation is a simple addition of each new computation from the arithmetic unit. Since the implementation is simple I opted to directly do it in the `user_logic` module.
