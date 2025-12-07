@@ -8,18 +8,18 @@ module arith_unit #(
 )(
     input wire clk,
     // Decoded signals
-        input logic [ARG_ROW_WIDTH-1:0] arg_row,
+        input wire [ARG_ROW_WIDTH-1:0] arg_row,
         input wire operand_valid,
         input wire operand_mult_add,
     // Argument readback
-        input logic [ARG_DATA_WIDTH-1:0] rd_arg_data_row0,
-        input logic [ARG_DATA_WIDTH-1:0] rd_arg_data_row1,
-        input logic [ARG_DATA_WIDTH-1:0] rd_arg_data_row2,
-        input logic [ARG_DATA_WIDTH-1:0] rd_arg_data_row3,
-        input logic [ARG_DATA_WIDTH-1:0] rd_arg_data_row4,
-        input logic [ARG_DATA_WIDTH-1:0] rd_arg_data_row5,
-        input logic [ARG_DATA_WIDTH-1:0] rd_arg_data_row6,
-        input logic [ARG_DATA_WIDTH-1:0] rd_arg_data_row7,
+        input wire [ARG_DATA_WIDTH-1:0] rd_arg_data_row0,
+        input wire [ARG_DATA_WIDTH-1:0] rd_arg_data_row1,
+        input wire [ARG_DATA_WIDTH-1:0] rd_arg_data_row2,
+        input wire [ARG_DATA_WIDTH-1:0] rd_arg_data_row3,
+        input wire [ARG_DATA_WIDTH-1:0] rd_arg_data_row4,
+        input wire [ARG_DATA_WIDTH-1:0] rd_arg_data_row5,
+        input wire [ARG_DATA_WIDTH-1:0] rd_arg_data_row6,
+        input wire [ARG_DATA_WIDTH-1:0] rd_arg_data_row7,
     // Computed Value
         output logic problem_valid,
         output logic [PROBLEM_DATA_WIDTH-1:0] problem_data
