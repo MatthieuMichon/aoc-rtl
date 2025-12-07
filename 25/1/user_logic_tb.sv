@@ -1,11 +1,11 @@
-`timescale 1ns/1ps
+`timescale 1ps/1ps
 `default_nettype none
 
 module user_logic_tb;
 
 string input_file = "input.txt";
 
-localparam time TCK_PERIOD = 20ns;
+localparam time TCK_PERIOD = 10ps;
 initial begin
     tck = 0;
     forever #(TCK_PERIOD/2) tck = ~tck;

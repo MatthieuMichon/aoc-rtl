@@ -1,0 +1,4 @@
+- Verilator and GTKWave have trouble agreeing on a common time base.
+- Reducing the TCK clock period in the testbench from 20ns to 10ps yields a **massive** increase in simulation speed.
+  - Day 1.1 simulates in less than 0.5 seconds down from eight minutes.
+  - *There must be a better/proper way to do this.*
