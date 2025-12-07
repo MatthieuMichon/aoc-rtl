@@ -55,18 +55,20 @@ always_ff @(posedge clk) arg_row <= arg_row_int;
 
 localparam arg_row_t OPERAND_ROW = 2'b11;
 
-logic char_is_digit, prev_char_was_digit;
-assign char_is_digit = (byte_data >= ZERO_CHAR) && (byte_data <= NINE_CHAR);
+logic char_is_text, prev_char_was_text;
+assign char_is_text =
+    ((byte_data >= ZERO_CHAR) && (byte_data <= NINE_CHAR)) ||
+    (byte_data == ADD_CHAR) || (byte_data == MULT_CHAR);
 always_ff @(posedge clk) begin
     if (byte_valid) begin
-        prev_char_was_digit <= char_is_digit;
+        prev_char_was_text <= char_is_text;
     end
 end
 
 always_ff @(posedge clk) begin: track_col
     if (byte_valid) begin
         if (byte_data == SPACE_CHAR) begin
-            if (prev_char_was_digit) begin: first_space_char
+            if (prev_char_was_text) begin: first_space_char
                 arg_col_int <= arg_col_int + 1'b1;
             end
         end else if (byte_data == LF_CHAR) begin
@@ -76,6 +78,14 @@ always_ff @(posedge clk) begin: track_col
 end
 
 always_ff @(posedge clk) arg_col <= arg_col_int;
+
+logic char_is_digit, prev_char_was_digit;
+assign char_is_digit = (byte_data >= ZERO_CHAR) && (byte_data <= NINE_CHAR);
+always_ff @(posedge clk) begin
+    if (byte_valid) begin
+        prev_char_was_digit <= char_is_digit;
+    end
+end
 
 always_ff @(posedge clk) begin: accumulate_arg
     arg_valid <= 1'b0;
