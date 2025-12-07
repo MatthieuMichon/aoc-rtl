@@ -2,16 +2,17 @@
 
 | Puzzle | Simulation | Synthesis | On-board | Remarks |
 | ------ | ---------- | --------- | -------- | ------- |
-| [1.1](25/1/README.md) | ⭐⭐⭐ Done | ⭐⭐ Done | ⭐ Done |
+| [1.1](25/1/) | ⭐⭐⭐ Done | ⭐⭐ Done | ⭐ Done |
 | 2.1 | ⏳ | ⏳ | ⏳ | Repeating pattern matching
 | 3.1 | ⏳ | ⏳ | ⏳ | Char sweep and comparison
 | 4.1 | ⏳ | ⏳ | ⏳ | Two-dimensional neighboors comparison
 | 5.1 | ⏳ | ⏳ | ⏳ | Comparison of value ranges
-| [6.1](25/6/README.md) | ⏱ | ⏳ | ⏳ | Arithmetics
+| [6.1](25/6/) | ⏱ | ⏳ | ⏳ | Arithmetics
 
 | Tag | Description
 | --- | ---
-| ⏱ | Not started
+| ⏳ | Not started
+| ⏱ | In progress
 | ⭐ | Like a breaze
 | ⭐⭐ | Had to give some thoughts
 | ⭐⭐⭐ | Challenging
