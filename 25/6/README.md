@@ -28,7 +28,7 @@ Still going with the tried and true JTAG / BSCANE2 for uploading the puzzle cont
 The input decoding is implemented in two steps:
 
 - Deserialization of the JTAG bitstream in bytes by the `tap_decoder` module.
-- Consolidation of ASCII digits into binary values and control of the signals for routing these values into the proper memory instance and address.
+- Consolidation of ASCII digits into binary values and control of the signals for routing these values into the proper memory instance and address. This is done by the `input_decoder` module.
 
 ## Data Stores
 
