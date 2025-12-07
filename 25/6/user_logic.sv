@@ -14,7 +14,7 @@ module user_logic (
 );
 
 // From puzzle description
-localparam int ARG_RANKS = 3;
+localparam int ARG_RANKS = 8;
 // From design space exploration
 localparam int MAX_ARGUMENT_COUNT = 1000;
 localparam int MAX_ARGUMENT_VALUE = 9999;
@@ -71,7 +71,8 @@ input_decoder #(
         .operand_mult_add(operand_mult_add)
 );
 
-arg_data_t arg_data_row0, arg_data_row1, arg_data_row2;
+arg_data_t arg_data_row0, arg_data_row1, arg_data_row2, arg_data_row3;
+arg_data_t arg_data_row4, arg_data_row5, arg_data_row6, arg_data_row7;
 
 arg_stores #(
     .ARG_ROW_WIDTH(ARG_ROW_WIDTH),
@@ -88,24 +89,36 @@ arg_stores #(
         .rd_arg_col(arg_col),
         .rd_arg_data_row0(arg_data_row0),
         .rd_arg_data_row1(arg_data_row1),
-        .rd_arg_data_row2(arg_data_row2)
+        .rd_arg_data_row2(arg_data_row2),
+        .rd_arg_data_row3(arg_data_row3),
+        .rd_arg_data_row4(arg_data_row4),
+        .rd_arg_data_row5(arg_data_row5),
+        .rd_arg_data_row6(arg_data_row6),
+        .rd_arg_data_row7(arg_data_row7)
 );
 
 logic problem_valid;
 problem_t problem_data;
 
 arith_unit #(
+    .ARG_ROW_WIDTH(ARG_ROW_WIDTH),
     .ARG_DATA_WIDTH(ARG_WIDTH),
     .PROBLEM_DATA_WIDTH(PROBLEM_WIDTH)
 ) arith_unit_i (
     .clk(tck),
     // Decoded signals
+        .arg_row(arg_row),
         .operand_valid(operand_valid),
         .operand_mult_add(operand_mult_add),
     // Argument readback
         .rd_arg_data_row0(arg_data_row0),
         .rd_arg_data_row1(arg_data_row1),
         .rd_arg_data_row2(arg_data_row2),
+        .rd_arg_data_row3(arg_data_row3),
+        .rd_arg_data_row4(arg_data_row4),
+        .rd_arg_data_row5(arg_data_row5),
+        .rd_arg_data_row6(arg_data_row6),
+        .rd_arg_data_row7(arg_data_row7),
     // Computed Value
         .problem_valid(problem_valid),
         .problem_data(problem_data)

@@ -16,7 +16,12 @@ module arg_stores #(
         input wire [ARG_COL_WIDTH-1:0] rd_arg_col,
         output logic [ARG_DATA_WIDTH-1:0] rd_arg_data_row0,
         output logic [ARG_DATA_WIDTH-1:0] rd_arg_data_row1,
-        output logic [ARG_DATA_WIDTH-1:0] rd_arg_data_row2
+        output logic [ARG_DATA_WIDTH-1:0] rd_arg_data_row2,
+        output logic [ARG_DATA_WIDTH-1:0] rd_arg_data_row3,
+        output logic [ARG_DATA_WIDTH-1:0] rd_arg_data_row4,
+        output logic [ARG_DATA_WIDTH-1:0] rd_arg_data_row5,
+        output logic [ARG_DATA_WIDTH-1:0] rd_arg_data_row6,
+        output logic [ARG_DATA_WIDTH-1:0] rd_arg_data_row7
 );
 
 typedef logic [ARG_ROW_WIDTH-1:0] arg_row_t;
@@ -35,6 +40,11 @@ always_comb begin
     rd_arg_data_row0 = mem_arg_data[0][rd_arg_col];
     rd_arg_data_row1 = mem_arg_data[1][rd_arg_col];
     rd_arg_data_row2 = mem_arg_data[2][rd_arg_col];
+    rd_arg_data_row3 = mem_arg_data[3][rd_arg_col];
+    rd_arg_data_row4 = mem_arg_data[4][rd_arg_col];
+    rd_arg_data_row5 = mem_arg_data[5][rd_arg_col];
+    rd_arg_data_row6 = mem_arg_data[6][rd_arg_col];
+    rd_arg_data_row7 = mem_arg_data[7][rd_arg_col];
 end
 
 endmodule

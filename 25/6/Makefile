@@ -1,7 +1,7 @@
 SV_SOURCES := $(filter-out shell.sv, $(wildcard *.sv))
 CPP_SOURCES := $(wildcard *.cpp)
 VTR_FLAGS := -Wall -j 0 --sv --cc --exe --build --trace --timing --Wno-fatal --top user_logic_tb
-INPUT_FILE ?= example.txt
+INPUT_FILE ?= input.txt
 USER_LOGIC ?= user_logic
 
 .PHONY: sim

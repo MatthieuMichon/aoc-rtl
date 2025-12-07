@@ -1,5 +1,7 @@
 # Day 6: Trash Compactor
 
+An unexpected twist is that the input data is deeper than the example data: it contains an extra operand row. I was expecting that it was simply much larger as stated, however the extra row requires some low-level changes.
+
 # Design Space Exploration
 
 The puzzle description refers to multiple arithmetic operations.
@@ -38,13 +40,15 @@ As mentioned previously, we need three memory pools of 14-bit wide data words wi
 arg_data_t mem_arg_data [0:2**ARG_ROW_WIDTH-1][0:2**ARG_COL_WIDTH-1];
 ```
 
-Technically the fourth memory region is unwanted, but it is required to have a complete mapping for all `arg_col` values. The unused memory will be trimmed away during synthesis.
+~Technically the fourth memory region is unwanted, but it is required to have a complete mapping for all `arg_col` values. The unused memory will be trimmed away during synthesis.~ Turns out that the extra row contains payload in the case of the custom input data.
 
 ## Arithmetic Unit
 
 The arithmetic unit takes all three operands read back from memory and computes the result named as `problem` in the puzzle description. I initially thought that the latency coming from the delay in the memory readback was to be compensated. However, it turns out that the column is updated on the character following the operand meaning that there is plenty of time built-in thus this latency is not a concern.
 
 Latency is however a concern on the computation proper since the operand are non-trivially small, and a three-term multiplication followed by a 2:1 may not be the easiest structure for closing timing. I added a shift register delaying the valid strobe by several clock cycles simplifying any future adjustments would they be needed.
+
+I had to rework the implementation after discovering the extra argument row in the custom input contents. The results obtained in simulation were correct however I feel that this design will have trouble being synthesized for the target FPGA. The implementation is likely to require some rework.
 
 ## Grand Total
 

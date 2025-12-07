@@ -98,14 +98,14 @@ always_ff @(posedge clk) begin: accumulate_arg
             end
         end else begin
             if (prev_char_was_digit) begin: arg_complete
-                arg_valid <= (arg_row_int < OPERAND_ROW);
+                arg_valid <= 1'b1;
             end
         end
     end
 end
 
 always_ff @(posedge clk) begin: track_operand
-    if (byte_valid && (arg_row == OPERAND_ROW)) begin
+    if (byte_valid) begin
         if (byte_data == ADD_CHAR) begin
             operand_valid <= 1'b1;
             operand_mult_add <= 1'b0;

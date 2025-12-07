@@ -100,7 +100,7 @@ task automatic serialize(input string bytes_);
     @(posedge tck);
 endtask
 
-task automatic deserialize(output logic [32-1:0] result);
+task automatic deserialize(output logic [64-1:0] result);
     run_state_hw_jtag(SELECT_DR_SCAN);
     @(posedge tck);
     run_state_hw_jtag(CAPTURE_DR);
@@ -127,7 +127,7 @@ string input_contents = "";
 initial begin
     int fd, file_size;
     int char;
-    logic [32-1:0] result;
+    logic [64-1:0] result;
 
     // set initial values
 
