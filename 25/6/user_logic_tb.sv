@@ -5,11 +5,11 @@ module user_logic_tb;
 
 localparam int SEEK_SET = 0;
 localparam int SEEK_END = 2;
-localparam time TCK_PERIOD = 10ps;
 
 initial begin
     tck = 0;
-    forever #(TCK_PERIOD/2) tck = ~tck;
+    forever #1 tck = ~tck;
+
 end
 
 typedef enum {

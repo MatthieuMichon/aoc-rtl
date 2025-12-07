@@ -8,7 +8,7 @@ string input_file = "input.txt";
 localparam time TCK_PERIOD = 10ps;
 initial begin
     tck = 0;
-    forever #(TCK_PERIOD/2) tck = ~tck;
+    forever #1 tck = ~tck;
 end
 
 /* Example from the problem statement:
