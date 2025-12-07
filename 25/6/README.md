@@ -19,4 +19,24 @@ Demuxing the contents looks trivial: two nested demux acting on digit to space t
 
 # Design Walkthrough
 
+## External Interface
+
 Still going with the tried and true JTAG / BSCANE2 for uploading the puzzle contents and reading back the solution. This allows reusing a large part of the prior implementation.
+
+## Input Decoding
+
+The input decoding is implemented in two steps:
+
+- Deserialization of the JTAG bitstream in bytes by the `tap_decoder` module.
+- Consolidation of ASCII digits into binary values and control of the signals for routing these values into the proper memory instance and address.
+
+## Data Stores
+
+As mentioned previously, we need three memory pools of 14-bit wide data words with 10-bit deep addresses. 
+
+```verilog
+localparam int ADDR_WIDTH = 10;
+localparam int DATA_WIDTH = 14;
+
+logic [DATA_WIDTH-1:0] mem_arg0, mem_arg1, mem_arg2 [0:2**ADDR_WIDTH-1];
+```

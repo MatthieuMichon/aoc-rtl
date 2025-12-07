@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 `default_nettype none
 
-module user_logic (
+module user_logic_stub (
     input wire tck,
     input wire tdi,
     output logic tdo,

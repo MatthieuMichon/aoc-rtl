@@ -13,12 +13,21 @@ module user_logic (
     input wire update_dr
 );
 
-localparam int INBOUND_DATA_WIDTH = 8;
-typedef logic [INBOUND_DATA_WIDTH-1:0] data_t;
-data_t inbound_data;
+// From puzzle description
+localparam int ARG_RANKS = 3;
+// From design space exploration
+localparam int MAX_ARGUMENT_COUNT = 1000;
+localparam int MAX_ARGUMENT_VALUE = 9999;
+// Design mapping
+localparam int ARG_WIDTH = $clog2(1 + MAX_ARGUMENT_VALUE);
+localparam int ARG_ROW_WIDTH = $clog2(ARG_RANKS);
+localparam int ARG_COL_WIDTH = $clog2(MAX_ARGUMENT_COUNT);
+localparam int BYTE_WIDTH = 8;
+
+logic [BYTE_WIDTH-1:0] inbound_data;
 logic inbound_valid;
 
-tap_decoder #(.DATA_WIDTH(INBOUND_DATA_WIDTH)) tap_decoder_i (
+tap_decoder #(.DATA_WIDTH(BYTE_WIDTH)) tap_decoder_i (
     // TAP signals
         .tck(tck),
         .tdi(tdi),
@@ -31,7 +40,32 @@ tap_decoder #(.DATA_WIDTH(INBOUND_DATA_WIDTH)) tap_decoder_i (
         .valid(inbound_valid)
 );
 
-tap_encoder #(.DATA_WIDTH(INBOUND_DATA_WIDTH)) tap_encoder_i (
+logic arg_valid;
+logic [ARG_ROW_WIDTH-1:0] arg_row;
+logic [ARG_COL_WIDTH-1:0] arg_col;
+logic [ARG_WIDTH-1:0] arg_data;
+logic operand_valid;
+logic operand_mult_add; // 1: mult, 0: add
+
+input_decoder #(
+    .ARG_ROW_WIDTH(ARG_ROW_WIDTH),
+    .ARG_COL_WIDTH(ARG_COL_WIDTH),
+    .ARG_DATA_WIDTH(ARG_WIDTH)
+) input_decoder_i (
+    .clk(tck),
+    // Inbound Byte Stream
+        .byte_valid(inbound_valid),
+        .byte_data(inbound_data),
+    // Decoded signals
+        .arg_valid(arg_valid),
+        .arg_row(arg_row),
+        .arg_col(arg_col),
+        .arg_data(arg_data),
+        .operand_valid(operand_valid),
+        .operand_mult_add(operand_mult_add)
+);
+
+tap_encoder #(.DATA_WIDTH(BYTE_WIDTH)) tap_encoder_i (
     // TAP signals
         .tck(tck),
         .tdo(tdo),
@@ -40,7 +74,7 @@ tap_encoder #(.DATA_WIDTH(INBOUND_DATA_WIDTH)) tap_encoder_i (
         .capture_dr(capture_dr),
         .shift_dr(shift_dr),
     // Encoded signals
-        .data(inbound_data),
+        .data(arg_row),
         .valid(inbound_valid)
 );
 
