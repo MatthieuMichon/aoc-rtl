@@ -23,10 +23,12 @@ localparam int ARG_WIDTH = $clog2(1 + MAX_ARGUMENT_VALUE);
 localparam int ARG_ROW_WIDTH = $clog2(ARG_RANKS);
 localparam int ARG_COL_WIDTH = $clog2(MAX_ARGUMENT_COUNT);
 localparam int BYTE_WIDTH = 8;
+localparam int PROBLEM_WIDTH = 3*ARG_WIDTH; // worst case: three member mult
 
 typedef logic [ARG_ROW_WIDTH-1:0] arg_row_t;
 typedef logic [ARG_COL_WIDTH-1:0] arg_col_t;
 typedef logic [ARG_WIDTH-1:0] arg_data_t;
+typedef logic [PROBLEM_WIDTH-1:0] problem_t;
 
 logic [BYTE_WIDTH-1:0] inbound_data;
 logic inbound_valid;
@@ -89,7 +91,40 @@ arg_stores #(
         .rd_arg_data_row2(arg_data_row2)
 );
 
-tap_encoder #(.DATA_WIDTH(BYTE_WIDTH)) tap_encoder_i (
+logic problem_valid;
+problem_t problem_data;
+
+arith_unit #(
+    .ARG_DATA_WIDTH(ARG_WIDTH),
+    .PROBLEM_DATA_WIDTH(PROBLEM_WIDTH)
+) arith_unit_i (
+    .clk(tck),
+    // Decoded signals
+        .operand_valid(operand_valid),
+        .operand_mult_add(operand_mult_add),
+    // Argument readback
+        .rd_arg_data_row0(arg_data_row0),
+        .rd_arg_data_row1(arg_data_row1),
+        .rd_arg_data_row2(arg_data_row2),
+    // Computed Value
+        .problem_valid(problem_valid),
+        .problem_data(problem_data)
+);
+
+localparam int GRAND_TOTAL_WIDTH = 64;
+logic grand_total_valid;
+logic[GRAND_TOTAL_WIDTH-1:0] grand_total;
+
+initial grand_total = '0;
+
+always_ff @(posedge tck) grand_total_valid <= 1'b1;
+always_ff @(posedge tck) begin
+    if (problem_valid) begin
+        grand_total <= grand_total + problem_data;
+    end
+end
+
+tap_encoder #(.DATA_WIDTH(GRAND_TOTAL_WIDTH)) tap_encoder_i (
     // TAP signals
         .tck(tck),
         .tdo(tdo),
@@ -98,8 +133,8 @@ tap_encoder #(.DATA_WIDTH(BYTE_WIDTH)) tap_encoder_i (
         .capture_dr(capture_dr),
         .shift_dr(shift_dr),
     // Encoded signals
-        .data(arg_row),
-        .valid(inbound_valid)
+        .data(grand_total),
+        .valid(grand_total_valid)
 );
 
 endmodule

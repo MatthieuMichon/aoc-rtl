@@ -35,8 +35,19 @@ The input decoding is implemented in two steps:
 As mentioned previously, we need three memory pools of 14-bit wide data words with 10-bit deep addresses. 
 
 ```verilog
-localparam int ADDR_WIDTH = 10;
-localparam int DATA_WIDTH = 14;
-
-logic [DATA_WIDTH-1:0] mem_arg0, mem_arg1, mem_arg2 [0:2**ADDR_WIDTH-1];
+arg_data_t mem_arg_data [0:2**ARG_ROW_WIDTH-1][0:2**ARG_COL_WIDTH-1];
 ```
+
+Technically the fourth memory region is unwanted, but it is required to have a complete mapping for all `arg_col` values. The unused memory will be trimmed away during synthesis.
+
+## Arithmetic Unit
+
+The arithmetic unit takes all three operands read back from memory and computes the result named as `problem` in the puzzle description. I initially thought that the latency coming from the delay in the memory readback was to be compensated. However, it turns out that the column is updated on the character following the operand meaning that there is plenty of time built-in thus this latency is not a concern.
+
+Latency is however a concern on the computation proper since the operand are non-trivially small, and a three-term multiplication followed by a 2:1 may not be the easiest structure for closing timing. I added a shift register delaying the valid strobe by several clock cycles simplifying any future adjustments would they be needed.
+
+## Grand Total
+
+The final stage of the computation is a simple addition of each new computation from the arithmetic unit. Since the implementation is simple I opted to directly do it in the `user_logic` module.
+
+I chose a width of 64 bits which corresponds to upper power of two from the width of the values computed by the arithmetic unit.
