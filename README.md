@@ -6,7 +6,7 @@
 | 2.1          | ⏳         | ⏳ | ⏳ | Repeating pattern matching
 | 3.1          | ⏳         | ⏳ | ⏳ | Char sweep and comparison
 | 4.1          | ⏳         | ⏳         | ⏳         | Two-dimensional neighboors comparison
-| [5.1](25/5/) | ⏱         | ⏳         | ⏳         | Comparison of value ranges
+| [5.1](25/5/) | ⭐ Done    | ⏳         | ⏳         | Comparison of value ranges
 | [6.1](25/6/) | ⭐ Done    | ⭐⭐ Done   | ⭐ Done   | Arithmetics
 | 7.1          | ⏳         | ⏳         | ⏳         | Binary graph
 

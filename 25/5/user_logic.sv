@@ -18,7 +18,7 @@ localparam int INGREDIENT_ID_RANGE_WIDTH = 49;
 localparam int RANGE_CHECK_INSTANCES = 200;
 localparam int MAX_INGREDIENT_QTY = 1000;
 
-localparam int RESULT_DATA_WIDTH = $clog2(MAX_INGREDIENT_QTY);
+localparam int RESULT_DATA_WIDTH = 16;
 
 typedef logic [INGREDIENT_ID_RANGE_WIDTH-1:0] id_range_data_t;
 
@@ -76,18 +76,34 @@ generate
     end
 endgenerate
 
-logic [RESULT_DATA_WIDTH-1:0] result_data;
+typedef logic [RESULT_DATA_WIDTH-1:0] result_data_t;
+result_data_t total_ingredients, spoiled_ingredients, result_data;
 logic result_valid;
 
-initial result_data = '0;
+initial begin
+    result_data = '0;
+    total_ingredients = '0;
+end
+
 always_ff @(posedge tck) begin: count_ingredients
+    if (sel_array[0] && valid_array[0]) begin
+        total_ingredients <= total_ingredients + 1;
+    end
     if (valid_array[$size(valid_array)-1]) begin
-        result_data <= result_data + 1;
+        spoiled_ingredients <= spoiled_ingredients + 1;
+    end
+end
+
+
+always_ff @(posedge tck) begin: update_result_valid_both_ends
+    if (valid_array[0] || valid_array[$size(valid_array)-1]) begin
         result_valid <= 1'b1;
     end else begin
         result_valid <= 1'b0;
     end
 end
+
+assign result_data = total_ingredients - spoiled_ingredients;
 
 tap_encoder #(.DATA_WIDTH(RESULT_DATA_WIDTH)) tap_encoder_i (
     // TAP signals

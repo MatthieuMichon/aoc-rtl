@@ -14,9 +14,7 @@ module input_decoder #(
         output logic [INGREDIENT_ID_RANGE_WIDTH-1:0] id_range_data
 );
 
-localparam int MAX_CHAR_CNT = $ceil(INGREDIENT_ID_RANGE_WIDTH/8);
 typedef logic [INGREDIENT_ID_RANGE_WIDTH-1:0] data_t;
-logic [MAX_CHAR_CNT-1:0] char_cnt;
 
 // from `man ascii`
 typedef enum byte {

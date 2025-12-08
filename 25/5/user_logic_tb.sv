@@ -126,7 +126,7 @@ string input_contents = "";
 initial begin
     int fd, file_size;
     int char;
-    logic [64-1:0] result;
+    logic [16-1:0] result;
 
     // set initial values
 
@@ -166,7 +166,7 @@ initial begin
     // serialize rotation commands and readback result
 
         serialize(input_contents);
-        repeat(10) @(posedge tck); // account for pipeline stages by cycling tck
+        repeat(250) @(posedge tck); // account for pipeline stages by cycling tck
         deserialize(result);
         $display("Result: %d (0x%h)", result, result);
 
