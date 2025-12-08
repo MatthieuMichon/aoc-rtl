@@ -23,8 +23,7 @@ proc ::parse_named_arguments {arg_list} {
 }
 
 proc ::build {arg_dict} {
-    #create_project -part xc7z020clg484-1 -in_memory
-    create_project -part xc7a12tcsg325-1 -in_memory
+    create_project -part xc7z020clg484-1 -in_memory
     read_verilog -sv [glob ../*.sv]
     read_xdc [glob ../*.xdc]
 
@@ -41,10 +40,14 @@ proc ::build {arg_dict} {
         -directive $directive \
         -timing_summary \
         -debug_log -verbose
+    phys_opt_design \
+        -verbose
     route_design \
         -directive $directive \
         -tns_cleanup \
         -debug_log -verbose
+    phys_opt_design \
+        -verbose
     write_checkpoint -force project.dcp
 
     # least crowded firmware
@@ -82,7 +85,7 @@ proc ::program {} {
     open_hw_manager -quiet
     connect_hw_server -quiet
     open_hw_target -quiet
-    set_property PROGRAM.FILE [glob ../*.bit] [current_hw_device]
+    set_property PROGRAM.FILE [glob *.bit] [current_hw_device]
     program_hw_devices [current_hw_device]
     refresh_hw_device -quiet
 }
@@ -104,7 +107,7 @@ proc ::load_inputs {arg_dict} {
 
     # upload file contents
     set new_line 0x0a; # `\n`
-    set input_file [dict get $arg_dict INPUT]
+    set input_file [dict get $arg_dict INPUT_FILE]
     set rotations [::textio::load ../$input_file]
     puts -nonewline "Uploading rotations... "
     foreach rotation $rotations {
@@ -128,7 +131,7 @@ proc ::load_inputs {arg_dict} {
 
 proc ::read_password {} {
     run_state_hw_jtag IDLE
-    set password 0x[scan_dr_hw_jtag 16 -tdi 0]
+    set password 0x[scan_dr_hw_jtag 64 -tdi 0]
     puts "Password readback: [format %d $password] ($password)"
 }
 

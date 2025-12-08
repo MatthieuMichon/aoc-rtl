@@ -41,11 +41,11 @@ always_ff @(posedge clk) begin
     mult_problem[1] <= rd_arg_data_row0;
     mult_problem[2] <= rd_arg_data_row0 * rd_arg_data_row1;
     mult_problem[3] <= rd_arg_data_row0 * rd_arg_data_row1 * rd_arg_data_row2;
-    mult_problem[4] <= rd_arg_data_row0 * rd_arg_data_row1 * rd_arg_data_row2 * rd_arg_data_row3;
-    mult_problem[5] <= rd_arg_data_row0 * rd_arg_data_row1 * rd_arg_data_row2 * rd_arg_data_row3 * rd_arg_data_row4;
-    mult_problem[6] <= rd_arg_data_row0 * rd_arg_data_row1 * rd_arg_data_row2 * rd_arg_data_row3 * rd_arg_data_row4 * rd_arg_data_row5;
-    mult_problem[7] <= rd_arg_data_row0 * rd_arg_data_row1 * rd_arg_data_row2 * rd_arg_data_row3 * rd_arg_data_row4 * rd_arg_data_row5 * rd_arg_data_row6;
-    mult_problem[8] <= rd_arg_data_row0 * rd_arg_data_row1 * rd_arg_data_row2 * rd_arg_data_row3 * rd_arg_data_row4 * rd_arg_data_row5 * rd_arg_data_row6 * rd_arg_data_row7;
+    mult_problem[4] <= mult_problem[3] * rd_arg_data_row3;
+    mult_problem[5] <= mult_problem[3] * rd_arg_data_row3 * rd_arg_data_row4;
+    mult_problem[6] <= mult_problem[5] * rd_arg_data_row5;
+    mult_problem[7] <= mult_problem[5] * rd_arg_data_row5 * rd_arg_data_row6;
+    mult_problem[8] <= mult_problem[5] * rd_arg_data_row5 * rd_arg_data_row6 * rd_arg_data_row7;
     add_problem[1] <= rd_arg_data_row0;
     add_problem[2] <= rd_arg_data_row0 + rd_arg_data_row1;
     add_problem[3] <= rd_arg_data_row0 + rd_arg_data_row1 + rd_arg_data_row2;

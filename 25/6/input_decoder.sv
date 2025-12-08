@@ -9,7 +9,7 @@ module input_decoder #(
     input wire clk,
     // Inbound Byte Stream
         input wire byte_valid,
-        input wire [8-1:0]byte_data,
+        input wire [8-1:0] byte_data,
     // Decoded signals
         output logic arg_valid,
         output logic [ARG_ROW_WIDTH-1:0] arg_row,

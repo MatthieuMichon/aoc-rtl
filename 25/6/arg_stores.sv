@@ -28,23 +28,34 @@ typedef logic [ARG_ROW_WIDTH-1:0] arg_row_t;
 typedef logic [ARG_COL_WIDTH-1:0] arg_col_t;
 typedef logic [ARG_DATA_WIDTH-1:0] arg_data_t;
 
-arg_data_t mem_arg_data [0:2**ARG_ROW_WIDTH-1][0:2**ARG_COL_WIDTH-1];
+arg_data_t rd_mem[0:2**ARG_ROW_WIDTH-1];
+genvar i;
+generate
+    for (i = 0; i < 2**ARG_ROW_WIDTH; i++) begin
+        arg_data_t mem_arg_data[0:2**ARG_COL_WIDTH-1];
 
-always_ff @(posedge clk) begin: mem_write_logic
-    if (wr_arg_valid) begin
-        mem_arg_data[wr_arg_row][wr_arg_col] <= wr_arg_data;
+        always_ff @(posedge clk) begin: mem_write_logic
+            if (wr_arg_valid && (wr_arg_row == i)) begin
+                mem_arg_data[wr_arg_col] <= wr_arg_data;
+            end
+        end
+
+        always_ff @(posedge clk) begin: mem_read_logic
+            rd_mem[i] <= mem_arg_data[rd_arg_col];
+        end
+
     end
-end
+endgenerate
 
 always_comb begin
-    rd_arg_data_row0 = mem_arg_data[0][rd_arg_col];
-    rd_arg_data_row1 = mem_arg_data[1][rd_arg_col];
-    rd_arg_data_row2 = mem_arg_data[2][rd_arg_col];
-    rd_arg_data_row3 = mem_arg_data[3][rd_arg_col];
-    rd_arg_data_row4 = mem_arg_data[4][rd_arg_col];
-    rd_arg_data_row5 = mem_arg_data[5][rd_arg_col];
-    rd_arg_data_row6 = mem_arg_data[6][rd_arg_col];
-    rd_arg_data_row7 = mem_arg_data[7][rd_arg_col];
+    rd_arg_data_row0 = rd_mem[0];
+    rd_arg_data_row1 = rd_mem[1];
+    rd_arg_data_row2 = rd_mem[2];
+    rd_arg_data_row3 = rd_mem[3];
+    rd_arg_data_row4 = rd_mem[4];
+    rd_arg_data_row5 = rd_mem[5];
+    rd_arg_data_row6 = rd_mem[6];
+    rd_arg_data_row7 = rd_mem[7];
 end
 
 endmodule

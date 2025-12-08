@@ -7,7 +7,7 @@
 | 3.1 | ⏳ | ⏳ | ⏳ | Char sweep and comparison
 | 4.1 | ⏳ | ⏳ | ⏳ | Two-dimensional neighboors comparison
 | 5.1 | ⏳ | ⏳ | ⏳ | Comparison of value ranges
-| [6.1](25/6/) | ⭐ Done | ⏱ | ⏳ | Arithmetics
+| [6.1](25/6/) | ⭐ Done | ⭐⭐ Done | ⭐ Done | Arithmetics
 | 7.1 | ⏳ | ⏳ | ⏳ | Binary graph
 
 | Tag | Description

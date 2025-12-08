@@ -34,7 +34,9 @@ The input decoding is implemented in two steps:
 
 ## Data Stores
 
-As mentioned previously, we need three memory pools of 14-bit wide data words with 10-bit deep addresses. 
+As mentioned previously, we need ~three memory pools of 14-bit wide data words with 10-bit deep addresses~ eight memory pools of 14-bit wide data words with 10-bit deep addresses since the custom inputs contents contains four argument rows and I just wanted to push things a bit further so eight memory pools is what I settled on.
+
+The first synthesis attempt failed due to exhaustion of the resources. Reviewing the synthesis log, it turned out that Vivado's heuristics weren't able to infer block memory resulting in a ton of registers being consumed. Slightly rearranging the `arg_store` was enough for inferring block memory.
 
 ```verilog
 arg_data_t mem_arg_data [0:2**ARG_ROW_WIDTH-1][0:2**ARG_COL_WIDTH-1];
@@ -48,11 +50,9 @@ The arithmetic unit takes all three operands read back from memory and computes 
 
 Latency is however a concern on the computation proper since the operand are non-trivially small, and a three-term multiplication followed by a 2:1 may not be the easiest structure for closing timing. I added a shift register delaying the valid strobe by several clock cycles simplifying any future adjustments would they be needed.
 
-I had to rework the implementation after discovering the extra argument row in the custom input contents. The results obtained in simulation were correct however I feel that this design will have trouble being synthesized for the target FPGA. The implementation is likely to require some rework.
+I had to rework the implementation after discovering the extra argument row in the custom input contents. The results obtained in simulation were correct however I feel that this design will have trouble being synthesized for the target FPGA. The implementation is likely to require some rework (and yes it did).
 
-The resulting schematics says it all:
-
-![](arith_unit_yosys.png)
+By splitting the long multiplication into up to three parts, the timing closure was achieved without any further adjustments.
 
 ## Grand Total
 
