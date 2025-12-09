@@ -12,8 +12,6 @@ module input_decoder (
         output logic cell_tpr  // 1: has a TPR, 0: empty
 );
 
-typedef logic [INGREDIENT_ID_RANGE_WIDTH-1:0] data_t;
-
 // from `man ascii`
 typedef enum byte {
     DOT_CHAR = 8'h2E,
@@ -33,6 +31,7 @@ always_ff @(posedge clk) begin: reg_byte_data
 end
 
 always_ff @(posedge clk) begin: decoder
+    cell_valid <= 1'b0;
     if (byte_valid) begin
         if (!is_cell(prev_byte_data) && is_cell(byte_data)) begin: first_cell
             cell_last <= 1'b0;
