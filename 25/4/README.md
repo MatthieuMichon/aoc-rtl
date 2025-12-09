@@ -11,7 +11,7 @@
 
 The input data has a simple and systematic structure, reading and streaming its contents in the FPGA should be straightforward.
 
-The max number of toilet paper rolls (TPR) per cell is 8.
+The max number of rolls of paper (ROP) per cell is 8.
 
 ## Constants
 
@@ -23,7 +23,7 @@ Max line length is 138 chars according to the `input.txt` file. Assuming a max l
 
 ## Naive Approach
 
-The most obvious approach would consist in storing the complete array in memory and once complete run a scan over each cell adding the number of neighbors being tagged has having a TPR. In addition to requiring a memory for storing a 138x138 bit array, scanning each cell requires close to eight memory read transactions per cell. Although these access could be executed in parallel for reducing the runtimeby distributing the work across multiple processing units. A better way must exist.
+The most obvious approach would consist in storing the complete array in memory and once complete run a scan over each cell adding the number of neighbors being tagged has having a ROP. In addition to requiring a memory for storing a 138x138 bit array, scanning each cell requires close to eight memory read transactions per cell. Although these access could be executed in parallel for reducing the runtimeby distributing the work across multiple processing units. A better way must exist.
 
 ## Single Pass Solution
 
@@ -46,7 +46,7 @@ This computation can be done on the fly by simply adding single and double cycle
 .0122223331. # trim corners
 ```
 
-The computation is relevant only if there a TPR to start with, so this information will need to be stored somewhere.
+The computation is relevant only if there a ROP to start with, so this information will need to be stored somewhere.
 
 ```
 Stored data for row N
@@ -79,7 +79,7 @@ Stored data for row N+1
 2322121222
 ```
 
-Colapsing the rows and accounting for the TPR present in the central location yields the expected results.
+Colapsing the rows and accounting for the ROP present in the central location yields the expected results.
 
 ```
 Stored data for row N-1
@@ -98,7 +98,7 @@ The result matches with the expected values from the puzzle statement.
 So to recap:
 
 - A smarter (or more appropriately a different) solution is therefore possible other than scanning the neighbor cells.
-- Only three lines must be stored: two lines with the TPR count and one for the mask information.
+- Only three lines must be stored: two lines with the ROP count and one for the mask information.
 
 # Design Walkthrough
 
@@ -108,7 +108,7 @@ Still using the BSCANE2 primitive with ASCII byte decoding.
 
 ## Input Decoding
 
-Each ASCII byte is remapped as a single bit encoding the presence of a TPR in the corresponding array cell.
+Each ASCII byte is remapped as a single bit encoding the presence of a ROP in the corresponding array cell.
 
 In addition, a `last` signal is provided indicating the last cell of a row.
 
