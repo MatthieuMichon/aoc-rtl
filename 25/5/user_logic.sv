@@ -94,7 +94,6 @@ always_ff @(posedge tck) begin: count_ingredients
     end
 end
 
-
 always_ff @(posedge tck) begin: update_result_valid_both_ends
     if (valid_array[0] || valid_array[$size(valid_array)-1]) begin
         result_valid <= 1'b1;

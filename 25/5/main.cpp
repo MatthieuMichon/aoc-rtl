@@ -1,5 +1,4 @@
 #include <verilated.h>
-//#include <verilated_fst_c.h>
 #include <verilated_vcd_c.h>
 #include "Vuser_logic_tb.h"
 
@@ -7,7 +6,6 @@ int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);
     Verilated::traceEverOn(true);
 
-    // VerilatedFstC* tfp = new VerilatedFstC;
     VerilatedVcdC* tfp = new VerilatedVcdC;
     Vuser_logic_tb* tb = new Vuser_logic_tb;
 
@@ -20,6 +18,5 @@ int main(int argc, char** argv) {
     }
 
     tfp->close();
-    delete tb;
     return 0;
 }
