@@ -9,7 +9,7 @@ module input_decoder (
     // Decoded signals
         output logic cell_last,
         output logic cell_valid,
-        output logic cell_tpr  // 1: has a TPR, 0: empty
+        output logic cell_rop  // 1: has a ROP, 0: empty
 );
 
 // from `man ascii`
@@ -36,15 +36,15 @@ always_ff @(posedge clk) begin: decoder
         if (!is_cell(prev_byte_data) && is_cell(byte_data)) begin: first_cell
             cell_last <= 1'b0;
             cell_valid <= 1'b0;
-            cell_tpr <= 1'b0;
+            cell_rop <= 1'b0;
         end else if (is_cell(prev_byte_data) && is_cell(byte_data)) begin: next_cell
             cell_last <= 1'b0;
             cell_valid <= 1'b1;
-            cell_tpr <= (prev_byte_data == AT_CHAR);
+            cell_rop <= (prev_byte_data == AT_CHAR);
         end else if (is_cell(prev_byte_data) && !is_cell(byte_data)) begin: last_cell
             cell_last <= 1'b1;
             cell_valid <= 1'b1;
-            cell_tpr <= (prev_byte_data == AT_CHAR);
+            cell_rop <= (prev_byte_data == AT_CHAR);
         end else begin: unexpected
             //$display("Unexpected character: 0x%h (previous 0x%h)", byte_data, prev_byte_data);
         end

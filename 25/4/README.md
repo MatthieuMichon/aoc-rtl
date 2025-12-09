@@ -112,10 +112,6 @@ Each ASCII byte is remapped as a single bit encoding the presence of a ROP in th
 
 In addition, a `last` signal is provided indicating the last cell of a row.
 
-## Range Check Units
+## Adjacent ROP Count
 
-The `range_check` design unit implements a dual comparison which is **reversed**: ingredient IDs which are inside the range are dropped. The key insight is that at the end of the series of `range_check` units all ingredient IDs which made it through are outside of all ranges.
-
-## Result Computation
-
-At this point obtaining the result is simply a matter of reversing the output of the `range_check` stages by calculating the difference between the total ingredient IDs and the number of spoiled ingredients.
+The first main component of the algorithm is an unit `adjacent_count` which translates binary input (ROP present or not) into a count of adjacent ROPs.

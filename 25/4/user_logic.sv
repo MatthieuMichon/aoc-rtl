@@ -33,7 +33,7 @@ tap_decoder #(.DATA_WIDTH(BYTE_WIDTH)) tap_decoder_i (
 
 logic cell_last;
 logic cell_valid;
-logic cell_tpr;
+logic cell_rop;
 
 input_decoder input_decoder_i (
     .clk(tck),
@@ -43,16 +43,36 @@ input_decoder input_decoder_i (
     // Decoded signals
         .cell_last(cell_last),
         .cell_valid(cell_valid),
-        .cell_tpr(cell_tpr)
+        .cell_rop(cell_rop)
 );
 
-logic [16-1:0] cell_cnt;
+localparam int MAX_ADJACENT_ROP_COUNT = 3;
+localparam int COUNT_ROP_WIDTH = $clog2(MAX_ADJACENT_ROP_COUNT + 1);
 
-always_ff @(posedge tck) begin
-    if (cell_valid && cell_tpr) begin
-        cell_cnt <= cell_cnt + 1;
-    end
-end
+logic count_last;
+logic count_valid;
+logic [COUNT_ROP_WIDTH-1:0] count_rop;
+
+adjacent_rop_counter #(.COUNT_ROP_WIDTH(COUNT_ROP_WIDTH))
+adjacent_rop_counter_i (
+    .clk(tck),
+    // Binary row data
+        .bin_last(cell_last),
+        .bin_valid(cell_valid),
+        .bin_rop(cell_rop),
+    // Adjacent ROP row data
+        .count_last(count_last),
+        .count_valid(count_valid),
+        .count_rop(count_rop)
+);
+
+// logic [16-1:0] cell_cnt;
+
+// always_ff @(posedge tck) begin
+//     if (cell_valid && cell_rop) begin
+//         cell_cnt <= cell_cnt + 1;
+//     end
+// end
 
 tap_encoder #(.DATA_WIDTH(16)) tap_encoder_i (
     // TAP signals
@@ -63,7 +83,7 @@ tap_encoder #(.DATA_WIDTH(16)) tap_encoder_i (
         .capture_dr(capture_dr),
         .shift_dr(shift_dr),
     // Encoded signals
-        .data(cell_cnt),
+        .data(count_rop),
         .valid(1'b1)
 );
 
