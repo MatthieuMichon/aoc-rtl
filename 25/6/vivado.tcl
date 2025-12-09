@@ -109,7 +109,7 @@ proc ::load_inputs {arg_dict} {
     set new_line 0x0a; # `\n`
     set input_file [dict get $arg_dict INPUT_FILE]
     set rotations [::textio::load ../$input_file]
-    puts -nonewline "Uploading rotations... "
+    puts -nonewline "Uploading bytes... "
     foreach rotation $rotations {
         set len [string length $rotation]
         for {set i 0} {$i<$len} {incr i} {
