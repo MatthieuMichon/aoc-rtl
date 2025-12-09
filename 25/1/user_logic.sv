@@ -5,7 +5,6 @@ module user_logic (
     input wire tck,
     input wire tdi,
     output logic tdo,
-
     input wire test_logic_reset,
     input wire ir_is_user,
     input wire capture_dr,
