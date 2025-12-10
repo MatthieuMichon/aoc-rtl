@@ -3,6 +3,8 @@
 
 module user_logic_tb;
 
+localparam int RESULT_WIDTH = 16;
+
 localparam int SEEK_SET = 0;
 localparam int SEEK_END = 2;
 
@@ -99,7 +101,7 @@ task automatic serialize(input string bytes_);
     @(posedge tck);
 endtask
 
-task automatic deserialize(output logic [64-1:0] result);
+task automatic deserialize(output logic [RESULT_WIDTH-1:0] result);
     run_state_hw_jtag(SELECT_DR_SCAN);
     @(posedge tck);
     run_state_hw_jtag(CAPTURE_DR);
@@ -125,8 +127,8 @@ string input_contents = "";
 
 initial begin
     int fd, file_size;
-    int char;
-    logic [16-1:0] result;
+    byte char;
+    logic [RESULT_WIDTH-1:0] result;
 
     // set initial values
 

@@ -17,7 +17,7 @@ The max number of rolls of paper (ROP) per cell is 8.
 
 Max line length is 138 chars according to the `input.txt` file. Assuming a max length of 160 chars for the implementation seems like a reasonable assumption.
 
-- `MAX_LINE_LENGTH` = 160
+- `MAX_COLS` = 160
 
 # Computation Algorithms
 
@@ -115,3 +115,7 @@ In addition, a `last` signal is provided indicating the last cell of a row.
 ## Adjacent ROP Count
 
 The first main component of the algorithm is an unit `adjacent_count` which translates binary input (ROP present or not) into a count of adjacent ROPs.
+
+The implementation is based on the algorithm described earlier and is quite simple.
+
+# ROP Count Stores
