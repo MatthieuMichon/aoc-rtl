@@ -2,3 +2,5 @@
 - Reducing the TCK clock period in the testbench from 20ns to 10ps yields a **massive** increase in simulation speed.
   - Day 1.1 simulates in less than 0.5 seconds down from eight minutes.
   - *There must be a better/proper way to do this.*: there is indeed, removing the half-cycle delay and replacing it with a single-cycle delay `#1`.
+- As of late 2025, Yosys doesn't support 2d arrays
+- `run_state_hw_jtag -state IDLE IDLE` does not cycle `tck`
