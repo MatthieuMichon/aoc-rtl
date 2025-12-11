@@ -12,7 +12,11 @@
 | 8.1            | ⏳         | ⏳         | ⏳        | 
 | 9.1            | ⏳         | ⏳         | ⏳        | 
 | 10.1           | ⏳         | ⏳         | ⏳        | 
-| [11.1](25/11/) | ⏳         | ⏳         | ⏳        | Reverse graph traversal
+| [11.1](25/11/) | ⏱         | ⏳         | ⏳        | Reverse graph traversal
+
+## Achivements
+
+- Found an issue with the `run_state_hw_jtag` Vivado TCL command and opened a [support request](https://adaptivesupport.amd.com/s/question/0D5Pd00001772mvKAA/)
 
 | Tag | Description
 | --- | ---
