@@ -3,4 +3,4 @@
   - Day 1.1 simulates in less than 0.5 seconds down from eight minutes.
   - *There must be a better/proper way to do this.*: there is indeed, removing the half-cycle delay and replacing it with a single-cycle delay `#1`.
 - As of late 2025, Yosys doesn't support 2d arrays
-- `run_state_hw_jtag -state IDLE IDLE` does not cycle `tck`
+- `run_state_hw_jtag -state IDLE IDLE` does not cycle `tck` (related [support request](https://adaptivesupport.amd.com/s/question/0D5Pd00001772mvKAA/) and [repository](https://github.com/MatthieuMichon/vivado_jtag_run-test-idle))
