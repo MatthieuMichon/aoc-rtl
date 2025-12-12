@@ -9,12 +9,18 @@ module forward_pass_processor #(
     parameter int MAX_OUTPUTS = 30 // maximum number of connections per device
 )(
     input wire clk,
-    // Connection entries
+    // Connection Entries
         input wire end_of_file,
         input wire connection_valid,
         input wire connection_last, // for a given device
         input wire [DEVICE_WIDTH-1:0] device,
-        input wire [DEVICE_WIDTH-1:0] next_device
+        input wire [DEVICE_WIDTH-1:0] next_device,
+    // Path Count Engine
+        output logic queue_empty,
+        output logic queue_push,
+        input wire [DEVICE_WIDTH-1:0] queue_device,
+        output logic [DEVICE_WIDTH-1:0] queue_count_incr,
+        output logic [8-1:0] queue_count_incr
 );
 
 localparam RHS_ADDR_WIDTH = $clog2(MAX_TOTAL_RHS_DEVICES);
@@ -50,30 +56,50 @@ device_t connection_list[2**RHS_ADDR_WIDTH-1:0];
 rhs_addr_t ptr = '0;
 output_count_t output_cnt = '0;
 
-always_ff @(posedge clk) begin: graph_store
+always_ff @(posedge clk) begin: adjacency_store
     if (connection_valid) begin
+        connection_list[ptr+output_cnt] <= next_device;
+        $display("W connection_list[0x%03x] <- {0x%04x-%s}", ptr+output_cnt, next_device, device_to_ascii(next_device));
         if (connection_last) begin
             adjacency_list[device].start_ptr <= ptr;
             adjacency_list[device].outputs <= 1 + output_cnt;
-            $display("W adjacency_list[0x%04x-%s] <- {%04x, %04x}", device, device_to_ascii(device), ptr, 1 + output_cnt);
+            $display("W adjacency_list[0x%04x-%s] <- {0x%03x, 0x%02x}", device, device_to_ascii(device), ptr, 1 + output_cnt);
+            ptr <= ptr + (1 + output_cnt);
             output_cnt <= '0;
         end else begin
             output_cnt <= output_cnt + 1;
         end
-        ptr <= ptr + 1;
     end
 end
+
 
 localparam device_t start_device = device_from_ascii("you");
 localparam device_t end_device = device_from_ascii("end");
 
-initial begin
-    $display("I start_device = %s", device_to_ascii(start_device));
-    $display("I 0x00528e = %s", device_to_ascii(15'h00528e));
-end
-
 path_count_t path_count_list[2**DEVICE_WIDTH-1:0];
 logic path_count_list_is_initialized = 1'b0;
+
+// -----------------
+
+parameter int QUEUE_DEPTH = 8;
+typedef logic [QUEUE_DEPTH-1:0] queue_ptr_t;
+typedef struct packed {
+    device_t device;
+    path_count_t count_incr;
+} update_t;
+
+update_t update_queue[QUEUE_DEPTH-1:0];
+queue_ptr_t wr_ptr = '0, rd_ptr = '0;
+
+// -----------------
+
+always_ff @(posedge clk) begin
+    if (connection_last && device == start_device) begin: received_start_device
+        update_queue[wr_ptr] <= '{start_device, 1};
+        $display("update_queue PUSH {0x%03x-%s, 0x%02x}", start_device, device_to_ascii(start_device), 1);
+        wr_ptr <= wr_ptr + 1;
+    end
+end
 
 always_ff @(posedge clk) begin: path_count_store
     if (!path_count_list_is_initialized) begin
