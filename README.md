@@ -12,7 +12,7 @@
 | 8.1            | ⏳         | ⏳         | ⏳        | 
 | 9.1            | ⏳         | ⏳         | ⏳        | 
 | 10.1           | ⏳         | ⏳         | ⏳        | 
-| [11.1](25/11/) | ⏱         | ⏳         | ⏳        | Reverse graph traversal
+| [11.1](25/11/) | ⏱         | ⏳         | ⏳        | DAG traversal
 
 ## Achivements
 

@@ -55,15 +55,24 @@ input_decoder input_decoder_i (
         .next_device(next_device)
 );
 
-forward_pass_processor forward_pass_processor_i (
+topological_sort topological_sort_i (
     .clk(tck),
-    // Connection entries
-        .end_of_file(end_of_file),
-        .connection_valid(connection_valid),
-        .connection_last(connection_last), // for a given device
-        .device(device),
-        .next_device(next_device)
+    // Connection Entries
+        .edge_last(end_of_file),
+        .edge_valid(connection_valid),
+        .src_node(device),
+        .dst_node(next_device)
 );
+
+// forward_pass_processor forward_pass_processor_i (
+//     .clk(tck),
+//     // Connection entries
+//         .end_of_file(end_of_file),
+//         .connection_valid(connection_valid),
+//         .connection_last(connection_last), // for a given device
+//         .device(device),
+//         .next_device(next_device)
+// );
 
 logic outbound_valid;
 logic [RESULT_WIDTH-1:0] outbound_data;

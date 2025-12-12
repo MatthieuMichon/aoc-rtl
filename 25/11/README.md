@@ -4,12 +4,21 @@
 
 ## Input Data
 
+File properties:
+
 | Property     | Example | Input   |
 | ------------ | ------- | ------- |
 | Size (bytes) | 118     | 9815    |
 | Rows         | 10      | 583     |
 | Max Entries  | 3       | 24      |
 | Unique IDs   | 26**3   | 26**3   |
+
+Having a closer look at the file contents, we can derive the following important values:
+
+- Device with the most connections: 24
+- Average number of connections per device: 2.96
+
+The average number of connections per device is two orders of magnitude smaller than the number of devices, meaning that the directed acyclic graph (DAG) is very sparse. In such cases it is strongly recommended to use an Adjacency List (AL) instead of an Adjacency Matrix (AM) for the graph representation of the incoming edges of each device. Furthermore a lookup table must be used for assigning increment IDs to each device.
 
 ## Derived Constants
 

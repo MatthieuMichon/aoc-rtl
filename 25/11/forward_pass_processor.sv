@@ -14,13 +14,13 @@ module forward_pass_processor #(
         input wire connection_valid,
         input wire connection_last, // for a given device
         input wire [DEVICE_WIDTH-1:0] device,
-        input wire [DEVICE_WIDTH-1:0] next_device,
+        input wire [DEVICE_WIDTH-1:0] next_device
     // Path Count Engine
-        output logic queue_empty,
-        output logic queue_push,
-        input wire [DEVICE_WIDTH-1:0] queue_device,
-        output logic [DEVICE_WIDTH-1:0] queue_count_incr,
-        output logic [8-1:0] queue_count_incr
+        // output logic queue_empty,
+        // output logic queue_push,
+        // input wire [DEVICE_WIDTH-1:0] queue_device,
+        // output logic [DEVICE_WIDTH-1:0] queue_count_incr,
+        // output logic [8-1:0] queue_count_incr
 );
 
 localparam RHS_ADDR_WIDTH = $clog2(MAX_TOTAL_RHS_DEVICES);
