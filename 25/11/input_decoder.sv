@@ -49,6 +49,8 @@ always_ff @(posedge clk) begin
                 device <= {DEVICE_BIN_BITS'(byte_data-A_CHAR), device[$high(device)-:2*DEVICE_BIN_BITS]};
             end else if (byte_data == COLON_CHAR) begin
                 device_is_set <= 1'b1;
+            end else begin: eof
+                end_of_file <= 1'b1;
             end
         end else begin: rhs
             if (char_is_letter(byte_data)) begin

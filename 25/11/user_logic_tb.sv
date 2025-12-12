@@ -127,6 +127,24 @@ task automatic serialize(input string bytes_);
         run_state_hw_jtag(UPDATE_DR);
         @(posedge tck);
     end
+    if (1) begin: finish_with_null_byte
+        run_state_hw_jtag(RUN_TEST_IDLE);
+        @(posedge tck);
+        run_state_hw_jtag(SELECT_DR_SCAN);
+        @(posedge tck);
+        run_state_hw_jtag(CAPTURE_DR);
+        @(posedge tck);
+        run_state_hw_jtag(SHIFT_DR);
+        char = 8'h00;
+        for (int j=0; j<8; j++) begin
+            tdi = char[j];
+            @(posedge tck); // commit bit shift
+        end
+        run_state_hw_jtag(EXIT1_DR);
+        @(posedge tck);
+        run_state_hw_jtag(UPDATE_DR);
+        @(posedge tck);
+    end
     run_state_hw_jtag(RUN_TEST_IDLE);
     @(posedge tck);
 endtask
@@ -159,7 +177,7 @@ endtask
 string input_file = "input.txt";
 string input_contents = "";
 
-initial begin
+initial begin: main_seq
     int fd, file_size;
     byte char;
     logic [RESULT_WIDTH-1:0] result;
