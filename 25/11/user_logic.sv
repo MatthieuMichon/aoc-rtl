@@ -16,6 +16,9 @@ module user_logic (
 localparam int BYTE_WIDTH = $bits(byte);
 // From design space exploration
 localparam int RESULT_WIDTH = 16;
+parameter int DEVICE_CHARS = 3;
+parameter int DEVICE_BIN_BITS = 5;
+parameter int DEVICE_WIDTH = DEVICE_CHARS*DEVICE_BIN_BITS;
 
 logic inbound_valid;
 logic [BYTE_WIDTH-1:0] inbound_data;
@@ -33,17 +36,33 @@ tap_decoder #(.DATA_WIDTH(BYTE_WIDTH)) tap_decoder_i (
         .data(inbound_data)
 );
 
-input_decoder  input_decoder_i (
+logic end_of_file;
+logic connection_valid;
+logic connection_last;
+logic [DEVICE_WIDTH-1:0] device;
+logic [DEVICE_WIDTH-1:0] next_device;
+
+input_decoder input_decoder_i (
     .clk(tck),
     // Inbound Byte Stream
         .byte_valid(inbound_valid),
         .byte_data(inbound_data),
     // Decoded signals
-        .end_of_file(),
-        .connection_valid(),
-        .connection_last(), // for a given device
-        .device(),
-        .next_device()
+        .end_of_file(end_of_file),
+        .connection_valid(connection_valid),
+        .connection_last(connection_last), // for a given device
+        .device(device),
+        .next_device(next_device)
+);
+
+forward_pass_processor forward_pass_processor_i (
+    .clk(tck),
+    // Connection entries
+        .end_of_file(end_of_file),
+        .connection_valid(connection_valid),
+        .connection_last(connection_last), // for a given device
+        .device(device),
+        .next_device(next_device)
 );
 
 logic outbound_valid;
