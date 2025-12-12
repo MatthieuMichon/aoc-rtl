@@ -109,27 +109,25 @@ task automatic serialize(input string bytes_);
     byte char;
     for (int i=0; i<num_bytes; i++) begin
         if (i % deci == 0)
-            $display("Processed %d %%", 100*i/num_bytes);
-        run_state_hw_jtag(RUN_TEST_IDLE);
-        @(posedge tck);
+            //$display("Processed %d %%", 100*i/num_bytes);
         run_state_hw_jtag(SELECT_DR_SCAN);
         @(posedge tck);
         run_state_hw_jtag(CAPTURE_DR);
         @(posedge tck);
-        run_state_hw_jtag(SHIFT_DR);
         char = bytes_[i];
         for (int j=0; j<8; j++) begin
             tdi = char[j];
-            @(posedge tck); // commit bit shift
+            run_state_hw_jtag(SHIFT_DR);
+            @(posedge tck);
         end
         run_state_hw_jtag(EXIT1_DR);
         @(posedge tck);
         run_state_hw_jtag(UPDATE_DR);
         @(posedge tck);
-    end
-    if (1) begin: finish_with_null_byte
         run_state_hw_jtag(RUN_TEST_IDLE);
         @(posedge tck);
+    end
+    if (1) begin: finish_with_null_byte
         run_state_hw_jtag(SELECT_DR_SCAN);
         @(posedge tck);
         run_state_hw_jtag(CAPTURE_DR);
@@ -144,9 +142,9 @@ task automatic serialize(input string bytes_);
         @(posedge tck);
         run_state_hw_jtag(UPDATE_DR);
         @(posedge tck);
+        run_state_hw_jtag(RUN_TEST_IDLE);
+        @(posedge tck);
     end
-    run_state_hw_jtag(RUN_TEST_IDLE);
-    @(posedge tck);
 endtask
 
 localparam int RESULT_WIDTH = 16;
