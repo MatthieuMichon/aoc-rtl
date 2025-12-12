@@ -39,11 +39,13 @@ For storing a map of output devices per each device a memory with a 11-bit wide 
 
 A second memory is required for storing the list of connected devices. Conversingly, its address and data width are swapped from the device map.
 
-| Constant           | Type    | Value   |
-| ------------------ | ------- | ------- |
+| Constant            | Type    | Value   |
+| ------------------- | ------- | ------- |
 | DEV_LIST_ADDR_WIDTH | Integer | 11      |
 | DEV_LIST_DATA_WIDTH | Integer | 15      |
 
 # Computation Algorithm
 
 Rather then going the conventional way of implementing a simple breadth-first search, I thought it would more interesting to design a bidirectional parallel strategy. This means doubling the storage requirements for the device map and list.
+
+The first leg of the strategy involves populating the map between devices and a pointer corresponding to their first entry in the list.
