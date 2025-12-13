@@ -48,11 +48,11 @@ input_decoder input_decoder_i (
         .byte_valid(inbound_valid),
         .byte_data(inbound_data),
     // Decoded signals
-        .end_of_file(end_of_file),
-        .connection_valid(connection_valid),
-        .connection_last(connection_last), // for a given device
-        .device(device),
-        .next_device(next_device)
+        .decoding_done(end_of_file),
+        .edge_valid(connection_valid),
+        //.connection_last(connection_last), // for a given device
+        .src_node(device),
+        .dst_node(next_device)
 );
 
 topological_sort topological_sort_i (

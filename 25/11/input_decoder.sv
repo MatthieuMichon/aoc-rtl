@@ -2,23 +2,29 @@
 `default_nettype none
 
 module input_decoder #(
-    parameter int DEVICE_CHARS = 3, // do not override
-    parameter int DEVICE_BIN_BITS = 5, // do not override
-    parameter int DEVICE_WIDTH = DEVICE_CHARS*DEVICE_BIN_BITS // do not override
+    parameter int NODE_CHARS = 3, // do not override
+    parameter int NODE_BIN_BITS = 5, // do not override
+    parameter int NODE_WIDTH = NODE_CHARS*NODE_BIN_BITS // do not override
 )(
     input wire clk,
     // Inbound Byte Stream
         input wire byte_valid,
         input wire [8-1:0] byte_data,
     // Decoded signals
-        output logic end_of_file,
-        output logic connection_valid,
-        output logic connection_last, // for a given device
-        output logic [DEVICE_WIDTH-1:0] device,
-        output logic [DEVICE_WIDTH-1:0] next_device
+        output logic decoding_done,
+        output logic edge_valid,
+        output logic src_node_valid, // for early src_node LUT registration
+        output logic [NODE_WIDTH-1:0] src_node,
+        output logic [NODE_WIDTH-1:0] dst_node
+
+        // output logic end_of_file,
+        // output logic connection_valid,
+        // output logic connection_last, // for a given device
+        // output logic [DEVICE_WIDTH-1:0] device,
+        // output logic [DEVICE_WIDTH-1:0] next_device
 );
 
-typedef logic [DEVICE_WIDTH-1:0] device_t;
+typedef logic [NODE_WIDTH-1:0] node_t;
 
 // from `man ascii`
 typedef enum byte {
@@ -38,28 +44,28 @@ always_ff @(posedge clk)
     if (byte_valid)
         prev_byte_data <= byte_data;
 
-logic device_is_set = 1'b0;
+logic src_node_is_set = 1'b0;
 
 always_ff @(posedge clk) begin
-    connection_last <= 1'b0;
-    connection_valid <= 1'b0;
+    decoding_done <= 1'b0;
+    edge_valid <= 1'b0;
     if (byte_valid) begin
-        if (!device_is_set) begin: lhs
+        if (!src_node_is_set) begin: lhs
             if (char_is_letter(byte_data)) begin
-                device <= {DEVICE_BIN_BITS'(byte_data-A_CHAR), device[$high(device)-:2*DEVICE_BIN_BITS]};
+                src_node <= {NODE_BIN_BITS'(byte_data-A_CHAR), src_node[$high(src_node)-:2*NODE_BIN_BITS]};
             end else if (byte_data == COLON_CHAR) begin
-                device_is_set <= 1'b1;
+                src_node_valid <= 1'b1;
+                src_node_is_set <= 1'b1;
             end else begin: eof
-                end_of_file <= 1'b1;
+                decoding_done <= 1'b1;
             end
         end else begin: rhs
             if (char_is_letter(byte_data)) begin
-                next_device <= {DEVICE_BIN_BITS'(byte_data-A_CHAR), next_device[$high(device)-:2*DEVICE_BIN_BITS]};
+                dst_node <= {NODE_BIN_BITS'(byte_data-A_CHAR), dst_node[$high(dst_node)-:2*NODE_BIN_BITS]};
             end else if (char_is_letter(prev_byte_data)) begin: special_char
-                connection_valid <= 1'b1;
+                edge_valid <= 1'b1;
                 if (byte_data == LF_CHAR) begin: end_of_line
-                    connection_last <= 1'b1;
-                    device_is_set <= 1'b0;
+                    src_node_is_set <= 1'b0;
                 end
             end
         end
