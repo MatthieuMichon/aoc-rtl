@@ -57,4 +57,4 @@ A second memory is required for storing the list of connected devices. Conversin
 
 Rather then going the conventional way of implementing a simple breadth-first search, I thought it would more interesting to design a bidirectional parallel strategy. This means doubling the storage requirements for the device map and list.
 
-The first leg of the strategy involves populating the map between devices and a pointer corresponding to their first entry in the list.
+The first leg of the strategy involves populating the map between devices and a pointer corresponding to their first entry in the list, this logic is performed by the `node_id_mapper` module.

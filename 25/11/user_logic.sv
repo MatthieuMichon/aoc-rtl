@@ -36,11 +36,11 @@ tap_decoder #(.DATA_WIDTH(BYTE_WIDTH)) tap_decoder_i (
         .data(inbound_data)
 );
 
-logic end_of_file;
-logic connection_valid;
-logic connection_last;
-logic [DEVICE_WIDTH-1:0] device;
-logic [DEVICE_WIDTH-1:0] next_device;
+logic decoding_done_str;
+logic edge_str_valid;
+logic src_node_str_valid;
+logic [DEVICE_WIDTH-1:0] src_node_str;
+logic [DEVICE_WIDTH-1:0] dst_node_str;
 
 input_decoder input_decoder_i (
     .clk(tck),
@@ -48,21 +48,43 @@ input_decoder input_decoder_i (
         .byte_valid(inbound_valid),
         .byte_data(inbound_data),
     // Decoded signals
-        .decoding_done(end_of_file),
-        .edge_valid(connection_valid),
-        //.connection_last(connection_last), // for a given device
-        .src_node(device),
-        .dst_node(next_device)
+        .decoding_done(decoding_done_str),
+        .edge_valid(edge_str_valid),
+        .src_node_valid(src_node_str_valid),
+        .src_node(src_node_str),
+        .dst_node(dst_node_str)
 );
 
-topological_sort topological_sort_i (
+logic decoding_done_idx;
+logic edge_idx_valid;
+logic src_node_idx_valid;
+logic [$clog2(1024)-1:0] src_node_idx;
+logic [$clog2(1024)-1:0] dst_node_idx;
+
+node_id_mapper node_id_mapper_i (
     .clk(tck),
-    // Connection Entries
-        .edge_last(end_of_file),
-        .edge_valid(connection_valid),
-        .src_node(device),
-        .dst_node(next_device)
+    // Node with Random Identifier
+        .decoding_done_str(decoding_done_str),
+        .edge_str_valid(edge_str_valid),
+        .src_node_str_valid(src_node_str_valid),
+        .src_node_str(src_node_str),
+        .dst_node_str(dst_node_str),
+    // Node with Indexed Identifier
+        .decoding_done_idx(decoding_done_idx),
+        .edge_idx_valid(edge_idx_valid),
+        .src_node_idx_valid(src_node_idx_valid),
+        .src_node_idx(src_node_idx),
+        .dst_node_idx(dst_node_idx)
 );
+
+// topological_sort topological_sort_i (
+//     .clk(tck),
+//     // Connection Entries
+//         .edge_last(end_of_file),
+//         .edge_valid(connection_valid),
+//         .src_node(device),
+//         .dst_node(next_device)
+// );
 
 // forward_pass_processor forward_pass_processor_i (
 //     .clk(tck),

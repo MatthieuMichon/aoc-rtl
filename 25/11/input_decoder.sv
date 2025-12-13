@@ -16,12 +16,6 @@ module input_decoder #(
         output logic src_node_valid, // for early src_node LUT registration
         output logic [NODE_WIDTH-1:0] src_node,
         output logic [NODE_WIDTH-1:0] dst_node
-
-        // output logic end_of_file,
-        // output logic connection_valid,
-        // output logic connection_last, // for a given device
-        // output logic [DEVICE_WIDTH-1:0] device,
-        // output logic [DEVICE_WIDTH-1:0] next_device
 );
 
 typedef logic [NODE_WIDTH-1:0] node_t;
@@ -49,6 +43,7 @@ logic src_node_is_set = 1'b0;
 always_ff @(posedge clk) begin
     decoding_done <= 1'b0;
     edge_valid <= 1'b0;
+    src_node_valid <= 1'b0;
     if (byte_valid) begin
         if (!src_node_is_set) begin: lhs
             if (char_is_letter(byte_data)) begin
