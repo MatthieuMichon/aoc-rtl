@@ -109,7 +109,11 @@ topological_sort topological_sort_i (
         .edge_valid(edge_idx_valid),
         .src_node_valid(src_node_idx_valid),
         .src_node(src_node_idx),
-        .dst_node(dst_node_idx)
+        .dst_node(dst_node_idx),
+    // Indegree List Interface
+        .indeg_node(indeg_node),
+        .indeg_dec(indeg_dec),
+        .indeg_degree(indeg_degree) // degree after decrement
 );
 
 // forward_pass_processor forward_pass_processor_i (
