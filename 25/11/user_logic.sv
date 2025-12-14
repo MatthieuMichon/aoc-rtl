@@ -77,14 +77,40 @@ node_id_mapper node_id_mapper_i (
         .dst_node_idx(dst_node_idx)
 );
 
-// topological_sort topological_sort_i (
+logic [$clog2(1024)-1:0] indeg_node = '0;
+logic indeg_dec = 1'b0;
+logic [$clog2(1024)-1:0] indeg_degree;
+
+indegree_list indegree_list_i (
+    .clk(tck),
+    // Connection Entries
+        .edge_valid(edge_idx_valid),
+        .dst_node(dst_node_idx),
+    // Update Interface
+        .node_sel(indeg_node),
+        .decrement_degree(indeg_dec),
+        .node_degree(indeg_degree) // degree after decrement
+);
+
+// path_counter path_counter_i (
 //     .clk(tck),
 //     // Connection Entries
-//         .edge_last(end_of_file),
-//         .edge_valid(connection_valid),
-//         .src_node(device),
-//         .dst_node(next_device)
+//         .decoding_done(decoding_done_idx),
+//         .edge_valid(edge_idx_valid),
+//         .src_node_valid(src_node_idx_valid),
+//         .src_node(src_node_idx),
+//         .dst_node(dst_node_idx)
 // );
+
+topological_sort topological_sort_i (
+    .clk(tck),
+    // Connection Entries
+        .decoding_done(decoding_done_idx),
+        .edge_valid(edge_idx_valid),
+        .src_node_valid(src_node_idx_valid),
+        .src_node(src_node_idx),
+        .dst_node(dst_node_idx)
+);
 
 // forward_pass_processor forward_pass_processor_i (
 //     .clk(tck),
@@ -96,8 +122,8 @@ node_id_mapper node_id_mapper_i (
 //         .next_device(next_device)
 // );
 
-logic outbound_valid;
-logic [RESULT_WIDTH-1:0] outbound_data;
+logic outbound_valid = 1'b0;
+logic [RESULT_WIDTH-1:0] outbound_data = '0;
 
 tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
     // TAP signals
@@ -111,6 +137,11 @@ tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
         .valid(outbound_valid),
         .data(outbound_data)
 );
+
+wire _unused_ok = 1'b0 && &{1'b0,
+    indeg_degree,
+    run_test_idle,  // To be fixed
+    1'b0};
 
 endmodule
 `default_nettype wire

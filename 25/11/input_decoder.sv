@@ -39,9 +39,9 @@ always_ff @(posedge clk)
         prev_byte_data <= byte_data;
 
 logic src_node_is_set = 1'b0;
+logic end_of_file = 1'b0, prev_end_of_file = 1'b0;
 
 always_ff @(posedge clk) begin
-    decoding_done <= 1'b0;
     edge_valid <= 1'b0;
     src_node_valid <= 1'b0;
     if (byte_valid) begin
@@ -52,7 +52,7 @@ always_ff @(posedge clk) begin
                 src_node_valid <= 1'b1;
                 src_node_is_set <= 1'b1;
             end else begin: eof
-                decoding_done <= 1'b1;
+                end_of_file <= 1'b1;
             end
         end else begin: rhs
             if (char_is_letter(byte_data)) begin
@@ -65,6 +65,11 @@ always_ff @(posedge clk) begin
             end
         end
     end
+end
+
+always_ff @(posedge clk) begin: decoding_done_driver
+    decoding_done <= end_of_file && !prev_end_of_file;
+    prev_end_of_file <= end_of_file;
 end
 
 endmodule

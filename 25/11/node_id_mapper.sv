@@ -21,28 +21,31 @@ module node_id_mapper #(
         output logic [NODE_IDX_WIDTH-1:0] dst_node_idx
 );
 
+
 typedef logic [NODE_STR_WIDTH-1:0] node_str_t;
 typedef logic [NODE_IDX_WIDTH-1:0] node_idx_t;
 
 node_idx_t node_lut[2**NODE_STR_WIDTH-1:0] = '{default: NODE_IDX_WIDTH'(0)};
 node_idx_t node_idx_cnt = NODE_IDX_WIDTH'(1); // zero value is reserved for unassigned
 
+always_ff @(posedge clk) decoding_done_idx <= decoding_done_str;
+
 always_ff @(posedge clk) begin: src_node_id_tracking
-    if (src_node_str_valid && !node_lut[src_node_str]) begin
+    if (src_node_str_valid && !|node_lut[src_node_str]) begin
         node_lut[src_node_str] <= node_idx_cnt;
     end
 end
 
 always_ff @(posedge clk) begin: dst_node_id_tracking
-    if (edge_str_valid && !node_lut[dst_node_str]) begin
+    if (edge_str_valid && !|node_lut[dst_node_str]) begin
         node_lut[dst_node_str] <= node_idx_cnt;
     end
 end
 
 always_ff @(posedge clk) begin: node_idx_cnt_increment
-    if (src_node_str_valid && !node_lut[src_node_str]) begin
+    if (src_node_str_valid && !|node_lut[src_node_str]) begin
         node_idx_cnt <= node_idx_cnt + 1;
-    end else if (edge_str_valid && !node_lut[dst_node_str]) begin
+    end else if (edge_str_valid && !|node_lut[dst_node_str]) begin
         node_idx_cnt <= node_idx_cnt + 1;
     end
 end
@@ -50,10 +53,10 @@ end
 always_ff @(posedge clk) begin: src_node_lookup
     if (src_node_str_valid) begin
         src_node_idx_valid <= 1'b1;
-        if (!node_lut[src_node_str]) begin
-            src_node_idx = node_idx_cnt;
+        if (!|node_lut[src_node_str]) begin
+            src_node_idx <= node_idx_cnt;
         end else begin
-            src_node_idx = node_lut[src_node_str];
+            src_node_idx <= node_lut[src_node_str];
         end
     end else begin
         src_node_idx_valid <= 1'b0;
@@ -63,10 +66,10 @@ end
 always_ff @(posedge clk) begin: dst_node_lookup
     if (edge_str_valid) begin
         edge_idx_valid <= 1'b1;
-        if (!node_lut[dst_node_str]) begin
-            dst_node_idx = node_idx_cnt;
+        if (!|node_lut[dst_node_str]) begin
+            dst_node_idx <= node_idx_cnt;
         end else begin
-            dst_node_idx = node_lut[dst_node_str];
+            dst_node_idx <= node_lut[dst_node_str];
         end
     end else begin
         edge_idx_valid <= 1'b0;
