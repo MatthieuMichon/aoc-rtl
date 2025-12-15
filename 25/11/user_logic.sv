@@ -60,6 +60,7 @@ logic edge_idx_valid;
 logic src_node_idx_valid;
 logic [$clog2(1024)-1:0] src_node_idx;
 logic [$clog2(1024)-1:0] dst_node_idx;
+logic [$clog2(1024)-1:0] node_idx_cnt;
 
 node_id_mapper node_id_mapper_i (
     .clk(tck),
@@ -74,7 +75,8 @@ node_id_mapper node_id_mapper_i (
         .edge_idx_valid(edge_idx_valid),
         .src_node_idx_valid(src_node_idx_valid),
         .src_node_idx(src_node_idx),
-        .dst_node_idx(dst_node_idx)
+        .dst_node_idx(dst_node_idx),
+        .node_idx_cnt(node_idx_cnt)
 );
 
 logic [$clog2(1024)-1:0] indeg_node = '0;
@@ -110,6 +112,7 @@ topological_sort topological_sort_i (
         .src_node_valid(src_node_idx_valid),
         .src_node(src_node_idx),
         .dst_node(dst_node_idx),
+        .node_idx_cnt(node_idx_cnt),
     // Indegree List Interface
         .indeg_node(indeg_node),
         .indeg_dec(indeg_dec),

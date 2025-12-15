@@ -13,6 +13,7 @@ module topological_sort #(
         input wire src_node_valid, // for early src_node LUT registration
         input wire [NODE_WIDTH-1:0] src_node,
         input wire [NODE_WIDTH-1:0] dst_node,
+        input wire [NODE_WIDTH-1:0] node_idx_cnt,
     // Indegree List Interface
         output logic [NODE_WIDTH-1:0] indeg_node,
         output logic indeg_dec,
@@ -55,7 +56,7 @@ end
 always_ff @(posedge clk) begin: initial_zero_indegree_sweep
     if (decoding_done || sweep_pending) begin
         sweep_pending <= 1'b1;
-        if (indeg_node < dst_node_cnt) begin
+        if (indeg_node < node_idx_cnt) begin
             indeg_node <= indeg_node + 1;
         end else begin
             sweep_pending <= 1'b0;
