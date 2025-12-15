@@ -17,7 +17,15 @@ module topological_sort #(
     // Indegree List Interface
         output logic [NODE_WIDTH-1:0] indeg_node,
         output logic indeg_dec,
-        input wire [NODE_WIDTH-1:0] indeg_degree
+        input wire [NODE_WIDTH-1:0] indeg_degree,
+    // Query/Reply Interface
+        input wire query_ready,
+        output logic query_valid,
+        output logic [NODE_WIDTH-1:0] query_data,
+        output logic reply_ready,
+        input wire reply_valid,
+        input wire reply_last,
+        input wire [NODE_WIDTH-1:0] reply_data
 );
 
 localparam int EDGE_ADDR_WIDTH = $clog2(MAX_EDGES);
