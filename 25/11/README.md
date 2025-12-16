@@ -69,13 +69,14 @@ lut["Node Id Mapper"]
 adj["Adjacency Map"]
 indeg["Nodes per Indegree"]
 sort["Topological Sort<br>(Khan's algorithm)"]
-
+bram["Sorted Node List"]
 tap-dec --ASCII Byte --> dec
 dec --Edges--> lut
 lut --Edges with Node ID--> adj
 lut --Edges with Node ID--> indeg
-lut --Edges with Node ID--> sort
-indeg --Initial Sweep--> sort
+sort --Decr Edge Count for Node--> indeg
+indeg --Edge Count--> sort
 sort --Query/Update--> adj
 adj --Reply--> sort
+sort --> bram
 ```
