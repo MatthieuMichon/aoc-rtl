@@ -90,6 +90,7 @@ logic reply_ready;
 logic reply_valid;
 logic reply_last;
 node_t reply_data;
+logic reply_no_edges_found;
 
 adjacency_map adjacency_map_i(
     .clk(tck),
@@ -107,7 +108,8 @@ adjacency_map adjacency_map_i(
         .reply_ready(reply_ready),
         .reply_valid(reply_valid),
         .reply_last(reply_last),
-        .reply_data(reply_data)
+        .reply_data(reply_data),
+        .reply_no_edges_found(reply_no_edges_found)
 );
 
 logic [$clog2(1024)-1:0] indeg_node = '0;
@@ -125,7 +127,7 @@ indegree_list indegree_list_i (
         .node_degree(indeg_degree) // degree after decrement
 );
 
-logic sorted_last;
+logic sorted_done;
 logic sorted_valid;
 node_t sorted_node;
 
@@ -150,8 +152,9 @@ topological_sort topological_sort_i (
         .reply_valid(reply_valid),
         .reply_last(reply_last),
         .reply_data(reply_data),
+        .reply_no_edges_found(reply_no_edges_found),
     // Sorted Nodes
-        .sorted_last(sorted_last),
+        .sorted_done(sorted_done),
         .sorted_valid(sorted_valid),
         .sorted_node(sorted_node)
 );
@@ -191,7 +194,7 @@ tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
 
 wire _unused_ok = 1'b0 && &{1'b0,
     indeg_degree,
-    sorted_last,
+    sorted_done,
     sorted_valid,
     sorted_node,
     run_test_idle,  // To be fixed

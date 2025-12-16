@@ -21,7 +21,8 @@ module adjacency_map #(
         output logic reply_last,
         input wire reply_ready,
         output logic reply_valid,
-        output logic [NODE_WIDTH-1:0] reply_data
+        output logic [NODE_WIDTH-1:0] reply_data,
+        output logic reply_no_edges_found
 );
 
 // table: node_index -> pointers to the first/last entries in node list
@@ -31,6 +32,7 @@ parameter int EDGE_PTR_WIDTH = $clog2(MAX_EDGES);
 
 typedef logic [EDGE_PTR_WIDTH-1:0] edge_list_ptr_t;
 typedef struct packed {
+    logic node_has_edges;
     edge_list_ptr_t ptr_first;
     edge_list_ptr_t ptr_last;
 } node_index_entry_t;
@@ -49,9 +51,9 @@ edge_list_ptr_t node_index_ptr = '0, dst_node_list_rd_ptr, reply_ptr_last = '0;
 
 always_ff @(posedge clk) begin: write_node_index
     if (src_node_valid) begin: new_src_node
-        node_index[src_node] <= {node_index_ptr, node_index_ptr};
+        node_index[src_node] <= {1'b1, node_index_ptr, node_index_ptr};
     end else if (edge_valid) begin: new_dst_node
-        node_index[src_node] <= {node_index[src_node].ptr_first, node_index_ptr};
+        node_index[src_node] <= {1'b1, node_index[src_node].ptr_first, node_index_ptr};
         node_index_ptr <= node_index_ptr + 1;
     end
 end
@@ -95,6 +97,7 @@ end
 
 logic set_dst_node_list_rd_ptr;
 logic inc_dst_node_list_rd_ptr;
+logic node_has_edges;
 
 always_comb begin: output_update
     unique case (current_state)
@@ -127,7 +130,7 @@ end
 
 always_ff @(posedge clk) begin: update_dst_node_list_rd_ptr
     if (query_valid) begin
-        {dst_node_list_rd_ptr, reply_ptr_last} <= node_index[query_data];
+        {node_has_edges, dst_node_list_rd_ptr, reply_ptr_last} <= node_index[query_data];
     end else if (reply_ready && inc_dst_node_list_rd_ptr) begin
         dst_node_list_rd_ptr <= dst_node_list_rd_ptr + 1;
     end
@@ -136,6 +139,7 @@ end
 always_ff @(posedge clk) begin
     reply_data <= dst_node_list[dst_node_list_rd_ptr];
     reply_last <= (dst_node_list_rd_ptr == reply_ptr_last);
+    reply_no_edges_found <= !node_has_edges;
 end
 
 wire _unused_ok = 1'b0 && &{1'b0,

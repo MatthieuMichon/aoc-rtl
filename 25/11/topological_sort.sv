@@ -26,8 +26,9 @@ module topological_sort #(
         output logic reply_ready,
         input wire reply_valid,
         input wire [NODE_WIDTH-1:0] reply_data,
+        input wire reply_no_edges_found,
     // Sorted Nodes
-        output logic sorted_last,
+        output logic sorted_done,
         output logic sorted_valid,
         output logic [NODE_WIDTH-1:0] sorted_node
 );
@@ -92,7 +93,11 @@ always_comb begin: state_logic
             if (!reply_valid) begin
                 next_state = WAIT_ADJ_NODES_SCAN_QUERY;
             end else begin
-                next_state = ISSUE_ADJ_NODE_DEGREE;
+                if (!reply_no_edges_found) begin: node_has_edges
+                    next_state = ISSUE_ADJ_NODE_DEGREE;
+                end else begin
+                    next_state = DONE;
+                end
             end
         end
         ISSUE_ADJ_NODE_DEGREE: begin
@@ -200,22 +205,12 @@ end
 assign query_data = root_node;
 assign sorted_node  = root_node;
 
-
-
-/*
-while queue:
-    top = queue.popleft()
-    sorted_nodes.append(top)
-    for next_node in adj.get(top, []):
-        indegree[next_node] -= 1
-        if indegree[next_node] == 0:
-            print(f"{next_node=}")
-            queue.append(next_node)
-*/
+always_ff @(posedge clk) begin: check_indexes
+    sorted_last <= reply_no_edges_found;
+end
 
 wire _unused_ok = 1'b0 && &{1'b0,
     zero_indeg_nodes_fifo[queue_wr_ptr],
-    queue_rd_ptr,
     src_node,
     dst_node,
     src_node_valid,
