@@ -18,95 +18,128 @@ module topological_sort #(
         output logic [NODE_WIDTH-1:0] indeg_node,
         output logic indeg_dec,
         input wire [NODE_WIDTH-1:0] indeg_degree,
-    // Query/Reply Interface
+    // Adjacency Map Query/Reply Interface
         input wire query_ready,
         output logic query_valid,
         output logic [NODE_WIDTH-1:0] query_data,
+        input wire reply_last,
         output logic reply_ready,
         input wire reply_valid,
-        input wire reply_last,
-        input wire [NODE_WIDTH-1:0] reply_data
+        input wire [NODE_WIDTH-1:0] reply_data,
+    // Sorted Nodes
+        output logic sorted_last,
+        output logic sorted_valid,
+        output logic [NODE_WIDTH-1:0] sorted_node
 );
 
 localparam int EDGE_ADDR_WIDTH = $clog2(MAX_EDGES);
 typedef logic [NODE_WIDTH-1:0] node_t;
 typedef logic [EDGE_ADDR_WIDTH-1:0] edge_addr_t;
 
-// node_t in_degree_table [MAX_NODES-1:0] = '{default: 0};
-// node_t incoming_edges;
-// logic edge_valid_r;
-// node_t dst_node_r;
+node_t zero_indeg_nodes_fifo[MAX_NODES-1:0];
+node_t dst_node_cnt = '0, queue_wr_ptr = '0, queue_rd_ptr = '0, queue_wr_data = '0;
+logic sweep_pending;
 
-// always_ff @(posedge clk) begin: readback
-//     if (edge_valid) begin
-//         incoming_edges <= in_degree_table[dst_node];
-//     end
-//     edge_valid_r <= edge_valid;
-//     dst_node_r <= dst_node;
-// end
+typedef enum {
+    INITIAL_SWEEP,
+    KAHNS_ALGORITHM
+} queue_wr_sel_t;
+queue_wr_sel_t queue_wr_sel;
 
-// always_ff @(posedge clk) begin: update
-//     if (edge_valid_r) begin
-//         in_degree_table[dst_node_r] <= incoming_edges + 1;
-//     end
-// end
+typedef enum logic [1:0] {
+    WAIT_DECODING_DONE,
+    RUN_INITIAL_SWEEP,
+    RUN_KAHNS_ALGORITHM,
+    DONE
+} state_t;
+state_t current_state, next_state;
 
-node_t empty_nodes_fifo[MAX_NODES-1:0];
-node_t dst_node_cnt = '0, wr_ptr = '0, rd_ptr = '0, indeg_node_r = '0;
-logic sweep_pending = 1'b0;
+logic queue_wr_en, alg_queue_we;
 
-always_ff @(posedge clk) begin
-    if (edge_valid) begin
-        dst_node_cnt <= dst_node_cnt + 1;
-    end
-end
+always_ff @(posedge clk) current_state <= next_state;
 
-always_ff @(posedge clk) begin: initial_zero_indegree_sweep
-    if (decoding_done || sweep_pending) begin
-        sweep_pending <= 1'b1;
-        if (indeg_node < node_idx_cnt) begin
-            indeg_node <= indeg_node + 1;
-        end else begin
-            sweep_pending <= 1'b0;
+always_comb begin: state_logic
+    unique case (current_state)
+        WAIT_DECODING_DONE: begin
+            if (!decoding_done) begin: input_decoding_pending
+                next_state = WAIT_DECODING_DONE;
+            end else begin
+                next_state = RUN_INITIAL_SWEEP;
+            end
         end
-    end
-    indeg_node_r <= indeg_node;
+        RUN_INITIAL_SWEEP: begin
+            if (indeg_node < node_idx_cnt) begin
+                next_state = RUN_INITIAL_SWEEP;
+            end else begin
+                next_state = RUN_KAHNS_ALGORITHM;
+            end
+        end
+        RUN_KAHNS_ALGORITHM: begin
+            if (queue_wr_ptr != queue_rd_ptr) begin: queue_not_empty
+                next_state = RUN_KAHNS_ALGORITHM;
+            end else begin
+                next_state = DONE;
+            end
+        end
+        DONE:
+            next_state = DONE;
+    endcase
 end
+
+always_comb begin: output_update
+    unique case (current_state)
+        WAIT_DECODING_DONE: begin
+            sweep_pending = 1'b0;
+            queue_wr_en = 1'b0;
+            queue_wr_sel = INITIAL_SWEEP;
+        end
+        RUN_INITIAL_SWEEP: begin
+            sweep_pending = 1'b1;
+            queue_wr_en = (indeg_degree == '0);
+            queue_wr_sel = INITIAL_SWEEP;
+        end
+        RUN_KAHNS_ALGORITHM: begin
+            sweep_pending = 1'b0;
+            queue_wr_en = alg_queue_we;
+            queue_wr_sel = KAHNS_ALGORITHM;
+        end
+        DONE: begin
+            sweep_pending = 1'b0;
+            queue_wr_en = 1'b0;
+            queue_wr_sel = KAHNS_ALGORITHM;
+        end
+    endcase
+end
+
+node_t prev_indeg_node, alg_queue_wr_data;
 
 always_ff @(posedge clk) begin
     if (sweep_pending) begin
-        if (!|indeg_degree) begin: initial_zero_indegree_node
-            empty_nodes_fifo[wr_ptr] <= indeg_node_r;
-            wr_ptr <= wr_ptr + 1;
-        end
+        prev_indeg_node <= indeg_node;
+        indeg_node <= indeg_node + 1;
     end
 end
 
+assign queue_wr_data = (queue_wr_sel == INITIAL_SWEEP) ? prev_indeg_node : alg_queue_wr_data;
+
+always_ff @(posedge clk) begin: zero_indegree_nodes_queue
+    if (queue_wr_en) begin: write_enable
+        zero_indeg_nodes_fifo[queue_wr_ptr] <= queue_wr_data;
+        queue_wr_ptr <= queue_wr_ptr + 1;
+    end
+end
+
+
 assign indeg_dec = 1'b0;
 
-// node_t sorted_nodes[MAX_NODES-1:0];
-// node_t root_node;
-// node_t sorted_nodes_ptr = '0;
 
-// while queue:
-//     top = queue.popleft()
-//     res.append(top)
-//     for next_node in adj[top]:
-//         indegree[next_node] -= 1
-//         if indegree[next_node] == 0:
-//             queue.append(next_node)
 
-// always_ff @(posedge clk) begin: kahns_algorithm
-//     if (wr_ptr > rd_ptr) begin
-//         root_node <= empty_nodes_fifo[rd_ptr];
-//         sorted_nodes[sorted_nodes_ptr] <= root_node;
 
-// end
 
 
 wire _unused_ok = 1'b0 && &{1'b0,
-    empty_nodes_fifo[wr_ptr],
-    rd_ptr,
+    zero_indeg_nodes_fifo[queue_wr_ptr],
+    queue_rd_ptr,
     src_node,
     dst_node,
     src_node_valid,

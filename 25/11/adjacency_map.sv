@@ -38,33 +38,32 @@ typedef logic [NODE_WIDTH-1:0] node_t;
 typedef enum logic [1:0] {
     WAIT_DECODING_DONE,
     WAIT_QUERY,
-    READ_EDGE_LIST_PTR,
+    SET_EDGE_LIST_RD_PTR,
     RETURN_LEAF_NODES
 } state_t;
 state_t current_state, next_state;
 
 node_index_entry_t node_index[MAX_NODES-1:0];
-node_t node_list[MAX_EDGES-1:0];
-edge_list_ptr_t node_index_ptr = '0, reply_rd_ptr = '0, reply_ptr_last = '0;
+node_t dst_node_list[MAX_EDGES-1:0];
+edge_list_ptr_t node_index_ptr = '0, dst_node_list_rd_ptr, reply_ptr_last = '0;
 
-node_t prev_src_node = '1;
+always_ff @(posedge clk) begin: write_node_index
+    if (src_node_valid) begin: new_src_node
+        node_index[src_node] <= {node_index_ptr, node_index_ptr};
+    end else if (edge_valid) begin: new_dst_node
+        node_index[src_node] <= {node_index[src_node].ptr_first, node_index_ptr};
+        node_index_ptr <= node_index_ptr + 1;
+    end
+end
 
-always_ff @(posedge clk) begin
+always_ff @(posedge clk) begin: write_dst_node_list
     if (edge_valid) begin
-        if (prev_src_node != src_node) begin: new_src_node
-            node_index[src_node].ptr_first <= node_index_ptr;
-            node_index[src_node].ptr_last <= node_index_ptr;
-            node_index_ptr <= node_index_ptr + 1;
-        end else begin: new_dst_node
-            node_index[src_node].ptr_first <= node_index[src_node].ptr_first;
-            node_index[src_node].ptr_last <= node_index_ptr;
-            node_index_ptr <= node_index_ptr + 1;
-        end
-        prev_src_node <= src_node;
+        dst_node_list[node_index_ptr] <= dst_node;
     end
 end
 
 always_ff @(posedge clk) current_state <= next_state;
+
 always_comb begin: state_logic
     unique case (current_state)
         WAIT_DECODING_DONE: begin
@@ -75,17 +74,17 @@ always_comb begin: state_logic
             end
         end
         WAIT_QUERY: begin
-            if (!query_ready || !query_valid) begin
+            if (!query_valid) begin
                 next_state = WAIT_QUERY;
             end else begin
-                next_state = READ_EDGE_LIST_PTR;
+                next_state = SET_EDGE_LIST_RD_PTR;
             end
         end
-        READ_EDGE_LIST_PTR: begin
+        SET_EDGE_LIST_RD_PTR: begin
             next_state = RETURN_LEAF_NODES;
         end
         RETURN_LEAF_NODES: begin
-            if (!reply_ready || reply_rd_ptr != reply_ptr_last) begin
+            if (!reply_ready || dst_node_list_rd_ptr != reply_ptr_last) begin
                 next_state = RETURN_LEAF_NODES;
             end else begin
                 next_state = WAIT_QUERY;
@@ -94,12 +93,55 @@ always_comb begin: state_logic
     endcase
 end
 
-always_ff @(posedge clk) begin
-    if (query_ready && query_valid) begin
-        node_index[query_data].ptr_first <= node_index[query_data].ptr_first;
-        node_index[query_data].ptr_last <= node_index[query_data].ptr_last;
+logic set_dst_node_list_rd_ptr;
+logic inc_dst_node_list_rd_ptr;
+
+always_comb begin: output_update
+    unique case (current_state)
+        WAIT_DECODING_DONE: begin
+            set_dst_node_list_rd_ptr = 1'b0;
+            inc_dst_node_list_rd_ptr = 1'b0;
+            query_ready = 1'b0;
+            reply_valid = 1'b0;
+        end
+        WAIT_QUERY: begin
+            set_dst_node_list_rd_ptr = 1'b0;
+            inc_dst_node_list_rd_ptr = 1'b0;
+            query_ready = 1'b1;
+            reply_valid = 1'b0;
+        end
+        SET_EDGE_LIST_RD_PTR: begin
+            set_dst_node_list_rd_ptr = 1'b1;
+            inc_dst_node_list_rd_ptr = 1'b0;
+            query_ready = 1'b0;
+            reply_valid = 1'b0;
+        end
+        RETURN_LEAF_NODES: begin
+            set_dst_node_list_rd_ptr = 1'b0;
+            inc_dst_node_list_rd_ptr = 1'b1;
+            query_ready = 1'b0;
+            reply_valid = 1'b1;
+        end
+    endcase
+end
+
+always_ff @(posedge clk) begin: update_dst_node_list_rd_ptr
+    if (set_dst_node_list_rd_ptr) begin
+        {dst_node_list_rd_ptr, reply_ptr_last} <= node_index[query_data];
+    end else if (reply_ready && inc_dst_node_list_rd_ptr) begin
+        dst_node_list_rd_ptr <= dst_node_list_rd_ptr + 1;
     end
 end
+
+always_ff @(posedge clk) begin
+    reply_data <= dst_node_list[dst_node_list_rd_ptr];
+    reply_last <= (dst_node_list_rd_ptr == reply_ptr_last);
+end
+
+wire _unused_ok = 1'b0 && &{1'b0,
+    node_idx_cnt,
+    src_node_valid,  // To be fixed
+    1'b0};
 
 endmodule
 `default_nettype wire

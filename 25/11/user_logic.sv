@@ -125,6 +125,10 @@ indegree_list indegree_list_i (
         .node_degree(indeg_degree) // degree after decrement
 );
 
+logic sorted_last;
+logic sorted_valid;
+node_t sorted_node;
+
 topological_sort topological_sort_i (
     .clk(tck),
     // Connection Entries
@@ -145,7 +149,11 @@ topological_sort topological_sort_i (
         .reply_ready(reply_ready),
         .reply_valid(reply_valid),
         .reply_last(reply_last),
-        .reply_data(reply_data)
+        .reply_data(reply_data),
+    // Sorted Nodes
+        .sorted_last(sorted_last),
+        .sorted_valid(sorted_valid),
+        .sorted_node(sorted_node)
 );
 
 // forward_pass_processor forward_pass_processor_i (
@@ -176,6 +184,9 @@ tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
 
 wire _unused_ok = 1'b0 && &{1'b0,
     indeg_degree,
+    sorted_last,
+    sorted_valid,
+    sorted_node,
     run_test_idle,  // To be fixed
     1'b0};
 
