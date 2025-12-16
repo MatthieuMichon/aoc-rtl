@@ -85,7 +85,8 @@ sort --Query--> adj
 adj --Reply--> sort
 lut --Start/End Nodes--> trim
 sort --Sorted Node List--> trim
-trim --Trimmed Sorted Node List--> path-cnt
+lut --Edges with Node ID--> path-cnt
+trim --Trimed Sorted Node List--> path-cnt
 path-cnt --> tap-enc
 tap-enc --JTAG-TAP--> tap
 ```
