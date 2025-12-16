@@ -47,9 +47,10 @@ typedef enum {
 } queue_wr_sel_t;
 queue_wr_sel_t queue_wr_sel;
 
-typedef enum logic [2:0] {
+typedef enum logic [3:0] {
     WAIT_DECODING_DONE,
     RUN_INITIAL_SWEEP,
+    START_INITIAL_SWEEP,
     LOAD_NEXT_ROOT_NODE,
     ISSUE_ADJ_NODES_SCAN_QUERY,
     WAIT_ADJ_NODES_SCAN_QUERY,
@@ -69,8 +70,11 @@ always_comb begin: state_logic
             if (!decoding_done) begin: input_decoding_pending
                 next_state = WAIT_DECODING_DONE;
             end else begin
-                next_state = RUN_INITIAL_SWEEP;
+                next_state = START_INITIAL_SWEEP;
             end
+        end
+        START_INITIAL_SWEEP: begin
+            next_state = RUN_INITIAL_SWEEP;
         end
         RUN_INITIAL_SWEEP: begin
             if (indeg_node < node_idx_cnt) begin
@@ -121,12 +125,16 @@ always_comb begin: output_update
     indeg_dec = 1'b0;
     query_valid = 1'b0;
     reply_ready = 1'b0;
+    sorted_done = 1'b0;
     sweep_pending = 1'b0;
     queue_wr_sel = INITIAL_SWEEP;
     queue_wr_en = 1'b0;
     queue_rd_en = 1'b0;
     unique case (current_state)
         WAIT_DECODING_DONE: begin
+        end
+        START_INITIAL_SWEEP: begin
+            sweep_pending = 1'b1;
         end
         RUN_INITIAL_SWEEP: begin
             sweep_pending = 1'b1;
@@ -158,16 +166,13 @@ always_comb begin: output_update
         end
         DONE: begin
             reply_ready = 1'b0;
+            sorted_done = reply_no_edges_found;
             sweep_pending = 1'b0;
             queue_wr_sel = KAHNS_ALGORITHM;
             queue_wr_en = 1'b0;
             queue_rd_en = 1'b0;
         end
         default: begin
-            sweep_pending = 1'b0;
-            queue_wr_sel = INITIAL_SWEEP;
-            queue_wr_en = 1'b0;
-            queue_rd_en = 1'b0;
         end
     endcase
 end
@@ -178,7 +183,7 @@ always_ff @(posedge clk) begin: adjacency_map_query
     if (sweep_pending) begin: initial_sweep
         prev_indeg_node <= indeg_node;
         indeg_node <= indeg_node + 1;
-    end else begin: sort_algorithm
+    end else if (queue_wr_sel == KAHNS_ALGORITHM) begin: sort_algorithm
         indeg_node <= reply_data;
     end
 end
@@ -204,10 +209,6 @@ end
 
 assign query_data = root_node;
 assign sorted_node  = root_node;
-
-always_ff @(posedge clk) begin: check_indexes
-    sorted_last <= reply_no_edges_found;
-end
 
 wire _unused_ok = 1'b0 && &{1'b0,
     zero_indeg_nodes_fifo[queue_wr_ptr],

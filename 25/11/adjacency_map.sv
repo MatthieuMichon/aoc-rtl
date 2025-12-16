@@ -136,10 +136,15 @@ always_ff @(posedge clk) begin: update_dst_node_list_rd_ptr
     end
 end
 
+logic prev_query_valid;
+
 always_ff @(posedge clk) begin
     reply_data <= dst_node_list[dst_node_list_rd_ptr];
     reply_last <= (dst_node_list_rd_ptr == reply_ptr_last);
-    reply_no_edges_found <= !node_has_edges;
+    if (prev_query_valid) begin
+        reply_no_edges_found <= !node_has_edges;
+    end
+    prev_query_valid <= query_valid;
 end
 
 wire _unused_ok = 1'b0 && &{1'b0,

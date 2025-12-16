@@ -65,6 +65,9 @@ logic src_node_idx_valid;
 node_t src_node_idx;
 node_t dst_node_idx;
 node_t node_idx_cnt;
+node_t start_node_idx;
+node_t end_node_idx;
+logic start_end_nodes_valid;
 
 node_id_mapper node_id_mapper_i (
     .clk(tck),
@@ -80,7 +83,10 @@ node_id_mapper node_id_mapper_i (
         .src_node_idx_valid(src_node_idx_valid),
         .src_node_idx(src_node_idx),
         .dst_node_idx(dst_node_idx),
-        .node_idx_cnt(node_idx_cnt)
+        .node_idx_cnt(node_idx_cnt),
+        .start_node_idx(start_node_idx),
+        .end_node_idx(end_node_idx),
+        .start_end_nodes_valid(start_end_nodes_valid)
 );
 
 logic query_ready;
