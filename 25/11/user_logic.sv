@@ -156,6 +156,13 @@ topological_sort topological_sort_i (
         .sorted_node(sorted_node)
 );
 
+int i = 0;
+always_ff @(posedge tck) begin
+    if (sorted_valid) begin
+        $display("Sorted Node #%0d: 0x%03x(%d)", 12'(i++), sorted_node, sorted_node);
+    end
+end
+
 // forward_pass_processor forward_pass_processor_i (
 //     .clk(tck),
 //     // Connection entries

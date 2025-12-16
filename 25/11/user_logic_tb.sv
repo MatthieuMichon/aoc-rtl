@@ -241,7 +241,7 @@ initial begin: main_seq
     // serialize rotation commands and readback result
 
         serialize(input_contents);
-        repeat(1000) @(posedge tck); // account for pipeline stages by cycling tck
+        repeat(10000) @(posedge tck); // account for pipeline stages by cycling tck
         deserialize(result);
         $display("Result: %d (0x%h)", result, result);
 

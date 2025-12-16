@@ -125,8 +125,9 @@ def user_logic(file: Path) -> int:
         for next_node in adj.get(top, []):
             indegree[next_node] -= 1
             if indegree[next_node] == 0:
-                print(f"{next_node=}")
                 queue.append(next_node)
+    for i, node in enumerate(sorted_nodes):
+        print(f"Sorted Node #{i}: 0x{node[0]:03x}({node[0]: 4d})")
     return 0
 
 
@@ -140,7 +141,7 @@ def main() -> int:
     files = ["./input.txt"]
     for f in files:
         print(f"In file {f}:")
-        print(f"\tPart One: {user_logic(file=Path(f))}")
+        user_logic(file=Path(f))
 
     return 0
 

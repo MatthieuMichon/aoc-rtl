@@ -18,9 +18,9 @@ module adjacency_map #(
         output logic query_ready,
         input wire query_valid,
         input wire [NODE_WIDTH-1:0] query_data,
+        output logic reply_last,
         input wire reply_ready,
         output logic reply_valid,
-        output logic reply_last,
         output logic [NODE_WIDTH-1:0] reply_data
 );
 
@@ -126,7 +126,7 @@ always_comb begin: output_update
 end
 
 always_ff @(posedge clk) begin: update_dst_node_list_rd_ptr
-    if (set_dst_node_list_rd_ptr) begin
+    if (query_valid) begin
         {dst_node_list_rd_ptr, reply_ptr_last} <= node_index[query_data];
     end else if (reply_ready && inc_dst_node_list_rd_ptr) begin
         dst_node_list_rd_ptr <= dst_node_list_rd_ptr + 1;

@@ -37,13 +37,14 @@ always_ff @(posedge clk) begin: update
 end
 
 node_t stored_node_degree;
+node_t node_sel_r;
+logic decrement_degree_r;
+
 always_ff @(posedge clk)
     stored_node_degree <= in_degree_table[node_sel];
 assign node_degree =
-    (decrement_degree) ? (stored_node_degree - 1) : stored_node_degree;
+    (decrement_degree_r) ? (stored_node_degree - 1) : stored_node_degree;
 
-logic decrement_degree_r;
-node_t node_sel_r;
 always_ff @(posedge clk) begin: node_degree_update
     if (decrement_degree_r) begin
         in_degree_table[node_sel_r] <= stored_node_degree - 1;
