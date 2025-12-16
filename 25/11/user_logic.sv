@@ -194,6 +194,13 @@ end
 
 node_path_counter node_path_counter_i (
     .clk(tck),
+    // Adjacency Nodes Entries
+        .decoding_done(decoding_done_idx),
+        .edge_valid(edge_idx_valid),
+        .src_node_valid(src_node_idx_valid),
+        .src_node(src_node_idx),
+        .dst_node(dst_node_idx),
+        .node_idx_cnt(node_idx_cnt),
     // Sorted Nodes
         .trimed_done(trimed_done),
         .trimed_valid(trimed_valid),
