@@ -126,7 +126,29 @@ def user_logic(file: Path) -> int:
             indegree[next_node] -= 1
             if indegree[next_node] == 0:
                 queue.append(next_node)
+    start_node = next(node for node in sorted_nodes if node[1] == "you")
+    end_node = next(node for node in sorted_nodes if node[1] == "out")
+    trimed_sorted_nodes = []
+    forward_node_list = False
     for i, node in enumerate(sorted_nodes):
+        if node[1] == "you":
+            forward_node_list = True
+            trimed_sorted_nodes.append(
+                (
+                    node,
+                    i,
+                )
+            )
+        elif forward_node_list:
+            trimed_sorted_nodes.append(
+                (
+                    node,
+                    i,
+                )
+            )
+            if node[1] == "out":
+                forward_node_list = False
+    for i, node in enumerate(trimed_sorted_nodes):
         print(f"Sorted Node #{i}: 0x{node[0]:03x}({node[0]: 4d})")
     return 0
 
