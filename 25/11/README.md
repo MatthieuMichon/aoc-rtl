@@ -58,3 +58,24 @@ A second memory is required for storing the list of connected devices. Conversin
 Rather then going the conventional way of implementing a simple breadth-first search, I thought it would more interesting to design a bidirectional parallel strategy. This means doubling the storage requirements for the device map and list.
 
 The first leg of the strategy involves populating the map between devices and a pointer corresponding to their first entry in the list, this logic is performed by the `node_id_mapper` module.
+
+# Implementation Details
+
+```mermaid
+flowchart
+tap-dec["TAP Decoder"]
+dec["Input Decoder"]
+lut["Node Id Mapper"]
+adj["Adjacency Map"]
+indeg["Nodes per Indegree"]
+sort["Topological Sort<br>(Khan's algorithm)"]
+
+tap-dec --ASCII Byte --> dec
+dec --Edges--> lut
+lut --Edges with Node ID--> adj
+lut --Edges with Node ID--> indeg
+lut --Edges with Node ID--> sort
+indeg --Initial Sweep--> sort
+sort --Query/Update--> adj
+adj --Reply--> sort
+```
