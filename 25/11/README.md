@@ -63,20 +63,29 @@ The first leg of the strategy involves populating the map between devices and a 
 
 ```mermaid
 flowchart
+tap["BSCANE2"]
 tap-dec["TAP Decoder"]
 dec["Input Decoder"]
 lut["Node Id Mapper"]
 adj["Adjacency Map"]
 indeg["Nodes per Indegree"]
 sort["Topological Sort<br>(Khan's algorithm)"]
-bram["Sorted Node List"]
+trim["Node List Trim"]
+path-cnt["Node Path Counter"]
+tap-enc["TAP Encoder"]
+
+tap --JTAG-TAP--> tap-dec
 tap-dec --ASCII Byte --> dec
 dec --Edges--> lut
 lut --Edges with Node ID--> adj
 lut --Edges with Node ID--> indeg
 sort --Decr Edge Count for Node--> indeg
 indeg --Edge Count--> sort
-sort --Query/Update--> adj
+sort --Query--> adj
 adj --Reply--> sort
-sort --> bram
+lut --Start/End Nodes--> trim
+sort --Sorted Node List--> trim
+trim --Trimmed Sorted Node List--> path-cnt
+path-cnt --> tap-enc
+tap-enc --JTAG-TAP--> tap
 ```

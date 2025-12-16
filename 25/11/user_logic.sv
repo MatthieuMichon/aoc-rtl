@@ -165,22 +165,43 @@ topological_sort topological_sort_i (
         .sorted_node(sorted_node)
 );
 
+logic trimed_done;
+logic trimed_valid;
+node_t trimed_node;
+
+node_list_trim node_list_trim_i (
+    .clk(tck),
+    // Node with Indexed Identifier
+        .start_node_idx(start_node_idx),
+        .end_node_idx(end_node_idx),
+        .start_end_nodes_valid(start_end_nodes_valid),
+    // Sorted Nodes
+        .sorted_done(sorted_done),
+        .sorted_valid(sorted_valid),
+        .sorted_node(sorted_node),
+    // Trimed Sorted Nodes
+        .trimed_done(trimed_done),
+        .trimed_valid(trimed_valid),
+        .trimed_node(trimed_node)
+);
+
 int i = 0;
 always_ff @(posedge tck) begin
-    if (sorted_valid) begin
-        $display("Sorted Node #%0d: 0x%03x(%d)", 12'(i++), sorted_node, sorted_node);
+    if (trimed_valid) begin
+        $display("Trimed Sorted Node #%0d: 0x%03x(%d)", 12'(i++), trimed_node, trimed_node);
     end
 end
 
-// forward_pass_processor forward_pass_processor_i (
-//     .clk(tck),
-//     // Connection entries
-//         .end_of_file(end_of_file),
-//         .connection_valid(connection_valid),
-//         .connection_last(connection_last), // for a given device
-//         .device(device),
-//         .next_device(next_device)
-// );
+node_path_counter node_path_counter_i (
+    .clk(tck),
+    // Sorted Nodes
+        .trimed_done(trimed_done),
+        .trimed_valid(trimed_valid),
+        .trimed_node(trimed_node),
+    // Path Count
+        .path_count_valid(outbound_valid),
+        .path_count_value(outbound_data)
+);
 
 logic outbound_valid = 1'b0;
 logic [RESULT_WIDTH-1:0] outbound_data = '0;

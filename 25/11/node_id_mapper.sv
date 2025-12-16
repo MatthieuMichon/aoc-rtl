@@ -2,8 +2,6 @@
 `default_nettype none
 
 module node_id_mapper #(
-    parameter string START_NODE = "you",
-    parameter string END_NODE = "out",
     parameter int NODE_STR_WIDTH = 15, // do not override
     parameter int MAX_NODES = 1024,
     parameter int NODE_IDX_WIDTH = $clog2(MAX_NODES)
@@ -39,6 +37,8 @@ function node_str_t node_str_from_node_ascii(string node_ascii);
     node_str_from_node_ascii[5-1-:5] = 5'(node_ascii[0] - A_CHAR);
 endfunction
 
+localparam string START_NODE = "you";
+localparam string END_NODE = "out";
 localparam node_str_t start_node_str = node_str_from_node_ascii(START_NODE);
 localparam node_str_t end_node_str = node_str_from_node_ascii(END_NODE);
 
@@ -101,6 +101,7 @@ end
 
 logic prev_src_node_was_start, prev_dst_node_was_end;
 logic start_node_captured, end_node_captured;
+
 always_ff @(posedge clk) begin: start_end_nodes
     if (prev_src_node_was_start) begin
         start_node_idx <= src_node_idx;
@@ -111,7 +112,7 @@ always_ff @(posedge clk) begin: start_end_nodes
         end_node_captured <= 1'b1;
     end
     prev_src_node_was_start <= src_node_str_valid && (src_node_str == start_node_str);
-    prev_dst_node_was_end <= edge_str_valid && (src_node_str == end_node_str);
+    prev_dst_node_was_end <= edge_str_valid && (dst_node_str == end_node_str);
     start_end_nodes_valid <= start_node_captured && end_node_captured;
 end
 
