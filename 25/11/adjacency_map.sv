@@ -14,10 +14,11 @@ module adjacency_map #(
         input wire [NODE_WIDTH-1:0] src_node,
         input wire [NODE_WIDTH-1:0] dst_node,
         input wire [NODE_WIDTH-1:0] node_idx_cnt,
-    // Query/Reply Interface
+    // Adjacency Query
         output logic query_ready,
         input wire query_valid,
         input wire [NODE_WIDTH-1:0] query_data,
+    // Adjacency Reply
         output logic reply_last,
         input wire reply_ready,
         output logic reply_valid,
@@ -113,8 +114,6 @@ always_comb begin: output_update
         end
         SET_EDGE_LIST_RD_PTR: begin
             set_dst_node_list_rd_ptr = 1'b1;
-            inc_dst_node_list_rd_ptr = 1'b1;
-            //reply_valid_mask = 1'b1;
         end
         RETURN_LEAF_NODES: begin
             inc_dst_node_list_rd_ptr = 1'b1;
@@ -123,31 +122,58 @@ always_comb begin: output_update
     endcase
 end
 
-assign reply_valid = reply_valid_mask;
+//assign reply_valid = reply_valid_mask;
 // always_ff @(posedge clk) begin: update_reply_valid_mask
 //     reply_valid <= reply_valid_mask;
 // end
 
+localparam int READ_LATENCY = 2;
+logic [READ_LATENCY-1:0] in_flight_dst_node_req;
+always_ff @(posedge clk) begin
+    in_flight_dst_node_req <= {(query_valid || dst_node_list_ptr_inc), in_flight_dst_node_req[READ_LATENCY-1:1]};
+end
+
+logic dst_node_list_ptr_inc;
+assign dst_node_list_ptr_inc = (reply_ready && reply_valid && !reply_last && inc_dst_node_list_rd_ptr);
+
 always_ff @(posedge clk) begin: update_dst_node_list_rd_ptr
     if (query_valid) begin
         {node_has_edges, dst_node_list_rd_ptr, reply_ptr_last} <= node_index[query_data];
-    end else if (reply_ready && reply_valid && inc_dst_node_list_rd_ptr) begin
+    end else if (dst_node_list_ptr_inc) begin
         dst_node_list_rd_ptr <= dst_node_list_rd_ptr + 1;
     end
 end
 
-logic prev_query_valid;
+logic prev_query_enable;
 
 always_ff @(posedge clk) begin
     reply_data <= dst_node_list[dst_node_list_rd_ptr];
-    reply_last <= (dst_node_list_rd_ptr == reply_ptr_last);
-    if (prev_query_valid) begin
+    //reply_last <= (prev_query_enable || prev_dst_node_list_ptr_inc) && (dst_node_list_rd_ptr == reply_ptr_last);
+    if (prev_query_enable) begin
         reply_no_edges_found <= !node_has_edges;
     end
-    prev_query_valid <= query_valid;
+    prev_query_enable <= (query_ready && query_valid);
+end
+
+logic new_reply_valid;
+logic prev_dst_node_list_ptr_inc;
+
+assign reply_valid = new_reply_valid;
+always_ff @(posedge clk) begin
+    if (!new_reply_valid) begin
+        reply_last <= (prev_query_enable || prev_dst_node_list_ptr_inc) && (dst_node_list_rd_ptr == reply_ptr_last);
+        new_reply_valid <= prev_query_enable || prev_dst_node_list_ptr_inc;
+    end else if (reply_ready && reply_valid) begin
+        reply_last <= reply_last && new_reply_valid;
+        new_reply_valid <= 1'b0;
+    end
+    prev_dst_node_list_ptr_inc <= dst_node_list_ptr_inc;
 end
 
 wire _unused_ok = 1'b0 && &{
+    reply_valid_mask,
+    new_reply_valid,
+    in_flight_dst_node_req,
     node_idx_cnt,
     set_dst_node_list_rd_ptr,
     1'b0};
