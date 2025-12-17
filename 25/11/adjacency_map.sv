@@ -98,40 +98,40 @@ end
 logic set_dst_node_list_rd_ptr;
 logic inc_dst_node_list_rd_ptr;
 logic node_has_edges;
+logic reply_valid_mask;
 
 always_comb begin: output_update
+    set_dst_node_list_rd_ptr = 1'b0;
+    inc_dst_node_list_rd_ptr = 1'b0;
+    query_ready = 1'b0;
+    reply_valid_mask = 1'b0;
     unique case (current_state)
         WAIT_DECODING_DONE: begin
-            set_dst_node_list_rd_ptr = 1'b0;
-            inc_dst_node_list_rd_ptr = 1'b0;
-            query_ready = 1'b0;
-            reply_valid = 1'b0;
         end
         WAIT_QUERY: begin
-            set_dst_node_list_rd_ptr = 1'b0;
-            inc_dst_node_list_rd_ptr = 1'b0;
             query_ready = 1'b1;
-            reply_valid = 1'b0;
         end
         SET_EDGE_LIST_RD_PTR: begin
             set_dst_node_list_rd_ptr = 1'b1;
-            inc_dst_node_list_rd_ptr = 1'b0;
-            query_ready = 1'b0;
-            reply_valid = 1'b0;
+            inc_dst_node_list_rd_ptr = 1'b1;
+            //reply_valid_mask = 1'b1;
         end
         RETURN_LEAF_NODES: begin
-            set_dst_node_list_rd_ptr = 1'b0;
             inc_dst_node_list_rd_ptr = 1'b1;
-            query_ready = 1'b0;
-            reply_valid = 1'b1;
+            reply_valid_mask = 1'b1;
         end
     endcase
 end
 
+assign reply_valid = reply_valid_mask;
+// always_ff @(posedge clk) begin: update_reply_valid_mask
+//     reply_valid <= reply_valid_mask;
+// end
+
 always_ff @(posedge clk) begin: update_dst_node_list_rd_ptr
     if (query_valid) begin
         {node_has_edges, dst_node_list_rd_ptr, reply_ptr_last} <= node_index[query_data];
-    end else if (reply_ready && inc_dst_node_list_rd_ptr) begin
+    end else if (reply_ready && reply_valid && inc_dst_node_list_rd_ptr) begin
         dst_node_list_rd_ptr <= dst_node_list_rd_ptr + 1;
     end
 end
@@ -147,9 +147,9 @@ always_ff @(posedge clk) begin
     prev_query_valid <= query_valid;
 end
 
-wire _unused_ok = 1'b0 && &{1'b0,
+wire _unused_ok = 1'b0 && &{
     node_idx_cnt,
-    src_node_valid,  // To be fixed
+    set_dst_node_list_rd_ptr,
     1'b0};
 
 endmodule

@@ -5,7 +5,7 @@ VVD_TASK ?= all
 
 SV_SOURCES := $(filter-out shell.sv, $(wildcard *.sv))
 CPP_SOURCES := $(wildcard *.cpp)
-VTR_FLAGS := -j 0 --assert --build --cc --exe --trace --timing --top user_logic_tb
+VTR_FLAGS := -Wall -j 0 --assert --build --cc --exe --trace --timing --top user_logic_tb
 INPUT_FILE ?= input.txt
 USER_LOGIC ?= user_logic
 

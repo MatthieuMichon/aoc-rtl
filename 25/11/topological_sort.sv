@@ -38,7 +38,7 @@ typedef logic [NODE_WIDTH-1:0] node_t;
 typedef logic [EDGE_ADDR_WIDTH-1:0] edge_addr_t;
 
 node_t zero_indeg_nodes_fifo[MAX_NODES-1:0];
-node_t dst_node_cnt = '0, queue_wr_ptr = '0, queue_rd_ptr = '0, queue_wr_data = '0, root_node = '0;
+node_t queue_wr_ptr = '0, queue_rd_ptr = '0, queue_wr_data = '0, root_node = '0;
 logic sweep_pending;
 
 typedef enum {
@@ -60,7 +60,7 @@ typedef enum logic [3:0] {
 } state_t;
 state_t current_state, next_state;
 
-logic queue_wr_en, queue_rd_en, alg_queue_we;
+logic queue_wr_en, queue_rd_en;
 
 always_ff @(posedge clk) current_state <= next_state;
 
@@ -149,7 +149,7 @@ always_comb begin: output_update
         ISSUE_ADJ_NODES_SCAN_QUERY: begin
             query_valid = 1'b1;
             queue_wr_sel = KAHNS_ALGORITHM;
-            queue_wr_en = alg_queue_we;
+            queue_wr_en = 1'b0;
             queue_rd_en = 1'b0;
         end
         WAIT_ADJ_NODES_SCAN_QUERY: begin

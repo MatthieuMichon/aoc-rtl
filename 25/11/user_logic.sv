@@ -188,7 +188,8 @@ node_list_trim node_list_trim_i (
 int i = 0;
 always_ff @(posedge tck) begin
     if (trimed_valid) begin
-        $display("Trimed Sorted Node #%0d: 0x%03x(%d)", 12'(i++), trimed_node, trimed_node);
+        $display("Trimed Sorted Node #%0d: 0x%03x(%d)", 12'(i), trimed_node, trimed_node);
+        i <= i + 1;
     end
 end
 
@@ -201,6 +202,10 @@ node_path_counter node_path_counter_i (
         .src_node(src_node_idx),
         .dst_node(dst_node_idx),
         .node_idx_cnt(node_idx_cnt),
+    // Matching Indexes for Start/End Nodes
+        .start_node_idx(start_node_idx),
+        .end_node_idx(end_node_idx),
+        .start_end_nodes_valid(start_end_nodes_valid),
     // Sorted Nodes
         .trimed_done(trimed_done),
         .trimed_valid(trimed_valid),
