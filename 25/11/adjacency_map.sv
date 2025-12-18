@@ -13,7 +13,7 @@ module adjacency_map #(
         input wire src_node_valid, // for early src_node LUT registration
         input wire [NODE_WIDTH-1:0] src_node,
         input wire [NODE_WIDTH-1:0] dst_node,
-        input wire [NODE_WIDTH-1:0] node_idx_cnt,
+        //input wire [NODE_WIDTH-1:0] node_idx_cnt,
     // Adjacency Query
         output logic query_ready,
         input wire query_valid,
@@ -25,9 +25,6 @@ module adjacency_map #(
         output logic [NODE_WIDTH-1:0] reply_data,
         output logic reply_no_edges_found
 );
-
-// table: node_index -> pointers to the first/last entries in node list
-// node list: list of nodes
 
 parameter int EDGE_PTR_WIDTH = $clog2(MAX_EDGES);
 
@@ -49,6 +46,11 @@ state_t current_state, next_state;
 node_index_entry_t node_index[MAX_NODES-1:0];
 node_t dst_node_list[MAX_EDGES-1:0];
 edge_list_ptr_t node_index_ptr = '0, dst_node_list_rd_ptr, reply_ptr_last = '0;
+logic inc_dst_node_list_rd_ptr;
+logic node_has_edges;
+logic dst_node_list_ptr_inc;
+logic prev_query_enable;
+logic prev_dst_node_list_ptr_inc;
 
 always_ff @(posedge clk) begin: write_node_index
     if (src_node_valid) begin: new_src_node
@@ -96,16 +98,9 @@ always_comb begin: state_logic
     endcase
 end
 
-logic set_dst_node_list_rd_ptr;
-logic inc_dst_node_list_rd_ptr;
-logic node_has_edges;
-logic reply_valid_mask;
-
 always_comb begin: output_update
-    set_dst_node_list_rd_ptr = 1'b0;
     inc_dst_node_list_rd_ptr = 1'b0;
     query_ready = 1'b0;
-    reply_valid_mask = 1'b0;
     unique case (current_state)
         WAIT_DECODING_DONE: begin
         end
@@ -113,27 +108,13 @@ always_comb begin: output_update
             query_ready = 1'b1;
         end
         SET_EDGE_LIST_RD_PTR: begin
-            set_dst_node_list_rd_ptr = 1'b1;
         end
         RETURN_LEAF_NODES: begin
             inc_dst_node_list_rd_ptr = 1'b1;
-            reply_valid_mask = 1'b1;
         end
     endcase
 end
 
-//assign reply_valid = reply_valid_mask;
-// always_ff @(posedge clk) begin: update_reply_valid_mask
-//     reply_valid <= reply_valid_mask;
-// end
-
-localparam int READ_LATENCY = 2;
-logic [READ_LATENCY-1:0] in_flight_dst_node_req;
-always_ff @(posedge clk) begin
-    in_flight_dst_node_req <= {(query_valid || dst_node_list_ptr_inc), in_flight_dst_node_req[READ_LATENCY-1:1]};
-end
-
-logic dst_node_list_ptr_inc;
 assign dst_node_list_ptr_inc = (reply_ready && reply_valid && !reply_last && inc_dst_node_list_rd_ptr);
 
 always_ff @(posedge clk) begin: update_dst_node_list_rd_ptr
@@ -144,39 +125,25 @@ always_ff @(posedge clk) begin: update_dst_node_list_rd_ptr
     end
 end
 
-logic prev_query_enable;
-
 always_ff @(posedge clk) begin
     reply_data <= dst_node_list[dst_node_list_rd_ptr];
-    //reply_last <= (prev_query_enable || prev_dst_node_list_ptr_inc) && (dst_node_list_rd_ptr == reply_ptr_last);
     if (prev_query_enable) begin
         reply_no_edges_found <= !node_has_edges;
     end
     prev_query_enable <= (query_ready && query_valid);
 end
 
-logic new_reply_valid;
-logic prev_dst_node_list_ptr_inc;
-
-assign reply_valid = new_reply_valid;
+//assign reply_valid = new_reply_valid;
 always_ff @(posedge clk) begin
-    if (!new_reply_valid) begin
+    if (!reply_valid) begin
         reply_last <= (prev_query_enable || prev_dst_node_list_ptr_inc) && (dst_node_list_rd_ptr == reply_ptr_last);
-        new_reply_valid <= prev_query_enable || prev_dst_node_list_ptr_inc;
+        reply_valid <= prev_query_enable || prev_dst_node_list_ptr_inc;
     end else if (reply_ready && reply_valid) begin
-        reply_last <= reply_last && new_reply_valid;
-        new_reply_valid <= 1'b0;
+        reply_last <= 1'b0;
+        reply_valid <= 1'b0;
     end
     prev_dst_node_list_ptr_inc <= dst_node_list_ptr_inc;
 end
-
-wire _unused_ok = 1'b0 && &{
-    reply_valid_mask,
-    new_reply_valid,
-    in_flight_dst_node_req,
-    node_idx_cnt,
-    set_dst_node_list_rd_ptr,
-    1'b0};
 
 endmodule
 `default_nettype wire

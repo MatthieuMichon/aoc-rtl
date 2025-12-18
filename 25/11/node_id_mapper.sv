@@ -49,6 +49,8 @@ typedef struct packed {
 
 node_index_entry_t node_lut[2**NODE_STR_WIDTH-1:0] =
     '{default: '{index_assigned: 1'b0, node_index: NODE_IDX_WIDTH'(0)}};
+logic prev_src_node_was_start, prev_dst_node_was_end;
+logic start_node_captured, end_node_captured;
 
 always_ff @(posedge clk) decoding_done_idx <= decoding_done_str;
 
@@ -98,9 +100,6 @@ always_ff @(posedge clk) begin: dst_node_lookup
         edge_idx_valid <= 1'b0;
     end
 end
-
-logic prev_src_node_was_start, prev_dst_node_was_end;
-logic start_node_captured, end_node_captured;
 
 always_ff @(posedge clk) begin: start_end_nodes
     if (prev_src_node_was_start) begin

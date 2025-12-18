@@ -21,31 +21,30 @@ node_t in_degree_table [MAX_NODES-1:0] = '{default: 0};
 node_t incoming_edges;
 logic edge_valid_r;
 node_t dst_node_r;
+node_t stored_node_degree;
+node_t node_sel_r;
+logic decrement_degree_r;
 
-always_ff @(posedge clk) begin: readback
+always_ff @(posedge clk) begin: readback_edge
     if (edge_valid) begin
         incoming_edges <= in_degree_table[dst_node];
+    end
+end
+
+always_ff @(posedge clk) begin: increment_edge
+    if (edge_valid_r) begin
+        in_degree_table[dst_node_r] <= incoming_edges + 1;
     end
     edge_valid_r <= edge_valid;
     dst_node_r <= dst_node;
 end
 
-always_ff @(posedge clk) begin: update
-    if (edge_valid_r) begin
-        in_degree_table[dst_node_r] <= incoming_edges + 1;
-    end
-end
+always_ff @(posedge clk) stored_node_degree <= in_degree_table[node_sel];
 
-node_t stored_node_degree;
-node_t node_sel_r;
-logic decrement_degree_r;
-
-always_ff @(posedge clk)
-    stored_node_degree <= in_degree_table[node_sel];
 assign node_degree =
     (decrement_degree_r) ? (stored_node_degree - 1) : stored_node_degree;
 
-always_ff @(posedge clk) begin: node_degree_update
+always_ff @(posedge clk) begin: decrement_edge
     if (decrement_degree_r) begin
         in_degree_table[node_sel_r] <= stored_node_degree - 1;
     end

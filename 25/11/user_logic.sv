@@ -106,7 +106,7 @@ adjacency_map adjacency_map_i(
         .src_node_valid(src_node_idx_valid),
         .src_node(src_node_idx),
         .dst_node(dst_node_idx),
-        .node_idx_cnt(node_idx_cnt),
+        //.node_idx_cnt(node_idx_cnt),
     // Query/Reply Interface
         .query_ready(query_ready),
         .query_valid(query_valid),
@@ -118,9 +118,9 @@ adjacency_map adjacency_map_i(
         .reply_no_edges_found(reply_no_edges_found)
 );
 
-logic [$clog2(1024)-1:0] indeg_node = '0;
-logic indeg_dec = 1'b0;
-logic [$clog2(1024)-1:0] indeg_degree;
+node_t indeg_node;
+logic indeg_dec;
+node_t indeg_degree;
 
 indegree_list indegree_list_i (
     .clk(tck),
@@ -141,10 +141,6 @@ topological_sort topological_sort_i (
     .clk(tck),
     // Connection Entries
         .decoding_done(decoding_done_idx),
-        .edge_valid(edge_idx_valid),
-        .src_node_valid(src_node_idx_valid),
-        .src_node(src_node_idx),
-        .dst_node(dst_node_idx),
         .node_idx_cnt(node_idx_cnt),
     // Indegree List Interface
         .indeg_node(indeg_node),
@@ -185,13 +181,8 @@ node_list_trim node_list_trim_i (
         .trimed_node(trimed_node)
 );
 
-int i = 0;
-always_ff @(posedge tck) begin
-    if (trimed_valid) begin
-        $display("Trimed Sorted Node #%0d: 0x%03x(%d)", 12'(i), trimed_node, trimed_node);
-        i <= i + 1;
-    end
-end
+logic outbound_valid;
+logic [RESULT_WIDTH-1:0] outbound_data;
 
 node_path_counter node_path_counter_i (
     .clk(tck),
@@ -201,7 +192,6 @@ node_path_counter node_path_counter_i (
         .src_node_valid(src_node_idx_valid),
         .src_node(src_node_idx),
         .dst_node(dst_node_idx),
-        .node_idx_cnt(node_idx_cnt),
     // Matching Indexes for Start/End Nodes
         .start_node_idx(start_node_idx),
         .end_node_idx(end_node_idx),
@@ -214,9 +204,6 @@ node_path_counter node_path_counter_i (
         .path_count_valid(outbound_valid),
         .path_count_value(outbound_data)
 );
-
-logic outbound_valid = 1'b0;
-logic [RESULT_WIDTH-1:0] outbound_data = '0;
 
 tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
     // TAP signals
@@ -232,10 +219,6 @@ tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
 );
 
 wire _unused_ok = 1'b0 && &{1'b0,
-    indeg_degree,
-    sorted_done,
-    sorted_valid,
-    sorted_node,
     run_test_idle,  // To be fixed
     1'b0};
 

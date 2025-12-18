@@ -9,19 +9,16 @@ module topological_sort #(
     input wire clk,
     // Connection Entries
         input wire decoding_done,
-        input wire edge_valid,
-        input wire src_node_valid, // for early src_node LUT registration
-        input wire [NODE_WIDTH-1:0] src_node,
-        input wire [NODE_WIDTH-1:0] dst_node,
         input wire [NODE_WIDTH-1:0] node_idx_cnt,
     // Indegree List Interface
         output logic [NODE_WIDTH-1:0] indeg_node,
         output logic indeg_dec,
         input wire [NODE_WIDTH-1:0] indeg_degree,
-    // Adjacency Map Query/Reply Interface
+    // Adjacency Map Query
         input wire query_ready,
         output logic query_valid,
         output logic [NODE_WIDTH-1:0] query_data,
+    // Adjacency Map Reply
         input wire reply_last,
         output logic reply_ready,
         input wire reply_valid,
@@ -37,20 +34,15 @@ localparam int EDGE_ADDR_WIDTH = $clog2(MAX_EDGES);
 typedef logic [NODE_WIDTH-1:0] node_t;
 typedef logic [EDGE_ADDR_WIDTH-1:0] edge_addr_t;
 
-node_t zero_indeg_nodes_fifo[MAX_NODES-1:0];
-node_t queue_wr_ptr = '0, queue_rd_ptr = '0, queue_wr_data = '0, root_node = '0;
-logic sweep_pending;
-
 typedef enum {
     INITIAL_SWEEP,
     KAHNS_ALGORITHM
 } queue_wr_sel_t;
-queue_wr_sel_t queue_wr_sel;
 
 typedef enum logic [3:0] {
     WAIT_DECODING_DONE,
-    RUN_INITIAL_SWEEP,
     START_INITIAL_SWEEP,
+    RUN_INITIAL_SWEEP,
     LOAD_NEXT_ROOT_NODE,
     ISSUE_ADJ_NODES_SCAN_QUERY,
     WAIT_ADJ_NODES_SCAN_QUERY,
@@ -58,9 +50,16 @@ typedef enum logic [3:0] {
     CHECK_ADJ_NODE_DEGREE,
     DONE
 } state_t;
+
+queue_wr_sel_t queue_wr_sel;
 state_t current_state, next_state;
 
+node_t zero_indeg_nodes_fifo[MAX_NODES-1:0];
+node_t queue_wr_ptr = '0, queue_rd_ptr = '0, queue_wr_data, root_node = '0;
+logic sweep_pending;
+node_t prev_indeg_node, alg_queue_wr_data;
 logic queue_wr_en, queue_rd_en;
+logic prev_reply_last;
 
 always_ff @(posedge clk) current_state <= next_state;
 
@@ -108,7 +107,7 @@ always_comb begin: state_logic
             next_state = CHECK_ADJ_NODE_DEGREE;
         end
         CHECK_ADJ_NODE_DEGREE: begin
-            if (!reply_last) begin
+            if (!prev_reply_last) begin
                 next_state = WAIT_ADJ_NODES_SCAN_QUERY;
             end else begin
                 next_state = LOAD_NEXT_ROOT_NODE;
@@ -177,7 +176,7 @@ always_comb begin: output_update
     endcase
 end
 
-node_t prev_indeg_node, alg_queue_wr_data;
+always_ff @(posedge clk) prev_reply_last <= reply_last;
 
 always_ff @(posedge clk) begin: adjacency_map_query
     if (sweep_pending) begin: initial_sweep
@@ -209,14 +208,6 @@ end
 
 assign query_data = root_node;
 assign sorted_node  = root_node;
-
-wire _unused_ok = 1'b0 && &{1'b0,
-    zero_indeg_nodes_fifo[queue_wr_ptr],
-    src_node,
-    dst_node,
-    src_node_valid,
-    edge_valid,
-    1'b0};
 
 endmodule
 `default_nettype wire

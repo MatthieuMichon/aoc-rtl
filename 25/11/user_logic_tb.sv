@@ -3,10 +3,8 @@
 
 module user_logic_tb;
 
-
-
-logic tck, tdi, tdo;
-logic test_logic_reset, run_test_idle, ir_is_user, capture_dr, shift_dr, update_dr;
+logic tck, tdi = 1'b0, tdo;
+logic test_logic_reset, run_test_idle, ir_is_user = 1'b0, capture_dr, shift_dr, update_dr;
 
 initial begin
     tck = 0;
@@ -101,49 +99,38 @@ task automatic run_state_hw_jtag(state_t tap_state);
             update_dr = 1'b0;
         end
     endcase
+    @(posedge tck);
 endtask
 
 task automatic serialize(input string bytes_);
     int num_bytes = bytes_.len();
     int deci = num_bytes / 10;
     byte char;
-    for (int i=0; i<num_bytes; i++) begin
+    for (int i=0; i<num_bytes; i++) begin: for_each_char
         if (i % deci == 0)
-            //$display("Processed %d %%", 100*i/num_bytes);
+            $display("Processed %d %%", 100*i/num_bytes);
         run_state_hw_jtag(SELECT_DR_SCAN);
-        @(posedge tck);
         run_state_hw_jtag(CAPTURE_DR);
-        @(posedge tck);
         char = bytes_[i];
         for (int j=0; j<8; j++) begin
             tdi = char[j];
             run_state_hw_jtag(SHIFT_DR);
-            @(posedge tck);
         end
         run_state_hw_jtag(EXIT1_DR);
-        @(posedge tck);
         run_state_hw_jtag(UPDATE_DR);
-        @(posedge tck);
         run_state_hw_jtag(RUN_TEST_IDLE);
-        @(posedge tck);
     end
-    if (1) begin: finish_with_null_byte
+    begin: finish_with_null_byte
         run_state_hw_jtag(SELECT_DR_SCAN);
-        @(posedge tck);
         run_state_hw_jtag(CAPTURE_DR);
-        @(posedge tck);
-        run_state_hw_jtag(SHIFT_DR);
         char = 8'h00;
         for (int j=0; j<8; j++) begin
             tdi = char[j];
-            @(posedge tck); // commit bit shift
+            run_state_hw_jtag(SHIFT_DR);
         end
         run_state_hw_jtag(EXIT1_DR);
-        @(posedge tck);
         run_state_hw_jtag(UPDATE_DR);
-        @(posedge tck);
         run_state_hw_jtag(RUN_TEST_IDLE);
-        @(posedge tck);
     end
 endtask
 
@@ -153,23 +140,17 @@ localparam int SEEK_END = 2;
 
 task automatic deserialize(output logic [RESULT_WIDTH-1:0] result);
     run_state_hw_jtag(SELECT_DR_SCAN);
-    @(posedge tck);
     run_state_hw_jtag(CAPTURE_DR);
-    @(posedge tck);
-    run_state_hw_jtag(SHIFT_DR);
 
     tdi = 1'b0; // replicate TCL script behavior
     for (int j=0; j<$bits(result); j++) begin
         result[j]= tdo;
-        @(posedge tck); // commit bit shift
+        run_state_hw_jtag(SHIFT_DR);
     end
 
     run_state_hw_jtag(EXIT1_DR);
-    @(posedge tck);
     run_state_hw_jtag(UPDATE_DR);
-    @(posedge tck);
     run_state_hw_jtag(RUN_TEST_IDLE);
-    @(posedge tck);
 endtask
 
 string input_file = "input.txt";
@@ -179,35 +160,6 @@ initial begin: main_seq
     int fd, file_size;
     byte char;
     logic [RESULT_WIDTH-1:0] result;
-
-    // set initial values
-
-        ir_is_user = 1'b0;
-        run_state_hw_jtag(TEST_LOGIC_RESET);
-        @(posedge tck);
-        tdi = 1'b0; // whatever value
-        run_state_hw_jtag(RUN_TEST_IDLE);
-        @(posedge tck);
-
-    // set instruction register to `USER4`
-
-        run_state_hw_jtag(SELECT_DR_SCAN);
-        @(posedge tck);
-        run_state_hw_jtag(IR); // SELECT_IR_SCAN
-        @(posedge tck);
-        run_state_hw_jtag(IR); // CAPTURE_IR
-        @(posedge tck);
-        for (int j=0; j<IR_LENGTH; j++) begin
-            run_state_hw_jtag(IR); // SHIFT_IR
-            @(posedge tck);
-        end
-        run_state_hw_jtag(IR); // EXIT1_IR
-        @(posedge tck);
-        run_state_hw_jtag(IR); // UPDATE_IR
-        @(posedge tck);
-        ir_is_user = 1'b1;
-        run_state_hw_jtag(RUN_TEST_IDLE);
-        @(posedge tck);
 
     // load file contents
 
@@ -233,16 +185,32 @@ initial begin: main_seq
             $fatal(1, "Failed to open file %s", input_file);
         $display("Loaded %d bytes", file_size);
 
+    // initialize JTAG
+
+        run_state_hw_jtag(TEST_LOGIC_RESET);
+        run_state_hw_jtag(RUN_TEST_IDLE);
+
     // set instruction register to `USER4`
 
+        run_state_hw_jtag(SELECT_DR_SCAN);
+        run_state_hw_jtag(IR); // SELECT_IR_SCAN wait state
+        run_state_hw_jtag(IR); // CAPTURE_IR wait state
+        for (int j=0; j<IR_LENGTH; j++) begin
+            run_state_hw_jtag(IR); // SHIFT_IR wait state
+        end
+        run_state_hw_jtag(IR); // EXIT1_IR wait state
+        run_state_hw_jtag(IR); // UPDATE_IR wait state
         ir_is_user = 1'b1;
-        @(posedge tck); // transition to state `run-test/idle`
+        run_state_hw_jtag(RUN_TEST_IDLE);
 
-    // serialize rotation commands and readback result
+    // serialize inputs into the user logic and readback result
 
         serialize(input_contents);
-        repeat(10000) @(posedge tck); // account for pipeline stages by cycling tck
-        deserialize(result);
+        result = 0;
+        while (result == 0) begin: loop_until_result
+            @(posedge tck);
+            deserialize(result);
+        end
         $display("Result: %d (0x%h)", result, result);
 
     $finish;
