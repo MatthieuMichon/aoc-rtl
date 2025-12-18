@@ -12,7 +12,7 @@
 | 8.1            | ⏳         | ⏳         | ⏳        | 
 | 9.1            | ⏳         | ⏳         | ⏳        | 
 | 10.1           | ⏳         | ⏳         | ⏳        | 
-| [11.1](25/11/) | ⏱         | ⏳         | ⏳        | DAG traversal
+| [11.1](25/11/) | :face_with_spiral_eyes: Done         | ⏱         | ⏳        | DAG with bottom-up **dynamic programming** :exploding_head:
 
 ## Achivements
 
