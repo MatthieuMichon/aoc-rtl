@@ -109,6 +109,8 @@ tap --Result Bits--> tb
 
 ## Synthesis
 
+## BRAM Issue
+
 Got a ominous error message pertaining to a RAM inference issue:
 
 ```
@@ -136,9 +138,7 @@ ERROR: [Synth 8-5743] Unable to infer RAMs due to unsupported pattern.
 
 The term *unsupported pattern* is rather opaque, by experience RAM inference usually fails when the design is too smart resulting in the inferrence heuristics getting confused. A larger rework is required and I'm afraid that an extra cycle will have to be conceded.
 
-Throwing an extra cycle (without reworking the logic making it obvious incorrect) clears this error, meaning that I was not that far off. For some reason the RAM output register is not used.
-
-- Usage is normal, with 11 RAMB36 primitives for 32K 11-bit words in 32K 1-bit wide blocks.
+Throwing an extra cycle (without reworking the logic making it obvious incorrect) clears this inference error, breaking all the logic since everything is off by one cycle. After tying all the pieces the `node_id_mapper` is now both logically correct and digestible by the synthesis tool.
 
 # Take Aways
 

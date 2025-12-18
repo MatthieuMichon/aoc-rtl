@@ -106,7 +106,6 @@ adjacency_map adjacency_map_i(
         .src_node_valid(src_node_idx_valid),
         .src_node(src_node_idx),
         .dst_node(dst_node_idx),
-        //.node_idx_cnt(node_idx_cnt),
     // Query/Reply Interface
         .query_ready(query_ready),
         .query_valid(query_valid),
