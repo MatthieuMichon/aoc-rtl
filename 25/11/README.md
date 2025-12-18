@@ -107,7 +107,40 @@ tap --Result Bits--> tb
 | [`node_path_counter`](node_path_counter.sv) | Path counting using bottom-up dynamic programming | :red_circle: | :exploding_head: | Source code appears deceptively simple, waveforms not so much :upside_down_face: |
 | [`tap_encoder`](tap_encoder.sv) | BSCANE2 interface for outbound signals | :blue_circle: | :kissing_smiling_eyes: | Copy-paste from previous puzzle | :kissing_smiling_eyes: |
 
-## Take Aways
+## Synthesis
+
+Got a ominous error message pertaining to a RAM inference issue:
+
+```
+INFO: [Synth 8-5858] RAM node_lut_reg from Abstract Data Type (record/struct) for this pattern/configuration is not supported. This will most likely be implemented in registers
+WARNING: [Synth 8-11357] Potential Runtime issue for 3D-RAM or RAM from Record/Structs for RAM  node_lut_reg with 720896 registers
+```
+
+The memory in question is `node_lut` from `node_id_mapper.sv`:
+
+```verilog
+typedef struct packed {
+    logic index_assigned;
+    node_idx_t node_index;
+} node_index_entry_t;
+
+node_index_entry_t node_lut[2**NODE_STR_WIDTH-1:0];
+```
+
+My bad, further then declaring a RAM from struct, I hadn't considered that partial word writes (except if alignment perfectly matches byte boundaries) would not be supported. Some rework is inevitable. After which a new error message appeared:
+
+```
+ERROR: [Synth 8-2914] Unsupported RAM template [/home/mm/Documents/aoc-rtl/25/11/node_id_mapper.sv:50]
+ERROR: [Synth 8-5743] Unable to infer RAMs due to unsupported pattern.
+```
+
+The term *unsupported pattern* is rather opaque, by experience RAM inference usually fails when the design is too smart resulting in the inferrence heuristics getting confused. A larger rework is required and I'm afraid that an extra cycle will have to be conceded.
+
+Throwing an extra cycle (without reworking the logic making it obvious incorrect) clears this error, meaning that I was not that far off. For some reason the RAM output register is not used.
+
+- Usage is normal, with 11 RAMB36 primitives for 32K 11-bit words in 32K 1-bit wide blocks.
+
+# Take Aways
 
 - Dynamic programming is astonishingly powerful, however it expects strict prerequisites such as acyclic and ordered input structure.
 - A robust backpressure support will eventually be required for any moderately complex design when several query / replies are dispatched in parallel.
