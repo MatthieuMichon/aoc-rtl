@@ -1,4 +1,6 @@
 GIT_COMMIT_SHORT := $(shell git rev-parse --short=8 HEAD)
+PART ?= xc7a12tcsg325-1
+#PART ?= xc7z020clg484-1
 VVD_MODE ?= batch
 VVD_FLAGS := -notrace -nojournal -mode $(VVD_MODE) -script ../vivado.tcl
 VVD_TASK ?= all
@@ -19,7 +21,7 @@ sim: obj_dir/Vuser_logic_tb
 .PHONY: synth
 synth:
 	mkdir -p vvd_dir
-	cd vvd_dir && vivado $(VVD_FLAGS) -tclargs GIT_COMMIT=$(GIT_COMMIT_SHORT) TASK=$(VVD_TASK) INPUT_FILE=$(INPUT_FILE)
+	cd vvd_dir && vivado $(VVD_FLAGS) -tclargs PART=$(PART) GIT_COMMIT=$(GIT_COMMIT_SHORT) TASK=$(VVD_TASK) INPUT_FILE=$(INPUT_FILE)
 
 .PHONY: clean
 clean:
