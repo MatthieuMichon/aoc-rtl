@@ -12,7 +12,7 @@ module indegree_list #(
     // Update Interface
         input wire [NODE_WIDTH-1:0] node_sel,
         input wire decrement_degree,
-        output [NODE_WIDTH-1:0] node_degree // degree after decrement
+        output logic [NODE_WIDTH-1:0] node_degree // degree after decrement
 );
 
 typedef logic [NODE_WIDTH-1:0] node_t;
