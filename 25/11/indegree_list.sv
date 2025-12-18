@@ -17,7 +17,7 @@ module indegree_list #(
 
 typedef logic [NODE_WIDTH-1:0] node_t;
 
-node_t in_degree_table [MAX_NODES-1:0] = '{default: 0};
+node_t in_degree_table [MAX_NODES-1:0];
 node_t incoming_edges;
 logic edge_valid_r;
 node_t dst_node_r;

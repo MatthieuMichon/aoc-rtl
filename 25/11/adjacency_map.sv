@@ -34,6 +34,8 @@ typedef struct packed {
     edge_list_ptr_t ptr_first;
     edge_list_ptr_t ptr_last;
 } node_index_entry_t;
+typedef logic [$size(node_index_entry_t)-1:0] flat_entry_t;
+
 typedef logic [NODE_WIDTH-1:0] node_t;
 typedef enum logic [1:0] {
     WAIT_DECODING_DONE,
@@ -43,9 +45,9 @@ typedef enum logic [1:0] {
 } state_t;
 state_t current_state, next_state;
 
-node_index_entry_t node_index[MAX_NODES-1:0];
+flat_entry_t node_index[MAX_NODES-1:0];
 node_t dst_node_list[MAX_EDGES-1:0];
-edge_list_ptr_t node_index_ptr = '0, dst_node_list_rd_ptr, reply_ptr_last = '0;
+edge_list_ptr_t base_index_ptr = '0, node_index_ptr = '0, dst_node_list_rd_ptr, reply_ptr_last = '0;
 logic inc_dst_node_list_rd_ptr;
 logic node_has_edges;
 logic dst_node_list_ptr_inc;
@@ -55,8 +57,9 @@ logic prev_dst_node_list_ptr_inc;
 always_ff @(posedge clk) begin: write_node_index
     if (src_node_valid) begin: new_src_node
         node_index[src_node] <= {1'b1, node_index_ptr, node_index_ptr};
+        base_index_ptr <= node_index_ptr;
     end else if (edge_valid) begin: new_dst_node
-        node_index[src_node] <= {1'b1, node_index[src_node].ptr_first, node_index_ptr};
+        node_index[src_node] <= {1'b1, base_index_ptr, node_index_ptr};
         node_index_ptr <= node_index_ptr + 1;
     end
 end

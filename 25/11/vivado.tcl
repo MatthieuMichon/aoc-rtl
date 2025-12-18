@@ -24,8 +24,7 @@ proc ::parse_named_arguments {arg_list} {
 
 proc ::build {arg_dict} {
     create_project -part [dict get $arg_dict PART] -in_memory
-    # read_verilog -sv [lsearch -all -inline -not [glob ../*.sv] *_tb.sv]
-    read_verilog -sv [list ../shell.sv ../user_logic.sv ../tap_encoder.sv ../tap_decoder.sv ../input_decoder.sv ../node_id_mapper.sv]
+    read_verilog -sv [lsearch -all -inline -not [glob ../*.sv] *_tb.sv]
     read_xdc [glob ../*.xdc]
 
     set directive RuntimeOptimized; # speed-run the build process

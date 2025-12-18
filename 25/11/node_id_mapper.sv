@@ -78,30 +78,24 @@ always_ff @(posedge clk) begin: dst_node_port
     node_lut_dst_rd_data <= node_lut[dst_node_str];
 end
 
-// assign src_node_idx = (node_lut_src_rd_data.index_state == ASSIGNED) ?
-//     node_lut_src_rd_data.node_index : current_index;
-
-// assign dst_node_idx = (node_lut_dst_rd_data.index_state == ASSIGNED) ?
-//     node_lut_dst_rd_data.node_index : current_index;
-
 check_valid_exclusivity: assert property (
     @(posedge clk) !(prev_src_node_str_valid && prev_dst_node_str_valid)
 ) else $error("Simultaneous source and destination node string mapping requests");
 
 always_ff @(posedge clk) begin: internal_state_tracking
-    node_lut_src_wr_data <= '{index_state: ASSIGNED, node_index: current_index};
     if (prev_src_node_str_valid && (node_lut_src_rd_data.index_state == UNASSIGNED)) begin
         src_node_idx <= current_index;
         node_lut_src_wr_en <= 1'b1;
+        node_lut_src_wr_data <= '{index_state: ASSIGNED, node_index: current_index};
         current_index <= current_index + 1'b1;
     end else begin
         src_node_idx <= node_lut_src_rd_data.node_index;
         node_lut_src_wr_en <= 1'b0;
     end
-    node_lut_dst_wr_data <= '{index_state: ASSIGNED, node_index: current_index};
     if (prev_dst_node_str_valid && (node_lut_dst_rd_data.index_state == UNASSIGNED)) begin
         dst_node_idx <= current_index;
         node_lut_dst_wr_en <= 1'b1;
+        node_lut_dst_wr_data <= '{index_state: ASSIGNED, node_index: current_index};
         current_index <= current_index + 1'b1;
     end else begin
         dst_node_idx <= node_lut_dst_rd_data.node_index;

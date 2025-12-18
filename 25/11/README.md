@@ -118,6 +118,8 @@ INFO: [Synth 8-5858] RAM node_lut_reg from Abstract Data Type (record/struct) fo
 WARNING: [Synth 8-11357] Potential Runtime issue for 3D-RAM or RAM from Record/Structs for RAM  node_lut_reg with 720896 registers
 ```
 
+The word *Runtime* is capitalized, suggesting that somebody thought worth adding the word *Potential* to the warning message.
+
 The memory in question is `node_lut` from `node_id_mapper.sv`:
 
 ```verilog
@@ -139,6 +141,31 @@ ERROR: [Synth 8-5743] Unable to infer RAMs due to unsupported pattern.
 The term *unsupported pattern* is rather opaque, by experience RAM inference usually fails when the design is too smart resulting in the inferrence heuristics getting confused. A larger rework is required and I'm afraid that an extra cycle will have to be conceded.
 
 Throwing an extra cycle (without reworking the logic making it obvious incorrect) clears this inference error, breaking all the logic since everything is off by one cycle. After tying all the pieces the `node_id_mapper` is now both logically correct and digestible by the synthesis tool.
+
+## New BRAM Issue
+
+At least this time Vivado didn't allocate all my computer's RAM and the error message conveys usefull information:
+
+```
+INFO: [Synth 8-5858] RAM node_index_reg from Abstract Data Type (record/struct) for this pattern/configuration is not supported. This will most likely be implemented in registers
+WARNING: [Synth 8-11357] Potential Runtime issue for 3D-RAM or RAM from Record/Structs for RAM  node_index_reg with 23552 registers
+Read & Write Range Direction Mismatch
+
+(...) much further down
+
+ERROR: [Synth 8-2914] Unsupported RAM template [/home/mm/Documents/aoc-rtl/25/11/node_id_mapper.sv:50]
+ERROR: [Synth 8-2914] Unsupported RAM template [/home/mm/Documents/aoc-rtl/25/11/indegree_list.sv:20]
+ERROR: [Synth 8-5743] Unable to infer RAMs due to unsupported pattern.
+```
+
+Furtermore, I'm not sure I fully approve what Vivado is attempting to do here:
+
+```
+INFO: [Synth 8-4471] merging register 'node_lut_dst_wr_data_reg[index_state]' into 'node_lut_src_wr_data_reg[index_state]' [/home/oyaji/Documents/aoc-rtl/25/11/node_id_mapper.sv:101]
+INFO: [Synth 8-4471] merging register 'node_lut_dst_wr_data_reg[node_index][9:0]' into 'node_lut_src_wr_data_reg[node_index][9:0]' [/home/oyaji/Documents/aoc-rtl/25/11/node_id_mapper.sv:101]
+WARNING: [Synth 8-6014] Unused sequential element node_lut_dst_wr_data_reg[index_state] was removed.  [/home/oyaji/Documents/aoc-rtl/25/11/node_id_mapper.sv:101]
+WARNING: [Synth 8-6014] Unused sequential element node_lut_dst_wr_data_reg[node_index] was removed.  [/home/oyaji/Documents/aoc-rtl/25/11/node_id_mapper.sv:101]
+```
 
 # Take Aways
 
