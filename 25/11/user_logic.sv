@@ -160,6 +160,18 @@ topological_sort topological_sort_i (
         .sorted_node(sorted_node)
 );
 
+logic debug_valid____;
+logic [16-1:0] debug_cnt____;
+
+always_ff @(posedge tck) begin
+    if (sorted_valid) begin
+        debug_cnt____ <= debug_cnt____ + 1;
+    end
+end
+assign debug_valid____ = sorted_done;
+
+/*
+
 logic trimed_done;
 logic trimed_valid;
 node_t trimed_node;
@@ -203,7 +215,7 @@ node_path_counter node_path_counter_i (
         .path_count_valid(outbound_valid),
         .path_count_value(outbound_data)
 );
-
+*/
 tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
     // TAP signals
         .tck(tck),
@@ -213,11 +225,15 @@ tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
         .capture_dr(capture_dr),
         .shift_dr(shift_dr),
     // Encoded signals
-        .valid(outbound_valid),
-        .data(outbound_data)
+        .valid(debug_valid____),
+        .data(debug_cnt____)
 );
 
 wire _unused_ok = 1'b0 && &{1'b0,
+    start_node_idx,
+    end_node_idx,
+    start_end_nodes_valid,
+    sorted_node,
     run_test_idle,  // To be fixed
     1'b0};
 

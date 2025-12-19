@@ -22,7 +22,6 @@ node_t dst_node_r;
 indegree_cnt_t dst_node_hold; // RAMB inference requires unique addr per port
 node_t node_sel_r;
 indegree_cnt_t node_sel_hold;
-indegree_cnt_t indegree_cnt_per_node [2**NODE_WIDTH-1:0];
 indegree_cnt_t prev_dst_node_indegree, incr_dst_node_indegree;
 indegree_cnt_t prev_node_degree, output_node_degree;
 logic prev_edge_valid, prev_decrement_degree;

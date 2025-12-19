@@ -28,7 +28,7 @@ proc ::build {arg_dict} {
     read_xdc [glob ../*.xdc]
 
     set directive RuntimeOptimized; # speed-run the build process
-    synth_design -top [lindex [find_top] 0] \
+    synth_design -top shell \
         -directive $directive \
         -flatten_hierarchy none \
         -debug_log -verbose
@@ -130,7 +130,7 @@ proc ::load_inputs {arg_dict} {
 
     # cycle tck for purging data stuck between register stages
     puts -nonewline  "Cycling TCL..."
-    for {set i 0} {$i<10000} {incr i} {
+    for {set i 0} {$i<30000} {incr i} {
         run_state_hw_jtag IDLE;
     }
     puts "done."

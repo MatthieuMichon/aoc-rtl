@@ -190,7 +190,15 @@ The only solution I came with was to move this logic into a separate module [`in
 
 ## Discrepancies with Board-testing vs Simulation
 
-The result data during board runs does not match the simulation results.
+The result data during board runs does not match the simulation results. In such case with modest designs, the divide and conquer approach is usually a good solution for narrowing the root cause.
+
+| Check | Simulation | On-board | Verdict |
+|-------|------------|----------|---------|
+| `input_decoder` egress edge count | 1725 | 1725 | :white_check_mark: Pass |
+| `node_list_trim` egress edge count | 150 | 2 | :x: Fail |
+| `node_list_trim` egress edge count | 10 (example.txt) | 2 | :x: Fail |
+| `topological_sort` egress edge count | 584 | 2 | Pending |
+| `topological_sort` egress edge count | 11 (example.txt) | 2 | Pending |
 
 # Take Aways
 
