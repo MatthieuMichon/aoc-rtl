@@ -51,6 +51,11 @@ And boy! Looking for something challenging, implementing DP on an FPGA didn't di
 
 # Implementation
 
+The design consists in a pipeline containing the following main steps:
+
+- Mapping of the arbitrary node names into sequential node IDs
+- Topological sorting of the nodes using [Khan's algorithm](https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm)
+
 ```mermaid
 flowchart
 tb["Testbench"]
@@ -234,13 +239,27 @@ foreach line $lines {
 }
 ```
 
+I reworked the JTAG result readout which now loops until a non-zero result is obtained. The main benefit is being agnostic from any processing delays.
+
 | Check | Simulation | On-board | Verdict |
 |-------|------------|----------|---------|
 | `tap_decoder` egress edge count on `decoding_done` | 9816 | 9816 | :white_check_mark: Pass |
+| `input_decoder` egress edge count on `decoding_done` | 1725 | 1725 | :white_check_mark: Pass |
+| `node_id_mapper` egress edge count on `decoding_done_idx` | 1725 | 1725 | :white_check_mark: Pass |
+| `topological_sort` egress edge count on `sorted_done` | 584 | 584 | :white_check_mark: Pass |
+| `node_list_trim` egress edge count on `trimed_done` | 150 | 584 | :x: Fail |
+| `end_node_idx` output of the `node_id_mapper` | 0x0a9 | 0x0a9 | :white_check_mark: Pass |
+| `start_node_idx` output of the `node_id_mapper` | 0x145 | 0x145 | :white_check_mark: Pass |
+| `node_list_trim` egress edge count on `trimed_done` with `start_node_idx` hardcoded to `0x191` (1) | 92 | 92 | :white_check_mark: Pass |
+| `node_list_trim` egress edge count on `trimed_done` with `start_node_idx` hardcoded to `0x145` (2) | 150 | 150 | :white_check_mark: Pass |
+
+(1) Randomly picked valid node ID in the trimed region from the simulation waveform.
+(2) Statically assigning the start node identifier yields the expected results, making things interesting.
 
 # Take Aways
 
 - Dynamic programming is astonishingly powerful, however it expects strict prerequisites such as acyclic and ordered input structure.
 - A robust backpressure support will eventually be required for any moderately complex design when several query / replies are dispatched in parallel.
 - Verilator is awesome.
-- Beware that DPRAM inferrence has some quirks and be prepared to handle them.
+- Beware that Vivado's DPRAM inferrence has some serious quirks and be prepared to handle them.
+- Don't assume that copy-pasted modules or script which previously worked are that trustworthy.

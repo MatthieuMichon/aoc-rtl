@@ -59,18 +59,6 @@ input_decoder input_decoder_i (
         .dst_node(dst_node_str)
 );
 
-logic debug_valid____;
-logic [16-1:0] debug_cnt____;
-
-always_ff @(posedge tck) begin
-    if (inbound_valid) begin
-        debug_cnt____ <= debug_cnt____ + 1;
-    end
-end
-assign debug_valid____ = decoding_done_str;
-
-/*
-
 logic decoding_done_idx;
 logic edge_idx_valid;
 logic src_node_idx_valid;
@@ -193,6 +181,18 @@ node_list_trim node_list_trim_i (
         .trimed_node(trimed_node)
 );
 
+logic debug_valid____;
+logic [16-1:0] debug_cnt____;
+
+always_ff @(posedge tck) begin
+    if (trimed_valid) begin
+        debug_cnt____ <= debug_cnt____ + 1;
+    end
+end
+assign debug_valid____ = trimed_done;
+
+/*
+
 logic outbound_valid;
 logic [RESULT_WIDTH-1:0] outbound_data;
 
@@ -231,6 +231,17 @@ tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
 );
 
 wire _unused_ok = 1'b0 && &{1'b0,
+    start_node_idx,
+    trimed_done,
+    trimed_node,
+    sorted_node,
+    src_node_idx_valid,
+    src_node_idx,
+    dst_node_idx,
+    node_idx_cnt,
+    start_node_idx,
+    end_node_idx,
+    start_end_nodes_valid,
     src_node_str_valid,
     src_node_str,
     dst_node_str,

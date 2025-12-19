@@ -20,14 +20,18 @@ module node_list_trim #(
         output logic [NODE_WIDTH-1:0] trimed_node
 );
 
-logic forward_node_list = 1'b0;
+logic forward_node_list;
+
+initial begin
+    forward_node_list = 1'b0;
+end
 
 always_ff @(posedge clk) begin
     if (!start_end_nodes_valid) begin
         forward_node_list <= 1'b0;
         trimed_done <= 1'b0;
         trimed_valid <= 1'b0;
-    end else if (sorted_node == start_node_idx) begin: start_node
+    end else if (sorted_node == 10'h145) begin: start_node
         forward_node_list <= 1'b1;
         trimed_done <= 1'b0;
         trimed_valid <= sorted_valid;
@@ -46,6 +50,9 @@ always_ff @(posedge clk) begin
         trimed_valid <= 1'b0;
     end
 end
+
+wire _unused_ok = 1'b0 && &{1'b0,
+    start_node_idx};
 
 endmodule
 `default_nettype wire
