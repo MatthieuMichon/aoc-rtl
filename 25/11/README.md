@@ -234,6 +234,10 @@ foreach line $lines {
 }
 ```
 
+| Check | Simulation | On-board | Verdict |
+|-------|------------|----------|---------|
+| `tap_decoder` egress edge count on `decoding_done` | 9816 | 9816 | :white_check_mark: Pass |
+
 # Take Aways
 
 - Dynamic programming is astonishingly powerful, however it expects strict prerequisites such as acyclic and ordered input structure.

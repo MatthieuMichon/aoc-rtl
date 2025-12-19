@@ -117,28 +117,25 @@ proc ::load_inputs {arg_dict} {
             scan [string index $line $i] %c char
             set hex_char [format "0x%02x" $char]
             scan_dr_hw_jtag 9 -tdi ${hex_char}
-            run_state_hw_jtag IDLE; # run through state `UPDATE`
             incr bytes_uploaded
         }
         scan_dr_hw_jtag 9 -tdi $new_line
-        run_state_hw_jtag IDLE; # run through state `UPDATE`
         incr bytes_uploaded
     }
     scan_dr_hw_jtag 9 -tdi $new_line
     puts "done. ($bytes_uploaded bytes)"
-
-    # cycle tck for purging data stuck between register stages
-    puts -nonewline  "Cycling TCL..."
-    for {set i 0} {$i<30000} {incr i} {
-        run_state_hw_jtag IDLE;
-    }
-    puts "done."
 }
 
 proc ::read_result {} {
-    run_state_hw_jtag IDLE
-    set password 0x[scan_dr_hw_jtag 16 -tdi 0]
-    puts "Result readback: [format %d $password] ($password)"
+    set result_width 16
+    set result 0x0
+    puts -nonewline "Waiting for non-zero result... "
+    while {$result == 0} {
+        set result 0x[scan_dr_hw_jtag 16 -tdi 0]
+    }
+    puts "done."
+    puts "Result readback: [format %d $result] ($result)"
+    close_hw_target -quiet
 }
 
 proc run {argv} {

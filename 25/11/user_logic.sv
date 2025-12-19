@@ -59,7 +59,6 @@ input_decoder input_decoder_i (
         .dst_node(dst_node_str)
 );
 
-/*
 logic debug_valid____;
 logic [16-1:0] debug_cnt____;
 
@@ -69,7 +68,8 @@ always_ff @(posedge tck) begin
     end
 end
 assign debug_valid____ = decoding_done_str;
- */
+
+/*
 
 logic decoding_done_idx;
 logic edge_idx_valid;
@@ -216,7 +216,7 @@ node_path_counter node_path_counter_i (
         .path_count_valid(outbound_valid),
         .path_count_value(outbound_data)
 );
-
+*/
 tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
     // TAP signals
         .tck(tck),
@@ -226,8 +226,8 @@ tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
         .capture_dr(capture_dr),
         .shift_dr(shift_dr),
     // Encoded signals
-        .valid(outbound_valid),
-        .data(outbound_data)
+        .valid(debug_valid____),
+        .data(debug_cnt____)
 );
 
 wire _unused_ok = 1'b0 && &{1'b0,
