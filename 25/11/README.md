@@ -158,17 +158,43 @@ ERROR: [Synth 8-2914] Unsupported RAM template [/home/mm/Documents/aoc-rtl/25/11
 ERROR: [Synth 8-5743] Unable to infer RAMs due to unsupported pattern.
 ```
 
-Furtermore, I'm not sure I fully approve what Vivado is attempting to do here:
+After reviewing the source code, I realized that the RAM data was accessed using four different addresses, which caused the RAM inference to fail (obvious, but hindsight is always 20/20). Modifying the logic for using a common address for each port solved this issue.
+
+A remaining issue which I have yet to explain is with the following construct:
+
+```verilog
+// Signals width, type and RAM declaration are all legit.
+
+always @(posedge clk) begin: read_decr_node_port
+    if (prev_decrement_degree) begin
+        indegree_cnt_per_node[node_sel_hold] <= output_node_degree;
+    end
+    prev_node_degree <= indegree_cnt_per_node[node_sel_hold];
+end
+
+always @(posedge clk) begin: incr_node_port
+    if (prev_edge_valid) begin
+        indegree_cnt_per_node[dst_node_hold] <= incr_dst_node_indegree;
+    end
+    prev_dst_node_indegree <= indegree_cnt_per_node[dst_node_hold];
+end
+```
+
+Although the above snippet conforms exactly with the DPRAM template (save for the common clock, but using a dual clock didn't change a thing), this was causing Vivado to fail with an error message rather lacking substance:
 
 ```
-INFO: [Synth 8-4471] merging register 'node_lut_dst_wr_data_reg[index_state]' into 'node_lut_src_wr_data_reg[index_state]' [/home/oyaji/Documents/aoc-rtl/25/11/node_id_mapper.sv:101]
-INFO: [Synth 8-4471] merging register 'node_lut_dst_wr_data_reg[node_index][9:0]' into 'node_lut_src_wr_data_reg[node_index][9:0]' [/home/oyaji/Documents/aoc-rtl/25/11/node_id_mapper.sv:101]
-WARNING: [Synth 8-6014] Unused sequential element node_lut_dst_wr_data_reg[index_state] was removed.  [/home/oyaji/Documents/aoc-rtl/25/11/node_id_mapper.sv:101]
-WARNING: [Synth 8-6014] Unused sequential element node_lut_dst_wr_data_reg[node_index] was removed.  [/home/oyaji/Documents/aoc-rtl/25/11/node_id_mapper.sv:101]
+ERROR: [Synth 8-2914] Unsupported RAM template [/home/mm/Documents/aoc-rtl/25/11/indegree_list.sv:20]
 ```
+
+The only solution I came with was to move this logic into a separate module [`indegree_list_dpram.sv`](indegree_list_dpram.sv). Doing so was enough to make the inferrence logic happy and complete the firmware build.
+
+## Discrepancies with Board-testing vs Simulation
+
+The result data during board runs does not match the simulation results.
 
 # Take Aways
 
 - Dynamic programming is astonishingly powerful, however it expects strict prerequisites such as acyclic and ordered input structure.
 - A robust backpressure support will eventually be required for any moderately complex design when several query / replies are dispatched in parallel.
 - Verilator is awesome.
+- Beware that DPRAM inferrence has some quirks and be prepared to handle them.

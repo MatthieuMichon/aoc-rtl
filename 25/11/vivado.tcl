@@ -129,16 +129,17 @@ proc ::load_inputs {arg_dict} {
     puts "done. ($bytes_uploaded bytes)"
 
     # cycle tck for purging data stuck between register stages
-    for {set i 0} {$i<50} {incr i} {
-        run_state_hw_jtag -state IDLE IDLE;
+    puts -nonewline  "Cycling TCL..."
+    for {set i 0} {$i<10000} {incr i} {
+        run_state_hw_jtag IDLE;
     }
-
+    puts "done."
 }
 
-proc ::read_password {} {
+proc ::read_result {} {
     run_state_hw_jtag IDLE
     set password 0x[scan_dr_hw_jtag 16 -tdi 0]
-    puts "Password readback: [format %d $password] ($password)"
+    puts "Result readback: [format %d $password] ($password)"
 }
 
 proc run {argv} {
@@ -148,7 +149,7 @@ proc run {argv} {
             ::build $arg_dict
             ::program
             ::load_inputs  $arg_dict
-            ::read_password
+            ::read_result
         }
         "build" {
             ::build $arg_dict
@@ -159,7 +160,7 @@ proc run {argv} {
         "run" {
             ::program
             ::load_inputs  $arg_dict
-            ::read_password
+            ::read_result
         }
         "lint" {
             ::lint

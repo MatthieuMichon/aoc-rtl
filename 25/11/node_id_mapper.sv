@@ -66,14 +66,14 @@ always_ff @(posedge clk) edge_idx_valid <= prev_dst_node_str_valid;
 
 always_ff @(posedge clk) begin: src_node_port
     if (node_lut_src_wr_en) begin
-        node_lut[prev_src_node_str] <= node_lut_src_wr_data;
+        node_lut[src_node_str] <= node_lut_src_wr_data;
     end
     node_lut_src_rd_data <= node_lut[src_node_str];
 end
 
 always_ff @(posedge clk) begin: dst_node_port
     if (node_lut_dst_wr_en) begin
-        node_lut[prev_dst_node_str] <= node_lut_dst_wr_data;
+        node_lut[dst_node_str] <= node_lut_dst_wr_data;
     end
     node_lut_dst_rd_data <= node_lut[dst_node_str];
 end

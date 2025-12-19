@@ -1,6 +1,6 @@
 GIT_COMMIT_SHORT := $(shell git rev-parse --short=8 HEAD)
-PART ?= xc7a12tcsg325-1
-#PART ?= xc7z020clg484-1
+#PART ?= xc7a12tcsg325-1
+PART ?= xc7z020clg484-1
 VVD_MODE ?= batch
 VVD_FLAGS := -notrace -nojournal -mode $(VVD_MODE) -script ../vivado.tcl
 VVD_TASK ?= all

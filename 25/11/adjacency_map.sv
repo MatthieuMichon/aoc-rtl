@@ -26,7 +26,7 @@ module adjacency_map #(
         output logic reply_no_edges_found
 );
 
-parameter int EDGE_PTR_WIDTH = $clog2(MAX_EDGES);
+localparam int EDGE_PTR_WIDTH = $clog2(MAX_EDGES);
 
 typedef logic [EDGE_PTR_WIDTH-1:0] edge_list_ptr_t;
 typedef struct packed {

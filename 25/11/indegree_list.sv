@@ -47,34 +47,35 @@ end
 assign node_sel_hold = (!prev_decrement_degree) ? node_sel : node_sel_r;
 
 // IMPORTANT: RAMB inference heuristics
-// Non-trivial implementations, such as unique different addresses for read and
-// write paths or doing even basic arithmetics may cause Vivado build to fail.
+// For some opaque reasons, Vivado was unable to synthesize this source file
+// to an error while trying to infer the following dual-port RAM. The simplest
+// workaround was to simply copy the following logic into a separate module.
+//
+// always @(posedge clk) begin: read_decr_node_port
+//     if (prev_decrement_degree) begin
+//         indegree_cnt_per_node[node_sel_hold] <= output_node_degree;
+//     end
+//     prev_node_degree <= indegree_cnt_per_node[node_sel_hold];
+// end
+//
+// always @(posedge clk) begin: incr_node_port
+//     if (prev_edge_valid) begin
+//         indegree_cnt_per_node[dst_node_hold] <= incr_dst_node_indegree;
+//     end
+//     prev_dst_node_indegree <= indegree_cnt_per_node[dst_node_hold];
+// end
 
-always @(posedge clk) begin: read_decr_node_port
-    if (prev_decrement_degree) begin
-        indegree_cnt_per_node[node_sel_hold] <= output_node_degree;
-    end
-    prev_node_degree <= indegree_cnt_per_node[node_sel_hold];
-end
-
-always @(posedge clk) begin: incr_node_port
-    if (prev_edge_valid) begin
-        indegree_cnt_per_node[dst_node_hold] <= incr_dst_node_indegree;
-    end
-    prev_dst_node_indegree <= indegree_cnt_per_node[dst_node_hold];
-end
-
-// indegree_list_dpram dpram_i (
-//     .clk(clk),
-//     .wea(prev_decrement_degree),
-//     .web(prev_edge_valid),
-//     .addra(node_sel_hold),
-//     .addrb(dst_node_hold),
-//     .dia(output_node_degree),
-//     .dib(incr_dst_node_indegree),
-//     .doa(prev_node_degree),
-//     .dob(prev_dst_node_indegree)
-// );
+indegree_list_dpram dpram_i (
+    .clk(clk),
+    .prev_decrement_degree(prev_decrement_degree),
+    .prev_edge_valid(prev_edge_valid),
+    .node_sel_hold(node_sel_hold),
+    .dst_node_hold(dst_node_hold),
+    .output_node_degree(output_node_degree),
+    .incr_dst_node_indegree(incr_dst_node_indegree),
+    .prev_node_degree(prev_node_degree),
+    .prev_dst_node_indegree(prev_dst_node_indegree)
+);
 
 // End of RAMB inference section
 
