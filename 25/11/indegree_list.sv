@@ -16,41 +16,70 @@ module indegree_list #(
 );
 
 typedef logic [NODE_WIDTH-1:0] node_t;
+typedef logic [NODE_WIDTH-1:0] indegree_cnt_t;
 
-node_t in_degree_table [MAX_NODES-1:0];
-node_t incoming_edges;
-logic edge_valid_r;
 node_t dst_node_r;
-node_t stored_node_degree;
+indegree_cnt_t dst_node_hold; // RAMB inference requires unique addr per port
 node_t node_sel_r;
-logic decrement_degree_r;
+indegree_cnt_t node_sel_hold;
+indegree_cnt_t indegree_cnt_per_node [2**NODE_WIDTH-1:0];
+indegree_cnt_t prev_dst_node_indegree, incr_dst_node_indegree;
+indegree_cnt_t prev_node_degree, output_node_degree;
+logic prev_edge_valid, prev_decrement_degree;
 
-always_ff @(posedge clk) begin: readback_edge
+always @(posedge clk) begin: hold_dst_node
     if (edge_valid) begin
-        incoming_edges <= in_degree_table[dst_node];
+        dst_node_r <= dst_node;
     end
+    prev_edge_valid <= edge_valid;
 end
 
-always_ff @(posedge clk) begin: increment_edge
-    if (edge_valid_r) begin
-        in_degree_table[dst_node_r] <= incoming_edges + 1;
+assign dst_node_hold = (edge_valid) ? dst_node : dst_node_r;
+assign incr_dst_node_indegree = prev_dst_node_indegree + 1;
+
+always @(posedge clk) begin: hold_decr_node
+    if (decrement_degree) begin
+        node_sel_r <= node_sel;
     end
-    edge_valid_r <= edge_valid;
-    dst_node_r <= dst_node;
+    prev_decrement_degree <= decrement_degree;
 end
 
-always_ff @(posedge clk) stored_node_degree <= in_degree_table[node_sel];
+assign node_sel_hold = (!prev_decrement_degree) ? node_sel : node_sel_r;
 
-assign node_degree =
-    (decrement_degree_r) ? (stored_node_degree - 1) : stored_node_degree;
+// IMPORTANT: RAMB inference heuristics
+// Non-trivial implementations, such as unique different addresses for read and
+// write paths or doing even basic arithmetics may cause Vivado build to fail.
 
-always_ff @(posedge clk) begin: decrement_edge
-    if (decrement_degree_r) begin
-        in_degree_table[node_sel_r] <= stored_node_degree - 1;
+always @(posedge clk) begin: read_decr_node_port
+    if (prev_decrement_degree) begin
+        indegree_cnt_per_node[node_sel_hold] <= output_node_degree;
     end
-    decrement_degree_r <= decrement_degree;
-    node_sel_r <= node_sel;
+    prev_node_degree <= indegree_cnt_per_node[node_sel_hold];
 end
+
+always @(posedge clk) begin: incr_node_port
+    if (prev_edge_valid) begin
+        indegree_cnt_per_node[dst_node_hold] <= incr_dst_node_indegree;
+    end
+    prev_dst_node_indegree <= indegree_cnt_per_node[dst_node_hold];
+end
+
+// indegree_list_dpram dpram_i (
+//     .clk(clk),
+//     .wea(prev_decrement_degree),
+//     .web(prev_edge_valid),
+//     .addra(node_sel_hold),
+//     .addrb(dst_node_hold),
+//     .dia(output_node_degree),
+//     .dib(incr_dst_node_indegree),
+//     .doa(prev_node_degree),
+//     .dob(prev_dst_node_indegree)
+// );
+
+// End of RAMB inference section
+
+assign output_node_degree = (!prev_decrement_degree) ? prev_node_degree : prev_node_degree - 1;
+assign node_degree = output_node_degree;
 
 endmodule
 `default_nettype wire
