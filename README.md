@@ -8,7 +8,7 @@
 | [4.1](25/4/)   | ⭐⭐ Done  | ⭐ Done    | ⭐⭐ Done | Two-dimensional neighboors comparison
 | [5.1](25/5/)   | ⭐ Done    | ⭐ Done    | ⭐ Done   | Comparison of value ranges
 | [6.1](25/6/)   | ⭐ Done    | ⭐⭐ Done  | ⭐ Done   | Arithmetics
-| 7.1            | ⏳         | ⏳         | ⏳        | Binary graph
+| 7.1            | ⏱         | ⏳         | ⏳        | Binary graph
 | 8.1            | ⏳         | ⏳         | ⏳        | 
 | 9.1            | ⏳         | ⏳         | ⏳        | 
 | 10.1           | ⏳         | ⏳         | ⏳        | 
