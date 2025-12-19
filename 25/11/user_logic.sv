@@ -59,6 +59,18 @@ input_decoder input_decoder_i (
         .dst_node(dst_node_str)
 );
 
+/*
+logic debug_valid____;
+logic [16-1:0] debug_cnt____;
+
+always_ff @(posedge tck) begin
+    if (inbound_valid) begin
+        debug_cnt____ <= debug_cnt____ + 1;
+    end
+end
+assign debug_valid____ = decoding_done_str;
+ */
+
 logic decoding_done_idx;
 logic edge_idx_valid;
 logic src_node_idx_valid;
@@ -84,6 +96,7 @@ node_id_mapper node_id_mapper_i (
         .src_node_idx(src_node_idx),
         .dst_node_idx(dst_node_idx),
         .node_idx_cnt(node_idx_cnt),
+    // Static Start and End Nodes
         .start_node_idx(start_node_idx),
         .end_node_idx(end_node_idx),
         .start_end_nodes_valid(start_end_nodes_valid)
@@ -160,18 +173,6 @@ topological_sort topological_sort_i (
         .sorted_node(sorted_node)
 );
 
-logic debug_valid____;
-logic [16-1:0] debug_cnt____;
-
-always_ff @(posedge tck) begin
-    if (sorted_valid) begin
-        debug_cnt____ <= debug_cnt____ + 1;
-    end
-end
-assign debug_valid____ = sorted_done;
-
-/*
-
 logic trimed_done;
 logic trimed_valid;
 node_t trimed_node;
@@ -215,7 +216,7 @@ node_path_counter node_path_counter_i (
         .path_count_valid(outbound_valid),
         .path_count_value(outbound_data)
 );
-*/
+
 tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
     // TAP signals
         .tck(tck),
@@ -225,15 +226,15 @@ tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
         .capture_dr(capture_dr),
         .shift_dr(shift_dr),
     // Encoded signals
-        .valid(debug_valid____),
-        .data(debug_cnt____)
+        .valid(outbound_valid),
+        .data(outbound_data)
 );
 
 wire _unused_ok = 1'b0 && &{1'b0,
-    start_node_idx,
-    end_node_idx,
-    start_end_nodes_valid,
-    sorted_node,
+    src_node_str_valid,
+    src_node_str,
+    dst_node_str,
+    edge_str_valid,
     run_test_idle,  // To be fixed
     1'b0};
 

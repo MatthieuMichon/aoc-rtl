@@ -195,10 +195,44 @@ The result data during board runs does not match the simulation results. In such
 | Check | Simulation | On-board | Verdict |
 |-------|------------|----------|---------|
 | `input_decoder` egress edge count | 1725 | 1725 | :white_check_mark: Pass |
-| `node_list_trim` egress edge count | 150 | 2 | :x: Fail |
-| `node_list_trim` egress edge count | 10 (example.txt) | 2 | :x: Fail |
-| `topological_sort` egress edge count | 584 | 2 | Pending |
-| `topological_sort` egress edge count | 11 (example.txt) | 2 | Pending |
+| (1) `node_list_trim` egress edge count | 150 | 2 | :x: Fail |
+| (1) `node_list_trim` egress edge count | 10 (example.txt) | 2 | :x: Fail |
+| (1) `topological_sort` egress edge count | 584 | 2 | :x: Fail |
+| (1) `topological_sort` egress edge count | 11 (example.txt) | 2 | :x: Fail |
+| `node_id_mapper` egress edge count | 1724 | 1724 | :white_check_mark: Pass |
+| `node_id_mapper` egress edge count | 16 (example.txt) | 16 | :white_check_mark: Pass |
+| (1) `node_id_mapper` egress edge count | 1725 | 1 | :x: Fail |
+| (1) `input_decoder` egress edge count | 1725 | 1 | :x: Fail |
+| (2) `tap_decoder` egress edge count | 9816 | 10 | :x: Fail |
+
+(1) I was using the `_done` signal which logic may be not behaving as expected. The `input_decoder` module is quite simple and seeing an erroneous count at the time the `decoding_done` output is asserted makes it very likely that the text character format which is processed by the FPGA differs from simulation. A closer inspection of the JTAG serialization process is warranted.
+
+(2) Counter is stopped when `decoding_done_str` is asserted. The result of ten (10) points toward the end of the first line being misinterpreted as the end of the file.
+
+```
+zzt: ujd
+       ^ eighth character
+```
+
+Looking into the logic responsible for uploading the input file contents, I noticed that the TAP controller was instructed to go through the `PAUSE-DR` (DRPAUSE) then `IDLE` states. This would cause it to pass through the `UPDATE-DR` thus committing a byte readout out of the `tap_decoder` module. Simply removing two lines solved this issue.
+
+```diff
+foreach line $lines {
+    set len [string length $line]
+    for {set i 0} {$i<$len} {incr i} {
+        scan [string index $line $i] %c char
+        set hex_char [format "0x%02x" $char]
+        scan_dr_hw_jtag 9 -tdi ${hex_char}
+        run_state_hw_jtag IDLE; # run through state `UPDATE`
+        incr bytes_uploaded
+    }
+    scan_dr_hw_jtag 9 -tdi $new_line
+    run_state_hw_jtag IDLE; # run through state `UPDATE`
+    incr bytes_uploaded
+-    run_state_hw_jtag DRPAUSE
+-    run_state_hw_jtag IDLE
+}
+```
 
 # Take Aways
 

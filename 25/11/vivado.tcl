@@ -106,7 +106,7 @@ proc ::load_inputs {arg_dict} {
     scan_ir_hw_jtag $zynq7_ir_length -tdi $zynq7_ir_user4
 
     # upload file contents
-    set new_line 0x00a; # `\n`
+    set new_line 0x0a; # `\n`
     set input_file [dict get $arg_dict INPUT_FILE]
     set lines [::textio::load ../$input_file]
     puts -nonewline "Uploading bytes... "
@@ -115,17 +115,16 @@ proc ::load_inputs {arg_dict} {
         set len [string length $line]
         for {set i 0} {$i<$len} {incr i} {
             scan [string index $line $i] %c char
-            set hex_char [format "%02x" $char]
-            scan_dr_hw_jtag 9 -tdi 0${hex_char}
+            set hex_char [format "0x%02x" $char]
+            scan_dr_hw_jtag 9 -tdi ${hex_char}
             run_state_hw_jtag IDLE; # run through state `UPDATE`
             incr bytes_uploaded
         }
         scan_dr_hw_jtag 9 -tdi $new_line
         run_state_hw_jtag IDLE; # run through state `UPDATE`
         incr bytes_uploaded
-        run_state_hw_jtag DRPAUSE
-        run_state_hw_jtag IDLE
     }
+    scan_dr_hw_jtag 9 -tdi $new_line
     puts "done. ($bytes_uploaded bytes)"
 
     # cycle tck for purging data stuck between register stages
