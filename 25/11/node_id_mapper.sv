@@ -106,13 +106,15 @@ end
 assign node_idx_cnt = current_index;
 
 always_ff @(posedge clk) begin: start_end_nodes
-    if (prev_src_node_str_valid && (prev_src_node_str == start_node_str)) begin
-        start_node_idx <= src_node_idx;
-        start_node_captured <= 1'b1;
-    end
-    if (prev_dst_node_str_valid && (prev_dst_node_str == end_node_str)) begin
-        end_node_idx <= dst_node_idx;
-        end_node_captured <= 1'b1;
+    if (!start_end_nodes_valid) begin
+        if (prev_src_node_str_valid && (prev_src_node_str == start_node_str)) begin
+            start_node_idx <= src_node_idx;
+            start_node_captured <= 1'b1;
+        end
+        if (prev_dst_node_str_valid && (prev_dst_node_str == end_node_str)) begin
+            end_node_idx <= dst_node_idx;
+            end_node_captured <= 1'b1;
+        end
     end
     start_end_nodes_valid <= start_node_captured && end_node_captured;
 end

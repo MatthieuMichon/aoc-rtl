@@ -181,17 +181,15 @@ node_list_trim node_list_trim_i (
         .trimed_node(trimed_node)
 );
 
-logic debug_valid____;
-logic [16-1:0] debug_cnt____;
+// logic debug_valid____;
+// logic [16-1:0] debug_cnt____;
 
-always_ff @(posedge tck) begin
-    if (trimed_valid) begin
-        debug_cnt____ <= debug_cnt____ + 1;
-    end
-end
-assign debug_valid____ = trimed_done;
-
-/*
+// always_ff @(posedge tck) begin
+//     if (trimed_valid) begin
+//         debug_cnt____ <= debug_cnt____ + 1;
+//     end
+// end
+// assign debug_valid____ = trimed_done;
 
 logic outbound_valid;
 logic [RESULT_WIDTH-1:0] outbound_data;
@@ -216,7 +214,7 @@ node_path_counter node_path_counter_i (
         .path_count_valid(outbound_valid),
         .path_count_value(outbound_data)
 );
-*/
+
 tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
     // TAP signals
         .tck(tck),
@@ -226,8 +224,8 @@ tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
         .capture_dr(capture_dr),
         .shift_dr(shift_dr),
     // Encoded signals
-        .valid(debug_valid____),
-        .data(debug_cnt____)
+        .valid(outbound_valid),
+        .data(outbound_data)
 );
 
 wire _unused_ok = 1'b0 && &{1'b0,

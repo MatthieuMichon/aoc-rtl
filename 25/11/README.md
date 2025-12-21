@@ -112,9 +112,30 @@ tap --Result Bits--> tb
 | [`node_path_counter`](node_path_counter.sv) | Path counting using bottom-up dynamic programming | :red_circle: | :exploding_head: | Source code appears deceptively simple, waveforms not so much :upside_down_face: |
 | [`tap_encoder`](tap_encoder.sv) | BSCANE2 interface for outbound signals | :large_blue_circle: | :kissing_smiling_eyes: | Copy-paste from previous puzzle | :kissing_smiling_eyes: |
 
-## Synthesis
+## Resource Usage
 
-## BRAM Issue
+| Ref Name | Used | Functional Category |
+|----------|------|---------------------|
+| RAMD64E  | 1024 |  Distributed Memory |
+| LUT6     |  511 |                 LUT |
+| FDRE     |  443 |        Flop & Latch |
+| LUT3     |  137 |                 LUT |
+| MUXF7    |   90 |               MuxFx |
+| LUT4     |   85 |                 LUT |
+| LUT2     |   55 |                 LUT |
+| LUT5     |   40 |                 LUT |
+| MUXF8    |   39 |               MuxFx |
+| CARRY4   |   17 |          CarryLogic |
+| LUT1     |   15 |                 LUT |
+| RAMB36E1 |   13 |        Block Memory |
+| FDSE     |    5 |        Flop & Latch |
+| RAMB18E1 |    3 |        Block Memory |
+| BUFG     |    1 |               Clock |
+| BSCANE2  |    1 |              Others |
+
+## Encountered Issues
+
+### BRAM Inference
 
 Got a ominous error message pertaining to a RAM inference issue:
 
@@ -147,7 +168,7 @@ The term *unsupported pattern* is rather opaque, by experience RAM inference usu
 
 Throwing an extra cycle (without reworking the logic making it obvious incorrect) clears this inference error, breaking all the logic since everything is off by one cycle. After tying all the pieces the `node_id_mapper` is now both logically correct and digestible by the synthesis tool.
 
-## New BRAM Issue
+### New BRAM Issue
 
 At least this time Vivado didn't allocate all my computer's RAM and the error message conveys usefull information:
 
@@ -193,7 +214,7 @@ ERROR: [Synth 8-2914] Unsupported RAM template [/home/mm/Documents/aoc-rtl/25/11
 
 The only solution I came with was to move this logic into a separate module [`indegree_list_dpram.sv`](indegree_list_dpram.sv). Doing so was enough to make the inferrence logic happy and complete the firmware build.
 
-## Discrepancies with Board-testing vs Simulation
+### Discrepancies with Board-testing vs Simulation
 
 The result data during board runs does not match the simulation results. In such case with modest designs, the divide and conquer approach is usually a good solution for narrowing the root cause.
 
