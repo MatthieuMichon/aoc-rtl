@@ -22,6 +22,7 @@ module node_path_counter #(
         input wire trimed_valid,
         input wire [NODE_WIDTH-1:0] trimed_node,
     // Path Count
+        output logic path_count_error,
         output logic path_count_valid,
         output logic [RESULT_WIDTH-1:0] path_count_value
 );
@@ -29,7 +30,7 @@ module node_path_counter #(
 typedef logic [RESULT_WIDTH-1:0] path_count_t;
 typedef logic [NODE_WIDTH-1:0] node_t;
 
-path_count_t path_count[MAX_NODES-1:0];
+//path_count_t path_count[MAX_NODES-1:0];
 path_count_t path_count_rd_data, path_count_wr_data;
 logic root_node_cnt_valid, outdeg_node_cnt_valid;
 path_count_t root_node_cnt, root_node_cnt_reg;
@@ -46,17 +47,40 @@ logic reply_no_edges_found;
 assign path_count_rd_en = (trimed_valid || reply_valid);
 assign path_count_rd_addr = (trimed_valid) ? trimed_node : reply_data;
 
-always_ff @(posedge clk) begin: path_count_read
-    if (path_count_rd_en) begin: register_start_node
-        path_count_rd_data <= path_count[path_count_rd_addr];
-    end
-end
+logic path_count_rd_valid___, path_count_wr_valid___;
 
-always_ff @(posedge clk) begin: path_count_write
-    if (path_count_wr_en) begin: register_start_node
-        path_count[path_count_wr_addr] <= path_count_wr_data;
-    end
-end
+always_ff @(posedge clk) path_count_rd_valid___ <= path_count_rd_en;
+always_ff @(posedge clk) path_count_wr_valid___ <= path_count_wr_en;
+
+node_path_counter_sdpram #(
+    .MAX_NODES(MAX_NODES),
+    .RESULT_WIDTH(RESULT_WIDTH),
+    .NODE_WIDTH(NODE_WIDTH)
+) node_path_counter_sdpram_i (
+    .clk(clk),
+    .path_count_rd_en(path_count_rd_en),
+    .path_count_wr_en(path_count_wr_en),
+    .path_count_rd_addr(path_count_rd_addr),
+    .path_count_wr_addr(path_count_wr_addr),
+    .path_count_wr_data(path_count_wr_data),
+    .path_count_rd_data(path_count_rd_data)
+);
+
+// always_ff @(posedge clk) begin: path_count_write
+//     path_count_wr_valid___ <= 1'b0;
+//     if (path_count_wr_en) begin: register_start_node
+//         path_count[path_count_wr_addr] <= path_count_wr_data;
+//         path_count_wr_valid___ <= 1'b1;
+//     end
+// end
+
+// always_ff @(posedge clk) begin: path_count_read
+//     path_count_rd_valid___ <= 1'b0;
+//     //if (path_count_rd_en) begin: register_start_node
+//         path_count_rd_data <= path_count[path_count_rd_addr];
+//         path_count_rd_valid___ <= 1'b1;
+//         //end
+// end
 
 always_ff @(posedge clk) root_node_cnt_valid <= trimed_valid;
 always_ff @(posedge clk) outdeg_node_cnt_valid <= reply_valid;
@@ -68,7 +92,7 @@ always_ff @(posedge clk) begin: path_count_update
     if (!start_node_registered && start_end_nodes_valid) begin
         path_count_wr_en <= 1'b1;
         path_count_wr_addr <= start_node_idx;
-        path_count_wr_data <= 1;
+        path_count_wr_data <= RESULT_WIDTH'(1'b1);
         start_node_registered <= 1'b1;
     end else if (outdeg_node_cnt_valid) begin
         path_count_wr_en <= 1'b1;
@@ -76,6 +100,7 @@ always_ff @(posedge clk) begin: path_count_update
         path_count_wr_data <= root_node_cnt + path_count_rd_data;
     end else begin
         path_count_wr_en <= 1'b0;
+        path_count_wr_addr <= '1; // park port B address to an supposed invalid address
     end
 end
 
@@ -85,16 +110,52 @@ always_ff @(posedge clk) begin: root_node_update
     end
 end
 
+path_count_t path_count_rd_en_cnt;
+always_ff @(posedge clk) begin: debug__rd
+    if (trimed_valid) begin
+        path_count_rd_en_cnt <= path_count_rd_en_cnt + 1;
+    end
+end
+
+path_count_t path_count_wr_en_cnt;
+always_ff @(posedge clk) begin: debug__wr
+    if (path_count_wr_en && (path_count_wr_addr == start_node_idx) && (path_count_wr_data == 1)) begin
+        path_count_wr_en_cnt <= path_count_wr_en_cnt + 1;
+    end
+end
+
 always_ff @(posedge clk) begin: result_capture
-    if ((root_node == end_node_idx) && root_node_cnt_valid) begin
-        path_count_value <= root_node_cnt;
-        path_count_valid <= 1'b1;
+    if (!path_count_valid) begin
+        if (root_node_cnt_valid && (root_node == end_node_idx)) begin
+            if (root_node_cnt == 0)
+                path_count_value <= 16'hCAFE;
+            else
+                path_count_value <= root_node_cnt;
+            path_count_valid <= 1'b1;
+        end else if (trimed_done) begin
+            path_count_value <= 16'hDEAD;
+            path_count_valid <= 1'b1;
+        end
     end
 end
 
 assign query_data = trimed_node;
-assign query_valid = trimed_valid;
+assign query_valid = trimed_valid && (trimed_node != end_node_idx);
 assign reply_ready = 1'b1;
+
+always_ff @(posedge clk) begin
+    if (!path_count_error) begin
+        if (query_valid && !query_ready) begin: unsupported_backpressure
+            path_count_error <= 1'b1;
+        end
+        if (trimed_valid && path_count_wr_en) begin
+            path_count_error <= 1'b1;
+        end
+        if (reply_no_edges_found) begin
+            path_count_error <= 1'b1;
+        end
+    end
+end
 
 adjacency_map adjacency_map_i (
     .clk(clk),
@@ -117,10 +178,13 @@ adjacency_map adjacency_map_i (
 
 /* verilator lint_off UNUSEDSIGNAL */
 wire _unused_ok = 1'b0 && &{1'b0,
-    trimed_done,
-    query_ready,
+    // trimed_done,
+    // query_ready,
+    path_count_rd_en,
+    path_count_wr_valid___,
+    path_count_rd_valid___,
     reply_last,
-    reply_no_edges_found,
+    // reply_no_edges_found,
     1'b0};
 /* verilator lint_on UNUSEDSIGNAL */
 

@@ -136,7 +136,6 @@ always_ff @(posedge clk) begin
     prev_query_enable <= (query_ready && query_valid);
 end
 
-//assign reply_valid = new_reply_valid;
 always_ff @(posedge clk) begin
     if (!reply_valid) begin
         reply_last <= (prev_query_enable || prev_dst_node_list_ptr_inc) && (dst_node_list_rd_ptr == reply_ptr_last);

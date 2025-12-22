@@ -181,16 +181,7 @@ node_list_trim node_list_trim_i (
         .trimed_node(trimed_node)
 );
 
-// logic debug_valid____;
-// logic [16-1:0] debug_cnt____;
-
-// always_ff @(posedge tck) begin
-//     if (trimed_valid) begin
-//         debug_cnt____ <= debug_cnt____ + 1;
-//     end
-// end
-// assign debug_valid____ = trimed_done;
-
+logic path_count_error;
 logic outbound_valid;
 logic [RESULT_WIDTH-1:0] outbound_data;
 
@@ -211,9 +202,20 @@ node_path_counter node_path_counter_i (
         .trimed_valid(trimed_valid),
         .trimed_node(trimed_node),
     // Path Count
+        .path_count_error(path_count_error),
         .path_count_valid(outbound_valid),
         .path_count_value(outbound_data)
 );
+
+logic debug_valid____;
+logic [16-1:0] debug_cnt____;
+
+always_ff @(posedge tck) begin
+    if (start_end_nodes_valid && (start_node_idx != 10'h145)) begin
+        debug_cnt____ <= debug_cnt____ + 1;
+    end
+end
+assign debug_valid____ = outbound_valid;
 
 tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
     // TAP signals
@@ -229,21 +231,10 @@ tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
 );
 
 wire _unused_ok = 1'b0 && &{1'b0,
-    start_node_idx,
-    trimed_done,
-    trimed_node,
-    sorted_node,
-    src_node_idx_valid,
-    src_node_idx,
-    dst_node_idx,
-    node_idx_cnt,
-    start_node_idx,
-    end_node_idx,
-    start_end_nodes_valid,
-    src_node_str_valid,
-    src_node_str,
-    dst_node_str,
-    edge_str_valid,
+    debug_valid____,
+    debug_cnt____,
+    outbound_data,
+    path_count_error,
     run_test_idle,  // To be fixed
     1'b0};
 

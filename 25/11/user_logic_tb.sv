@@ -123,7 +123,7 @@ task automatic serialize(input string bytes_);
     begin: finish_with_null_byte
         run_state_hw_jtag(SELECT_DR_SCAN);
         run_state_hw_jtag(CAPTURE_DR);
-        char = 8'h00;
+        char = 8'h0A;
         for (int j=0; j<8; j++) begin
             tdi = char[j];
             run_state_hw_jtag(SHIFT_DR);
