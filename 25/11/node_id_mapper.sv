@@ -47,7 +47,7 @@ typedef struct packed {
     node_idx_t node_index;
 } node_index_entry_t;
 typedef logic [$size(node_index_entry_t)-1:0] flat_entry_t;
-flat_entry_t node_lut[2**NODE_STR_WIDTH-1:0];
+//flat_entry_t node_lut[2**NODE_STR_WIDTH-1:0];
 
 logic prev_src_node_str_valid, prev_dst_node_str_valid;
 node_str_t prev_src_node_str, prev_dst_node_str;
@@ -64,51 +64,68 @@ always_ff @(posedge clk) prev_dst_node_str <= dst_node_str;
 always_ff @(posedge clk) src_node_idx_valid <= prev_src_node_str_valid;
 always_ff @(posedge clk) edge_idx_valid <= prev_dst_node_str_valid;
 
-always_ff @(posedge clk) begin: src_node_port
-    if (node_lut_src_wr_en) begin
-        node_lut[src_node_str] <= node_lut_src_wr_data;
-    end
-    node_lut_src_rd_data <= node_lut[src_node_str];
-end
+// always_ff @(posedge clk) begin: src_node_port
+//     if (node_lut_src_wr_en) begin
+//         node_lut[src_node_str] <= node_lut_src_wr_data;
+//     end
+//     node_lut_src_rd_data <= node_lut[src_node_str];
+// end
 
-always_ff @(posedge clk) begin: dst_node_port
-    if (node_lut_dst_wr_en) begin
-        node_lut[dst_node_str] <= node_lut_dst_wr_data;
-    end
-    node_lut_dst_rd_data <= node_lut[dst_node_str];
-end
+// always_ff @(posedge clk) begin: dst_node_port
+//     if (node_lut_dst_wr_en) begin
+//         node_lut[dst_node_str] <= node_lut_dst_wr_data;
+//     end
+//     node_lut_dst_rd_data <= node_lut[dst_node_str];
+// end
 
-// check_valid_exclusivity: assert property (
-//     @(posedge clk) !(prev_src_node_str_valid && prev_dst_node_str_valid)
-// ) else $error("Simultaneous source and destination node string mapping requests");
+node_id_mapper_dpram #(
+    .NODE_STR_WIDTH(NODE_STR_WIDTH),
+    .MAX_NODES(MAX_NODES),
+    .NODE_IDX_WIDTH(NODE_IDX_WIDTH)
+) node_id_mapper_dpram_i (
+    .clk(clk),
+    .node_lut_src_wr_en(node_lut_src_wr_en),
+    .node_lut_dst_wr_en(node_lut_dst_wr_en),
+    .src_node_str(src_node_str),
+    .dst_node_str(dst_node_str),
+    .node_lut_src_wr_data(node_lut_src_wr_data),
+    .node_lut_dst_wr_data(node_lut_dst_wr_data),
+    .node_lut_src_rd_data(node_lut_src_rd_data),
+    .node_lut_dst_rd_data(node_lut_dst_rd_data)
+);
+
+check_valid_exclusivity: assert property (
+    @(posedge clk) !(prev_src_node_str_valid && prev_dst_node_str_valid)
+) else $error("Simultaneous source and destination node string mapping requests");
 
 always_ff @(posedge clk) begin: internal_state_tracking
-    if (prev_src_node_str_valid && (node_lut_src_rd_data.index_state == UNASSIGNED)) begin
+    src_node_idx <= node_lut_src_rd_data.node_index;
+    node_lut_src_wr_en <= 1'b0;
+    dst_node_idx <= node_lut_dst_rd_data.node_index;
+    node_lut_dst_wr_en <= 1'b0;
+    if (prev_src_node_str_valid && (node_lut_src_rd_data.index_state == 1'b0)) begin
         src_node_idx <= current_index;
         node_lut_src_wr_en <= 1'b1;
-        node_lut_src_wr_data <= '{index_state: ASSIGNED, node_index: current_index};
+        node_lut_src_wr_data <= {1'b1, current_index};
         current_index <= current_index + 1'b1;
-    end else begin
-        src_node_idx <= node_lut_src_rd_data.node_index;
-        node_lut_src_wr_en <= 1'b0;
-    end
-    if (prev_dst_node_str_valid && (node_lut_dst_rd_data.index_state == UNASSIGNED)) begin
+    end else if (prev_dst_node_str_valid && (node_lut_dst_rd_data.index_state == 1'b0)) begin
         dst_node_idx <= current_index;
         node_lut_dst_wr_en <= 1'b1;
-        node_lut_dst_wr_data <= '{index_state: ASSIGNED, node_index: current_index};
+        node_lut_dst_wr_data <= {1'b1, current_index};
         current_index <= current_index + 1'b1;
-    end else begin
-        dst_node_idx <= node_lut_dst_rd_data.node_index;
-        node_lut_dst_wr_en <= 1'b0;
     end
 end
 
 assign node_idx_cnt = current_index;
 
+logic start_node_found;
+
 always_ff @(posedge clk) begin: start_end_nodes
-    if (prev_src_node_str_valid && (prev_src_node_str == start_node_str)) begin
-        start_node_idx <= 10'h145; // FIXME: src_node_idx;
+    start_node_found <= 1'b0;
+    if (src_node_idx_valid && (src_node_str == start_node_str)) begin
+        start_node_idx <= src_node_idx; //10'h145; // FIXME: src_node_idx;
         start_node_captured <= 1'b1;
+        start_node_found <= 1'b1;
     end
     if (prev_dst_node_str_valid && (prev_dst_node_str == end_node_str)) begin
         end_node_idx <= 10'h0a9; // FIXME: dst_node_idx;
@@ -118,6 +135,11 @@ always_ff @(posedge clk) begin: start_end_nodes
 end
 
 always_ff @(posedge clk) decoding_done_idx <= decoding_done_str;
+
+wire _unused_ok = 1'b0 && &{1'b0,
+    prev_src_node_str,  // To be fixed
+    start_node_found,
+    1'b0};
 
 endmodule
 `default_nettype wire

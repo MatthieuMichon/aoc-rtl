@@ -27,7 +27,7 @@ initial begin
 end
 
 always_ff @(posedge clk) begin
-    if (!start_end_nodes_valid) begin
+    if (!start_end_nodes_valid) begin: abnormal_discard_prior_valid_config
         forward_node_list <= 1'b0;
         trimed_done <= 1'b0;
         trimed_valid <= 1'b0;
@@ -46,7 +46,7 @@ always_ff @(posedge clk) begin
         trimed_done <= 1'b1;
         trimed_valid <= 1'b0;
         trimed_node <= sorted_node;
-    end else begin
+    end else begin: before_start_or_after_end
         trimed_valid <= 1'b0;
     end
 end
