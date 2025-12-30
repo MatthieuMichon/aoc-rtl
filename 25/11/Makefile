@@ -18,6 +18,10 @@ obj_dir/Vuser_logic_tb: $(SV_SOURCES) $(CPP_SOURCES)
 sim: obj_dir/Vuser_logic_tb
 	obj_dir/Vuser_logic_tb +INPUT_FILE=$(INPUT_FILE)
 
+.PHONY: isim
+isim:
+	iverilog -g2012 -gsupported-assertions $(SV_SOURCES)
+
 .PHONY: synth
 synth:
 	mkdir -p vvd_dir
