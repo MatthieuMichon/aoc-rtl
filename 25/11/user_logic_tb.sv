@@ -207,7 +207,7 @@ initial begin: main_seq
 
         serialize(input_contents);
         result = 0;
-        while (result == 0) begin: loop_until_result
+        while (result == 0 || $isunknown(result)) begin: loop_until_result
             @(posedge tck);
             deserialize(result);
         end

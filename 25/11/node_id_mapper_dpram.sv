@@ -21,6 +21,13 @@ module node_id_mapper_dpram #(
 typedef logic [1+NODE_IDX_WIDTH-1:0] flat_entry_t;
 flat_entry_t node_lut[2**NODE_STR_WIDTH-1:0];
 
+initial begin
+    integer i;
+    for (i = 0; i < (2**NODE_STR_WIDTH); i = i + 1) begin
+        node_lut[i] = {1+NODE_IDX_WIDTH{1'b0}};
+    end
+end
+
 always_ff @(posedge clk) begin: port_a
     if (node_lut_src_wr_en) begin
         node_lut[src_node_str] <= node_lut_src_wr_data;

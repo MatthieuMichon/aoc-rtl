@@ -40,8 +40,8 @@ function node_str_t node_str_from_node_ascii(string node_ascii);
     node_str_from_node_ascii[10-1-:5] = 5'(node_ascii[1] - A_CHAR);
     node_str_from_node_ascii[5-1-:5] = 5'(node_ascii[0] - A_CHAR);
 endfunction
-localparam node_str_t start_node_str = node_str_from_node_ascii(START_NODE);
-localparam node_str_t end_node_str = node_str_from_node_ascii(END_NODE);
+node_str_t start_node_str = node_str_from_node_ascii(START_NODE);
+node_str_t end_node_str = node_str_from_node_ascii(END_NODE);
 typedef struct packed {
     logic index_state;
     node_idx_t node_index;
@@ -55,7 +55,7 @@ logic node_lut_src_wr_en, node_lut_dst_wr_en;
 node_index_entry_t node_lut_src_rd_data, node_lut_src_wr_data;
 node_index_entry_t node_lut_dst_rd_data, node_lut_dst_wr_data;
 node_idx_t current_index = '0;
-logic start_node_captured, end_node_captured;
+logic start_node_captured = 1'b0, end_node_captured = 1'b0;
 
 always_ff @(posedge clk) prev_src_node_str_valid <= src_node_str_valid;
 always_ff @(posedge clk) prev_dst_node_str_valid <= edge_str_valid;
