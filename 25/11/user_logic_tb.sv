@@ -155,10 +155,11 @@ endtask
 
 string input_file = "input.txt";
 string input_contents = "";
+byte char = 0;
 
 initial begin: main_seq
     int fd, file_size;
-    byte char;
+
     logic [RESULT_WIDTH-1:0] result;
 
     // load file contents
@@ -174,11 +175,10 @@ initial begin: main_seq
         file_size = $ftell(fd);
         $display("file_size: %d bytes", file_size);
         $fseek(fd, 0, SEEK_SET);
-        while (1) begin
+        while (char != -1) begin
             char = $fgetc(fd);
-            if (char == -1)
-                break;
-            input_contents = $sformatf("%s%c", input_contents, char);
+            if (char != -1)
+                input_contents = $sformatf("%s%c", input_contents, char);
         end
         $fclose(fd);
         if (input_contents.len() != file_size)
@@ -228,5 +228,11 @@ user_logic user_logic_i (
         .shift_dr(shift_dr),
         .update_dr(update_dr));
 
+initial
+ begin
+    $dumpfile("wave.vcd");
+    $dumpvars(0,user_logic_tb);
+ end
 endmodule
+
 `default_nettype wire

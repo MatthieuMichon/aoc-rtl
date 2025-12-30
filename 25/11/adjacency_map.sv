@@ -34,7 +34,8 @@ typedef struct packed {
     edge_list_ptr_t ptr_first;
     edge_list_ptr_t ptr_last;
 } node_index_entry_t;
-typedef logic [$size(node_index_entry_t)-1:0] flat_entry_t;
+localparam node_index_entry_t_size = $bits(node_index_entry_t);
+typedef logic [node_index_entry_t_size-1:0] flat_entry_t;
 
 typedef logic [NODE_WIDTH-1:0] node_t;
 typedef enum logic [1:0] {
