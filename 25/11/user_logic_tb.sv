@@ -144,6 +144,7 @@ task automatic deserialize(output logic [RESULT_WIDTH-1:0] result);
 
     tdi = 1'b0; // replicate TCL script behavior
     for (int j=0; j<$bits(result); j++) begin
+        @(negedge tck);
         result[j]= tdo;
         run_state_hw_jtag(SHIFT_DR);
     end

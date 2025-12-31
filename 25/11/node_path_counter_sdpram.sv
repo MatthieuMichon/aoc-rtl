@@ -18,6 +18,13 @@ module node_path_counter_sdpram #(
 typedef logic [RESULT_WIDTH-1:0] path_count_t;
 path_count_t path_count[2**NODE_WIDTH-1:0];
 
+initial begin
+    integer i;
+    for (i = 0; i < (2**NODE_WIDTH); i = i + 1) begin
+        path_count[i] = {RESULT_WIDTH{1'b0}};
+    end
+end
+
 always_ff @(posedge clk) begin: path_count_write
     if (path_count_wr_en) begin
         path_count[path_count_wr_addr] <= path_count_wr_data;

@@ -202,6 +202,10 @@ always_ff @(posedge clk) begin: queue_wr
     end
 end
 
+initial begin
+    sorted_valid = 1'b0;
+end
+
 always_ff @(posedge clk) begin: queue_rd
     sorted_valid <= 1'b0;
     if (queue_rd_en) begin: read_enable

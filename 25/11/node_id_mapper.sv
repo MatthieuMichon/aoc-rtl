@@ -138,6 +138,7 @@ initial begin
     decoding_done_idx = 1'b0;
     src_node_idx_valid = 1'b0;
     edge_idx_valid = 1'b0;
+    start_end_nodes_valid = 1'b0;
 end
 
 always_ff @(posedge clk) decoding_done_idx <= decoding_done_str;

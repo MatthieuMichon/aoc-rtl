@@ -30,12 +30,11 @@ module node_path_counter #(
 typedef logic [RESULT_WIDTH-1:0] path_count_t;
 typedef logic [NODE_WIDTH-1:0] node_t;
 
-//path_count_t path_count[MAX_NODES-1:0];
 path_count_t path_count_rd_data, path_count_wr_data;
-logic root_node_cnt_valid, outdeg_node_cnt_valid;
-path_count_t root_node_cnt, root_node_cnt_reg;
-logic path_count_rd_en, path_count_wr_en;
-node_t root_node, path_count_rd_addr, path_count_wr_addr;
+logic root_node_cnt_valid = 1'b0, outdeg_node_cnt_valid = 1'b0;
+path_count_t root_node_cnt, root_node_cnt_reg = '0;
+logic path_count_rd_en, path_count_wr_en = 1'b0;
+node_t root_node = '0, path_count_rd_addr, path_count_wr_addr;
 logic start_node_registered = 1'b0;
 
 logic query_ready, query_valid;
@@ -44,13 +43,14 @@ logic reply_last, reply_ready, reply_valid;
 node_t reply_data;
 logic reply_no_edges_found;
 
+initial begin
+    path_count_error = 1'b0;
+    path_count_valid = 1'b0;
+    path_count_value = '0;
+end
+
 assign path_count_rd_en = (trimed_valid || reply_valid);
 assign path_count_rd_addr = (trimed_valid) ? trimed_node : reply_data;
-
-logic path_count_rd_valid___, path_count_wr_valid___;
-
-always_ff @(posedge clk) path_count_rd_valid___ <= path_count_rd_en;
-always_ff @(posedge clk) path_count_wr_valid___ <= path_count_wr_en;
 
 node_path_counter_sdpram #(
     .MAX_NODES(MAX_NODES),
@@ -107,20 +107,6 @@ end
 always_ff @(posedge clk) begin: root_node_update
     if (trimed_valid) begin
         root_node <= trimed_node;
-    end
-end
-
-path_count_t path_count_rd_en_cnt;
-always_ff @(posedge clk) begin: debug__rd
-    if (trimed_valid) begin
-        path_count_rd_en_cnt <= path_count_rd_en_cnt + 1;
-    end
-end
-
-path_count_t path_count_wr_en_cnt;
-always_ff @(posedge clk) begin: debug__wr
-    if (path_count_wr_en && (path_count_wr_addr == start_node_idx) && (path_count_wr_data == 1)) begin
-        path_count_wr_en_cnt <= path_count_wr_en_cnt + 1;
     end
 end
 
@@ -181,8 +167,6 @@ wire _unused_ok = 1'b0 && &{1'b0,
     // trimed_done,
     // query_ready,
     path_count_rd_en,
-    path_count_wr_valid___,
-    path_count_rd_valid___,
     reply_last,
     // reply_no_edges_found,
     1'b0};

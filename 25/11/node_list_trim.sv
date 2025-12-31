@@ -23,6 +23,8 @@ module node_list_trim #(
 logic forward_node_list;
 
 initial begin
+    trimed_done = 1'b0;
+    trimed_valid = 1'b0;
     forward_node_list = 1'b0;
 end
 
