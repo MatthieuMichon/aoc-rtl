@@ -34,12 +34,19 @@ function bit char_is_letter(byte char);
 endfunction
 
 logic [8-1:0] prev_byte_data;
-always_ff @(posedge clk)
-    if (byte_valid)
-        prev_byte_data <= byte_data;
 
 logic src_node_is_set = 1'b0;
 logic end_of_file = 1'b0, prev_end_of_file = 1'b0;
+
+initial begin
+    decoding_done = 1'b0;
+    edge_valid = 1'b0;
+    src_node_valid = 1'b0;
+end
+
+always_ff @(posedge clk)
+    if (byte_valid)
+        prev_byte_data <= byte_data;
 
 always_ff @(posedge clk) begin
     edge_valid <= 1'b0;
@@ -66,6 +73,7 @@ always_ff @(posedge clk) begin
         end
     end
 end
+
 
 always_ff @(posedge clk) begin: decoding_done_driver
     decoding_done <= end_of_file && !prev_end_of_file;

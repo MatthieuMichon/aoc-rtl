@@ -44,16 +44,29 @@ typedef enum logic [1:0] {
     SET_EDGE_LIST_RD_PTR,
     RETURN_LEAF_NODES
 } state_t;
-state_t current_state, next_state;
+state_t current_state = WAIT_DECODING_DONE, next_state;
 
-flat_entry_t node_index[MAX_NODES-1:0];
+flat_entry_t node_index[2**NODE_WIDTH-1:0];
 node_t dst_node_list[MAX_EDGES-1:0];
-edge_list_ptr_t base_index_ptr = '0, node_index_ptr = '0, dst_node_list_rd_ptr, reply_ptr_last = '0;
+edge_list_ptr_t base_index_ptr = '0, node_index_ptr = '0, dst_node_list_rd_ptr = '0, reply_ptr_last = '0;
 logic inc_dst_node_list_rd_ptr;
-logic node_has_edges;
+logic node_has_edges = 1'b0;
 logic dst_node_list_ptr_inc;
-logic prev_query_enable;
-logic prev_dst_node_list_ptr_inc;
+logic prev_query_enable = 1'b0;
+logic prev_dst_node_list_ptr_inc = 1'b0;
+
+initial begin
+    reply_last = 1'b0;
+    reply_valid = 1'b0;
+    reply_no_edges_found = 1'b0;
+end
+
+initial begin
+    integer i;
+    for (i = 0; i < (2**NODE_WIDTH); i = i + 1) begin
+        node_index[i] = {node_index_entry_t_size{1'b0}};
+    end
+end
 
 always_ff @(posedge clk) begin: write_node_index
     if (src_node_valid) begin: new_src_node

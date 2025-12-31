@@ -34,7 +34,7 @@ localparam int EDGE_ADDR_WIDTH = $clog2(MAX_EDGES);
 typedef logic [NODE_WIDTH-1:0] node_t;
 typedef logic [EDGE_ADDR_WIDTH-1:0] edge_addr_t;
 
-typedef enum {
+typedef enum logic {
     INITIAL_SWEEP,
     KAHNS_ALGORITHM
 } queue_wr_sel_t;
@@ -52,7 +52,7 @@ typedef enum logic [3:0] {
 } state_t;
 
 queue_wr_sel_t queue_wr_sel;
-state_t current_state, next_state;
+state_t current_state = WAIT_DECODING_DONE, next_state;
 
 node_t zero_indeg_nodes_fifo[MAX_NODES-1:0];
 node_t queue_wr_ptr = '0, queue_rd_ptr = '0, queue_wr_data, root_node = '0;
@@ -179,9 +179,14 @@ end
 always_ff @(posedge clk) prev_reply_last <= reply_last;
 
 always_ff @(posedge clk) begin: adjacency_map_query
-    if (sweep_pending) begin: initial_sweep
-        prev_indeg_node <= indeg_node;
-        indeg_node <= indeg_node + 1;
+    if (queue_wr_sel == INITIAL_SWEEP) begin
+        if (!sweep_pending) begin
+            prev_indeg_node <= '0;
+            indeg_node <= '0;
+        end else begin: initial_sweep
+            prev_indeg_node <= indeg_node;
+            indeg_node <= indeg_node + 1;
+        end
     end else if (queue_wr_sel == KAHNS_ALGORITHM) begin: sort_algorithm
         indeg_node <= reply_data;
     end

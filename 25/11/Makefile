@@ -20,7 +20,7 @@ sim: obj_dir/Vuser_logic_tb
 
 .PHONY: isim
 isim:
-	iverilog -g2012 -gsupported-assertions $(SV_SOURCES)
+	iverilog -o a.out -g2012 -gsupported-assertions $(SV_SOURCES)
 
 .PHONY: synth
 synth:

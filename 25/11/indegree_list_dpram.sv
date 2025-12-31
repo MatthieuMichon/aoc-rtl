@@ -16,6 +16,13 @@ module indegree_list_dpram #(
 typedef logic [NODE_WIDTH-1:0] indegree_cnt_t;
 indegree_cnt_t indegree_cnt_per_node [2**NODE_WIDTH-1:0];
 
+initial begin
+    integer i;
+    for (i = 0; i < (2**NODE_WIDTH); i = i + 1) begin
+        indegree_cnt_per_node[i] = {NODE_WIDTH{1'b0}};
+    end
+end
+
 always @(posedge clk) begin: read_decr_node_port
     if (prev_decrement_degree) begin
         indegree_cnt_per_node[node_sel_hold] <= output_node_degree;

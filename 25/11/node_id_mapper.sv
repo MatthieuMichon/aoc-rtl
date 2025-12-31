@@ -49,7 +49,7 @@ typedef struct packed {
 typedef logic [$size(node_index_entry_t)-1:0] flat_entry_t;
 //flat_entry_t node_lut[2**NODE_STR_WIDTH-1:0];
 
-logic prev_src_node_str_valid, prev_dst_node_str_valid;
+logic prev_src_node_str_valid = 1'b0, prev_dst_node_str_valid = 1'b0;
 node_str_t prev_src_node_str, prev_dst_node_str;
 logic node_lut_src_wr_en, node_lut_dst_wr_en;
 node_index_entry_t node_lut_src_rd_data, node_lut_src_wr_data;
@@ -132,6 +132,12 @@ always_ff @(posedge clk) begin: start_end_nodes
         end_node_captured <= 1'b1;
     end
     start_end_nodes_valid <= start_node_captured && end_node_captured;
+end
+
+initial begin
+    decoding_done_idx = 1'b0;
+    src_node_idx_valid = 1'b0;
+    edge_idx_valid = 1'b0;
 end
 
 always_ff @(posedge clk) decoding_done_idx <= decoding_done_str;
