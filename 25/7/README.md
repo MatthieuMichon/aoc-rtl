@@ -111,23 +111,25 @@ tap-dec["TAP Decoder"]
 dec["Line Decoder"]
 beam["Beam Tracker"]
 tap-enc["TAP Encoder"]
+cnt["Active Splitters Accumulator"]
 
 tb --Input Bits--> tap
 tap --JTAG-TAP--> tap-dec
 tap-dec --ASCII Byte --> dec
-dec --Edges--> lut
-seq --Final Path Count--> tap-enc
+dec --Edges--> beam
+beam --Active Splitters--> cnt
+cnt --Result--> tap-enc
 tap-enc --JTAG-TAP--> tap
 tap --Result Bits--> tb
 ```
 
-| Module | Description | Complexity | Mindblowness | Remarks |
-| --- | --- | --- | --- | --- |
+| Module | Description | Complexity | Implementation | Remarks |
+| --- | --- |:---:| --- | --- |
 | [`user_logic_tb`](user_logic_tb.sv) | Testbench | :green_circle: | :kissing_smiling_eyes: | Small refactor and misc improvements |
 | [`user_logic`](user_logic.sv) | Logic top-level | :large_blue_circle: | :kissing_smiling_eyes: | Wire harness |
 | [`tap_decoder`](tap_decoder.sv) | BSCANE2 interface for inbound signals | :large_blue_circle: | :kissing_smiling_eyes: | Copy-paste from previous puzzle |
 | [`line_decoder`](line_decoder.sv) | Simple text parser | :large_blue_circle: | :kissing_smiling_eyes: | Discards empty lines and detects end-of-file |
-| [`beam_tracker`](beam_tracker.sv) | Memoize beam positions | :green_circle: | :exploding_head: | Evaluate beam and splitter intersections and perform left/right shifts |
+| [`beam_tracker`](beam_tracker.sv) | Memoize beam positions | :green_circle: | :blush: | Evaluate beam and splitter intersections and perform left/right shifts |
 | [`tap_encoder`](tap_encoder.sv) | BSCANE2 interface for outbound signals | :large_blue_circle: | :kissing_smiling_eyes: | Copy-paste from previous puzzle | :kissing_smiling_eyes: |
 
 ## Resource Usage
