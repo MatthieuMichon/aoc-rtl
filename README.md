@@ -31,10 +31,13 @@ tap-enc --JTAG-TAP--> tap
 
 These implementations share the following common features:
 
-- Written in System Verilog
-- The input contents are NOT embedded but read from the testbench or TCL script. **The same firmware is capable of processing all inputs**.
+- Written in plain System Verilog
+- Puzzle input contents are NOT embedded but read from the testbench or TCL script
+  - **The same firmware** is capable of processing all input (example, inputs from different accounts)
+  - Applicable for both simulation and synthesized firmware
 - Simulated using [Verilator](https://www.veripool.org/verilator)
-- Synthesized using [Vivado](https://www.xilinx.com/products/design-tools/vivado.html)
+  - Some puzzles also add [Icarus Verilog](http://iverilog.icarus.com/) target for 4-state (with `x` and `z` states) logic simulation, helpful for debugging initial behavior
+- Synthesized using [Vivado](https://www.xilinx.com/products/design-tools/vivado.html), all firmwares can be built targeting license-free FPGAs (eg. Zynq 7020)
 
 ## Porting to Other Targets
 
