@@ -37,3 +37,35 @@ The `range_check` design unit implements a dual comparison which is **reversed**
 ## Result Computation
 
 At this point obtaining the result is simply a matter of reversing the output of the `range_check` stages by calculating the difference between the total ingredient IDs and the number of spoiled ingredients.
+
+# Implementation
+
+```mermaid
+flowchart
+tb["Testbench"]
+tap["TAP Interface"]
+tap-dec["TAP Decoder"]
+dec["Input Decoder"]
+beam["Beam Tracker"]
+tap-enc["TAP Encoder"]
+cnt["Fresh Ingredients Count"]
+subgraph generate
+    rc0["Range Check Instance #0"]
+    rc1["Range Check Instance #1"]
+    rc2["..."]
+    rc199["Range Check Instance #199"]
+end
+
+tb --Input Bits--> tap
+tap --JTAG-TAP--> tap-dec
+tap-dec --ASCII Byte --> dec
+dec --Ingredients--> rc0
+rc0 --> rc1
+rc1 --> rc2
+rc2 --> rc199
+rc199 --Spoiled Ingredients--> cnt
+dec --Total Ingredients --> cnt
+cnt --Result--> tap-enc
+tap-enc --JTAG-TAP--> tap
+tap --Result Bits--> tb
+```
