@@ -229,11 +229,11 @@ user_logic user_logic_i (
         .shift_dr(shift_dr),
         .update_dr(update_dr));
 
-initial
- begin
+`ifndef VERILATOR
+initial begin
     $dumpfile("wave.vcd");
-    $dumpvars(0,user_logic_tb);
- end
+    $dumpvars(0, user_logic_tb);
+end
+`endif
 endmodule
-
 `default_nettype wire

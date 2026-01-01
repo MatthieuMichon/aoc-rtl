@@ -31,4 +31,5 @@ synth:
 clean:
 	$(RM) -r .Xil vvd_dir
 	$(RM) -r obj_dir
+	$(RM) a.out
 	$(RM) wave.vcd
