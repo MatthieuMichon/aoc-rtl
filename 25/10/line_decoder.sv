@@ -10,7 +10,7 @@ module line_decoder #(
         input wire [8-1:0] inbound_byte,
     // TAP controller states
         output logic end_of_file, // held high
-        output logic end_of_line, // pulsed on valid cycle
+        output logic end_of_line, // pulsed outside of a valid cycle
         output logic wiring_valid,
         output logic [MAX_WIRING_WIDTH-1:0] wiring_data
 );
@@ -56,7 +56,7 @@ endfunction
 
 always_ff @(posedge clk) begin: decode_buttons_wiring
     if (inbound_valid) begin
-        case (inbound_byte)
+        unique case (inbound_byte)
             SPACE_CHAR: begin
                 button_wiring <= '0;
             end
@@ -97,10 +97,6 @@ always_ff @(posedge clk) begin: output_sel
         endcase
     end
 end
-
-wire _unused_ok = 1'b0 && &{1'b0,
-    button_wiring,
-    1'b0};
 
 endmodule
 `default_nettype wire
