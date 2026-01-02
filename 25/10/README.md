@@ -42,6 +42,27 @@ Simplest way would be to breakdown this operation into several elementary steps:
 
 ## First Stage
 
+Just like other puzzles, the first stage consists in copy-pasting the common design files.
+
+| Module | Description | Complexity | Mindblowness | Remarks |
+| --- | --- | --- | --- | --- |
+| [`user_logic_tb`](user_logic_tb.sv) | Testbench | :large_blue_circle: | :kissing_smiling_eyes: | Small refactor and misc improvements |
+| [`user_logic`](user_logic.sv) | Logic top-level | :large_blue_circle: | :kissing_smiling_eyes: | Wire harness |
+| [`tap_decoder`](tap_decoder.sv) | BSCANE2 interface for inbound signals | :large_blue_circle: | :kissing_smiling_eyes: | Copy-paste from previous puzzle |
+| [`tap_encoder`](tap_encoder.sv) | BSCANE2 interface for outbound signals | :large_blue_circle: | :kissing_smiling_eyes: | Copy-paste from previous puzzle | :kissing_smiling_eyes: |
+
+### Design Iterations
+
+Completed in a single pass.
+
+| Target    | Status | Notes |
+|-----------|--------|-------|
+| Varilator | Pass   | None  |
+| Iverilog  | Pass   | None  |
+| Vivado    | Pass   | None  |
+
+### Diagram
+
 ```mermaid
 flowchart
 tb["Testbench"]
@@ -58,17 +79,68 @@ tap-enc --JTAG-TAP--> tap
 tap --Result Bits--> tb
 ```
 
-Just like other puzzles, the first stage consists in copy-pasting the common design files.
+### Resource Usage
 
-| Module | Description | Complexity | Mindblowness | Remarks |
-| --- | --- | --- | --- | --- |
-| [`user_logic_tb`](user_logic_tb.sv) | Testbench | :large_blue_circle: | :kissing_smiling_eyes: | Small refactor and misc improvements |
-| [`user_logic`](user_logic.sv) | Logic top-level | :large_blue_circle: | :kissing_smiling_eyes: | Wire harness |
-| [`tap_decoder`](tap_decoder.sv) | BSCANE2 interface for inbound signals | :large_blue_circle: | :kissing_smiling_eyes: | Copy-paste from previous puzzle |
-| [`tap_encoder`](tap_encoder.sv) | BSCANE2 interface for outbound signals | :large_blue_circle: | :kissing_smiling_eyes: | Copy-paste from previous puzzle | :kissing_smiling_eyes: |
+```
+Detailed RTL Component Info : 
++---Registers : 
+	               16 Bit    Registers := 2     
+	                8 Bit    Registers := 1     
+	                1 Bit    Registers := 2     
++---Muxes : 
+	   4 Input   16 Bit        Muxes := 2     
+	   2 Input   16 Bit        Muxes := 1     
+```
 
-| Target    | Status | Notes |
-|-----------|--------|-------|
-| Varilator | Pass   | None  |
-| Iverilog  | Pass   | None  |
-| Vivado    | Pass   | None  |
+## Second Stage
+
+I added byte stream decoding through a dedicated module [`line_decoder`](line_decoder.sv). No difficulties encountered, quite the opposite with the encoded to one-hot conversion being easier than expected:
+
+```verilog
+always_ff @(posedge clk) begin: decode_buttons_wiring
+    if (inbound_valid) begin
+        case (inbound_byte)
+            SPACE_CHAR: begin
+                button_wiring <= '0;
+            end
+            default: begin
+                if (is_digit(inbound_byte)) begin
+                    button_wiring <= button_wiring + (1 << (inbound_byte - ZERO_CHAR));
+                end
+            end
+        endcase
+    end
+end
+```
+
+The design I implemented is **limited to single digit positions**, meaning that the width of the light and thus button cannot exceed ten, which is what I deduced by running the Python script mentioned earlier. Adding this support would add some complexity for having to accumulate digits and convert the decimal value obtained into binary.
+
+### Resource Usage
+
+```
+Module line_decoder
+Detailed RTL Component Info :
++---Adders :
+	   2 Input    6 Bit       Adders := 1
++---Registers :
+	               12 Bit    Registers := 2
+	                1 Bit    Registers := 3
++---Muxes :
+	   2 Input    1 Bit        Muxes := 4
+	   3 Input    1 Bit        Muxes := 1
+```
+
+The total remains very frugal:
+
+
+|      |Cell    |Count |
+|------|--------|------|
+|1     |BSCANE2 |     1|
+|2     |CARRY4  |     9|
+|3     |LUT1    |     1|
+|4     |LUT2    |    39|
+|5     |LUT3    |    34|
+|6     |LUT4    |     2|
+|7     |LUT5    |    11|
+|8     |LUT6    |     8|
+|9     |FDRE    |    96|

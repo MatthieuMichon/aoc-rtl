@@ -17,7 +17,10 @@ module user_logic (
 
 localparam int BYTE_WIDTH = $bits(byte);
 // From design space exploration
+localparam int MAX_WIRING_WIDTH = 12;
 localparam int RESULT_WIDTH = 16;
+
+typedef logic [MAX_WIRING_WIDTH-1:0] wiring_t;
 
 logic inbound_valid;
 logic [BYTE_WIDTH-1:0] inbound_data;
@@ -35,6 +38,23 @@ tap_decoder #(.DATA_WIDTH(BYTE_WIDTH)) tap_decoder_i (
         .data(inbound_data)
 );
 
+logic end_of_file;
+logic end_of_line;
+logic wiring_valid;
+wiring_t wiring_data;
+
+line_decoder #(.MAX_WIRING_WIDTH(MAX_WIRING_WIDTH)) line_decoder_i (
+    .clk(tck),
+    // Inbound Byte Stream
+        .inbound_valid(inbound_valid),
+        .inbound_byte(inbound_data),
+    // TAP controller states
+        .end_of_file(end_of_file), // held high
+        .end_of_line(end_of_line), // pulsed on valid cycle
+        .wiring_valid(wiring_valid),
+        .wiring_data(wiring_data)
+);
+
 logic outbound_valid;
 logic [RESULT_WIDTH-1:0] outbound_data = '0;
 
@@ -43,9 +63,9 @@ always_ff @(posedge tck) begin
         outbound_valid <= 1'b0;
         outbound_data <= '0;
     end else begin
-        outbound_valid <= inbound_valid;
-        if (inbound_valid) begin
-            outbound_data <= outbound_data + 1;
+        outbound_valid <= end_of_file;
+        if (wiring_valid) begin
+            outbound_data <= outbound_data + 16'(wiring_data);
         end
     end
 end
@@ -64,15 +84,11 @@ tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
 );
 
 wire _unused_ok = 1'b0 && &{1'b0,
-    run_test_idle,
-    test_logic_reset,
-    run_test_idle,
-    ir_is_user,
-    capture_dr,
-    shift_dr,
-    update_dr, tck,
-    inbound_valid,
-    inbound_data,
+    run_test_idle, test_logic_reset,
+    end_of_file,
+    end_of_line,
+    wiring_valid,
+    wiring_data,
     1'b0};
 endmodule
 `default_nettype wire
