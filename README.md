@@ -60,7 +60,7 @@ Unless stated otherwise, I focused only the first part of the following puzzles.
 | [7.1](25/7/)   | :large_blue_circle: Combinatorial algorithm | :large_blue_circle: Synthesized right away | *To be done*                               | Binary graph
 | 8.1            | *To be done*                                | *To be done*                               | *To be done*                               | 
 | 9.1            | *To be done*                                | *To be done*                               | *To be done*                               | 
-| 10.1           | *To be done*                                | *To be done*                               | *To be done*                               | 
+| [10.1](25/10/) | In progress                                 | In progress                               | *To be done*                               | 
 | [11.1](25/11/) | :black_circle: Hello *dynamic programming*  | :black_circle: cursed DPRAM inference      | *To be done* :black_circle: Severe sim / synth mismatch | DAG with bottom-up **dynamic programming** :exploding_head:
 
 | Symbol              | Level       | Description      | Remarks                           |
