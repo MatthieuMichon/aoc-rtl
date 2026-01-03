@@ -17,10 +17,12 @@ module user_logic (
 
 localparam int BYTE_WIDTH = $bits(byte);
 // From design space exploration
-localparam int MAX_WIRING_WIDTH = 12;
+localparam int MAX_WIRING_WIDTH = 10;
+localparam int MAX_BUTTON_WIRINGS = 13;
 localparam int RESULT_WIDTH = 16;
 
 typedef logic [MAX_WIRING_WIDTH-1:0] wiring_t;
+typedef logic [MAX_BUTTON_WIRINGS-1:0] button_wirings_t;
 
 logic inbound_valid;
 logic [BYTE_WIDTH-1:0] inbound_data;
@@ -38,9 +40,7 @@ tap_decoder #(.DATA_WIDTH(BYTE_WIDTH)) tap_decoder_i (
         .data(inbound_data)
 );
 
-logic end_of_file;
-logic end_of_line;
-logic wiring_valid;
+logic end_of_file, end_of_line, wiring_valid;
 wiring_t wiring_data;
 
 line_decoder #(.MAX_WIRING_WIDTH(MAX_WIRING_WIDTH)) line_decoder_i (
@@ -48,11 +48,30 @@ line_decoder #(.MAX_WIRING_WIDTH(MAX_WIRING_WIDTH)) line_decoder_i (
     // Inbound Byte Stream
         .inbound_valid(inbound_valid),
         .inbound_byte(inbound_data),
-    // TAP controller states
+    // Decoded Line Contents
         .end_of_file(end_of_file), // held high
         .end_of_line(end_of_line), // pulsed on valid cycle
         .wiring_valid(wiring_valid),
         .wiring_data(wiring_data)
+);
+
+logic solver_ready, solving_done, solution_valid;
+button_wirings_t solution_button_wirings;
+
+machine_wiring_solver #(
+        .MAX_WIRING_WIDTH(MAX_WIRING_WIDTH),
+        .MAX_BUTTON_WIRINGS(MAX_BUTTON_WIRINGS)
+) machine_wiring_solver_i (
+    .clk(tck),
+    // Decoded Line Contents
+        .solver_ready(solver_ready),
+        .end_of_line(end_of_line), // pulsed on valid cycle
+        .wiring_valid(wiring_valid),
+        .wiring_data(wiring_data),
+    // Solver Outputs
+        .solving_done(solving_done),
+        .solution_valid(solution_valid),
+        .solution_button_wirings(solution_button_wirings)
 );
 
 logic outbound_valid;
@@ -89,6 +108,9 @@ wire _unused_ok = 1'b0 && &{1'b0,
     end_of_line,
     wiring_valid,
     wiring_data,
+    solver_ready,
+    solving_done, solution_valid,
+    solution_button_wirings,
     1'b0};
 endmodule
 `default_nettype wire

@@ -9,7 +9,7 @@ The puzzle input format is slightly more complex compared to others. The input c
 Adding some margin for handling accounts with slightly different input contents, I assume the following sizing:
 
 - Max number of entries: 200 (162 effective in my input)
-- Max elements per entry: 12 (10 effective in my input)
+- Max elements per entry: 10 effective in my input (complexity increases above ten because of multiple consecutive decimal digits being decoded)
 - Max total elements: 2400 (1150 effective in my input)
 
 Pulling an entry from the puzzle example contents:
@@ -144,3 +144,19 @@ The total remains very frugal:
 |7     |LUT5    |    11|
 |8     |LUT6    |     8|
 |9     |FDRE    |    96|
+
+## Third Stage
+
+My approach is to implement a single combination solving unit ([`machine_wiring_solver`](machine_wiring_solver.sv)) first and defer the fanout of multiple combinations to a further stage.
+
+The puzzle requires finding the *fewest button presses*, keyword being **fewest**. The operation involves two states which are inverted each time a bit from an element is set. This operation is akin to a XOR operation where each change flips a bit's state.
+
+Thus the puzzle requires finding the solution involving the minimum number of active elements being XOR'ed each other. With a machine constituted of six elements, the solution space explored equates $$2^6 = 64$$ combinations. Worst case is 13 button wiring entries making it 16384 combinations, largely in the realm of what is reasonable.
+
+Knowing that a realistic solution is available, the next step is to think about the interfaces. The following information is likely to be required:
+
+- Solution, corresponding to the light wiring which is the first data value received from the line decoder unit.
+- Each individual button wirings
+- End of processing
+- Strobe signal indicating a valid solution
+- Number of enabled elements
