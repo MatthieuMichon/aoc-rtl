@@ -21,6 +21,10 @@ always_ff @(posedge tck) begin: shift_tdi
     end
 end
 
+initial begin
+    valid = 1'b0;
+end
+
 always_ff @(posedge tck) begin: update
     if (test_logic_reset) begin
         valid <= 1'b0;

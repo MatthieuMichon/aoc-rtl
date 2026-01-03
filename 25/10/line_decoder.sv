@@ -8,7 +8,7 @@ module line_decoder #(
     // Inbound Byte Stream
         input wire inbound_valid,
         input wire [8-1:0] inbound_byte,
-    // TAP controller states
+    // Decoded Line Contents
         output logic end_of_file, // held high
         output logic end_of_line, // pulsed outside of a valid cycle
         output logic wiring_valid,
@@ -71,6 +71,8 @@ end
 
 initial begin
     end_of_file = 1'b0;
+    end_of_line = 1'b0;
+    wiring_valid = 1'b0;
 end
 
 always_ff @(posedge clk) begin: output_sel
