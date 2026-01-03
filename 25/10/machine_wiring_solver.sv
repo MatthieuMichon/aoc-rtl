@@ -84,9 +84,11 @@ always_comb begin: output_update
         end
         UPDATE_COMBINATIONS: begin
             solver_ready = 1'b0;
+            wiring_sel = BUTTON;
         end
         RUN_SOLVER: begin
             solver_ready = 1'b0;
+            wiring_sel = BUTTON;
             run_solver = 1'b1;
         end
     endcase
@@ -139,29 +141,22 @@ generate for (i = 0; i < MAX_BUTTON_WIRINGS; i++) begin: button_wiring_gen
 
 end endgenerate
 
-wiring_t xorrr;
+// always_ff @(posedge clk) solution_button_wirings <= light_wiring ^ wiring.xor(); not supported by Icarus Verilog :'(
 
-// always_ff @(posedge clk) solution_button_wirings <= wiring.xor(); not supported by Icarus Verilog :'(
-
-initial begin
-    solution_button_wirings = '0;
-end
 always_comb begin
-    solution_button_wirings = '0; // Initialize to zero (neutral element for XOR)
+    solution_button_wirings = light_wiring;
     for (int i = 0; i < MAX_BUTTON_WIRINGS; i++) begin
         solution_button_wirings = solution_button_wirings ^ wiring[i];
     end
 end
 
 assign solving_done = 1'b0;
-assign solution_valid = 1'b0;
-//assign solution_button_wirings = '0;
+assign solution_valid = !(|solution_button_wirings) && run_solver;
 
 wire _unused_ok = 1'b0 && &{1'b0,
     wiring_sel,
     light_wiring,
     button_wiring,
-    xorrr,
     1'b0};
 endmodule
 `default_nettype wire

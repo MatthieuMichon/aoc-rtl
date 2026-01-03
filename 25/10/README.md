@@ -160,3 +160,30 @@ Knowing that a realistic solution is available, the next step is to think about 
 - End of processing
 - Strobe signal indicating a valid solution
 - Number of enabled elements
+
+### Puzzle Description Misunderstanding
+
+The puzzle states:
+
+> There are a few ways to correctly configure the first machine:
+> 
+>     [.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}
+> 
+> - You could press the first three buttons once each, a total of 3 button presses.
+> - You could press (1,3) once, (2,3) once, and (0,1) twice, a total of 4 button presses.
+> - You could press all of the buttons except (1,3) once each, a total of 5 button presses.
+> 
+> However, the fewest button presses required is 2. One way to do this is by pressing the last two buttons ((0,2) and (0,1)) once each.
+
+Initial testing with the `example.txt` file showed the following solutions:
+
+- 0x07, corresponding to the first three buttons
+- 0x0A, corresponding to the buttons (1,3) once, (2,3) once
+- 0x30, corresponding to the buttons (0,2) once, (0,1) once
+- 0x3D, corresponding to all of the buttons except (1,3)
+
+![](machine_wiring_solver_wave.png)
+
+However the puzzle states (0,1) twice, which I have trouble understanding. A fundamental property of the XOR operator is that any pair of identical arguments will zero out each other, which in practice means that pressing (0,1) twice had no effect. Accordingly the puzzle statement overlooked the existence of the **(1,3) once, (2,3) once** solution.
+
+Since the result is the minimum number of enabled buttons, this omission didn't change the final value, which may explain why it was not spotted in the first place.
