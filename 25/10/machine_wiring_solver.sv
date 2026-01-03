@@ -27,7 +27,8 @@ wiring_type_t wiring_sel;
 
 wiring_t light_wiring;
 wiring_t button_wiring;
-//button_wirings_t button_wirings;
+logic reset_button_wiring_units;
+logic run_solver;
 
 typedef enum logic [1:0] {
     CAPTURE_LIGHT_WIRING,
@@ -69,10 +70,13 @@ always_comb begin: state_logic
 end
 
 always_comb begin: output_update
+    reset_button_wiring_units = 1'b0;
     wiring_sel = LIGHT;
+    run_solver = 1'b0;
     unique case (current_state)
         CAPTURE_LIGHT_WIRING: begin
             solver_ready = 1'b1;
+            reset_button_wiring_units = 1'b1;
         end
         CAPTURE_BUTTON_WIRINGS: begin
             solver_ready = 1'b1;
@@ -83,6 +87,7 @@ always_comb begin: output_update
         end
         RUN_SOLVER: begin
             solver_ready = 1'b0;
+            run_solver = 1'b1;
         end
     endcase
 end
@@ -98,14 +103,65 @@ always_ff @(posedge clk) begin: wiring_data_fanout
     endcase
 end
 
+logic wiring_valid_chain[0:MAX_BUTTON_WIRINGS]; // +1 for exit node
+wiring_t wiring_data_chain[0:MAX_BUTTON_WIRINGS]; // +1 for exit node
+logic [MAX_BUTTON_WIRINGS-1:0] enable;
+wiring_t wiring[0:MAX_BUTTON_WIRINGS-1];
+
+assign wiring_valid_chain[0] = wiring_valid && (wiring_sel == BUTTON);
+assign wiring_data_chain[0] = wiring_data;
+
+always_ff @(posedge clk) begin
+    if (!run_solver) begin
+        enable <= '0;
+    end else begin
+        enable <= enable + 1'b1;
+    end
+end
+
+genvar i;
+generate for (i = 0; i < MAX_BUTTON_WIRINGS; i++) begin: button_wiring_gen
+
+    button_wiring #(
+        .MAX_WIRING_WIDTH(MAX_WIRING_WIDTH)
+    ) button_wiring_i (
+        .clk(clk),
+        .reset(reset_button_wiring_units), // clear wiring configuration
+        // Configuration Daisy Chain
+            .wiring_valid_in(wiring_valid_chain[i]),
+            .wiring_data_in(wiring_data_chain[i]),
+            .wiring_valid_out(wiring_valid_chain[i+1]),
+            .wiring_data_out(wiring_data_chain[i+1]),
+        // Wiring State
+            .enable(enable[i]),
+            .wiring(wiring[i])
+    );
+
+end endgenerate
+
+wiring_t xorrr;
+
+// always_ff @(posedge clk) solution_button_wirings <= wiring.xor(); not supported by Icarus Verilog :'(
+
+initial begin
+    solution_button_wirings = '0;
+end
+always_comb begin
+    solution_button_wirings = '0; // Initialize to zero (neutral element for XOR)
+    for (int i = 0; i < MAX_BUTTON_WIRINGS; i++) begin
+        solution_button_wirings = solution_button_wirings ^ wiring[i];
+    end
+end
+
 assign solving_done = 1'b0;
 assign solution_valid = 1'b0;
-assign solution_button_wirings = '0;
+//assign solution_button_wirings = '0;
 
 wire _unused_ok = 1'b0 && &{1'b0,
     wiring_sel,
     light_wiring,
     button_wiring,
+    xorrr,
     1'b0};
 endmodule
 `default_nettype wire
