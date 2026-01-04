@@ -187,3 +187,33 @@ Initial testing with the `example.txt` file showed the following solutions:
 However the puzzle states (0,1) twice, which I have trouble understanding. A fundamental property of the XOR operator is that any pair of identical arguments will zero out each other, which in practice means that pressing (0,1) twice had no effect. Accordingly the puzzle statement overlooked the existence of the **(1,3) once, (2,3) once** solution.
 
 Since the result is the minimum number of enabled buttons, this omission didn't change the final value, which may explain why it was not spotted in the first place.
+
+## Four Stage
+
+Knowing that the puzzle requires the lowest number of button presses, I thought that there should be a better way then trying all the combinations of button pushes using a binary counter, which would be inefficient for cases where the only the last button shall be pressed. After a bit of digging there is a very clever algorithm for producing codes starting with all the the combinations of the least bit sets: the [**Gosper's Hack**](https://rosettacode.org/wiki/Gosper%27s_hack#C++).
+
+The money shoot is turning the following C++ method into RTL:
+
+```cpp
+uint32_t gospers_hack(const uint32_t& n) {
+	const uint32_t c = n & -n;
+	const uint32_t r = n + c;
+	return ( ( ( r ^ n ) >> 2 ) / c ) | r;
+}
+```
+
+I implemented the algorithm without trying to read much into it, and renamed the signals according to what I was able to make up by reading the waveform:
+
+![](gospers_hack_counter_wave.png)
+
+Resulting in the following snippet:
+
+```verilog
+always_comb begin
+    max_x = ((1 << nb_bits_set) - 1) << ($bits(nb_bits_set)'(WIDTH) - nb_bits_set);
+    lowest_set_bit = x & -x;
+    increment = x + lowest_set_bit;
+    flipped_bits = x ^ increment;
+    alignment = (flipped_bits >> 2) / lowest_set_bit;
+end
+```

@@ -26,15 +26,18 @@ typedef enum logic {
 wiring_type_t wiring_sel;
 
 wiring_t light_wiring;
-wiring_t button_wiring;
+wiring_t indicator_lights;
 logic reset_button_wiring_units;
 logic run_solver;
+logic buttons_wiring_enum_done;
+logic buttons_wiring_valid;
 
-typedef enum logic [1:0] {
+typedef enum logic [2:0] {
     CAPTURE_LIGHT_WIRING,
     CAPTURE_BUTTON_WIRINGS,
     UPDATE_COMBINATIONS,
-    RUN_SOLVER
+    RUN_SOLVER,
+    UNEXPECTED_BEHAVIOR
 } state_t;
 state_t current_state = CAPTURE_LIGHT_WIRING, next_state;
 
@@ -62,10 +65,14 @@ always_comb begin: state_logic
         RUN_SOLVER: begin
             if (!solving_done) begin
                 next_state = RUN_SOLVER;
+            end else if (buttons_wiring_enum_done) begin
+                next_state = UNEXPECTED_BEHAVIOR;
             end else begin
                 next_state = CAPTURE_LIGHT_WIRING;
             end
         end
+        default:
+            next_state = UNEXPECTED_BEHAVIOR;
     endcase
 end
 
@@ -91,6 +98,9 @@ always_comb begin: output_update
             wiring_sel = BUTTON;
             run_solver = 1'b1;
         end
+        default:begin
+            solver_ready = 1'b0;
+        end
     endcase
 end
 
@@ -99,34 +109,33 @@ always_ff @(posedge clk) begin: wiring_data_fanout
         LIGHT: begin
             light_wiring <= wiring_data;
         end
-        BUTTON: begin
-            button_wiring <= wiring_data;
+        default: begin
         end
     endcase
 end
 
 logic wiring_valid_chain[0:MAX_BUTTON_WIRINGS]; // +1 for exit node
 wiring_t wiring_data_chain[0:MAX_BUTTON_WIRINGS]; // +1 for exit node
-logic [MAX_BUTTON_WIRINGS-1:0] enable;
+logic [MAX_BUTTON_WIRINGS-1:0] buttons_wiring_sel;
 wiring_t wiring[0:MAX_BUTTON_WIRINGS-1];
 
 assign wiring_valid_chain[0] = wiring_valid && (wiring_sel == BUTTON);
 assign wiring_data_chain[0] = wiring_data;
 
-always_ff @(posedge clk) begin
-    if (!run_solver) begin
-        enable <= '0;
-    end else begin
-        enable <= enable + 1'b1;
-    end
-end
+gospers_hack_counter #(.WIDTH(MAX_BUTTON_WIRINGS)) gospers_hack_counter_i (
+    .clk(clk),
+    .reset(!run_solver),
+    .done(buttons_wiring_enum_done),
+    .valid(buttons_wiring_valid),
+    .bits(buttons_wiring_sel)
+);
+
+assign solution_button_wirings = buttons_wiring_sel;
 
 genvar i;
 generate for (i = 0; i < MAX_BUTTON_WIRINGS; i++) begin: button_wiring_gen
 
-    button_wiring #(
-        .MAX_WIRING_WIDTH(MAX_WIRING_WIDTH)
-    ) button_wiring_i (
+    button_wiring #(.MAX_WIRING_WIDTH(MAX_WIRING_WIDTH)) button_wiring_i (
         .clk(clk),
         .reset(reset_button_wiring_units), // clear wiring configuration
         // Configuration Daisy Chain
@@ -135,28 +144,25 @@ generate for (i = 0; i < MAX_BUTTON_WIRINGS; i++) begin: button_wiring_gen
             .wiring_valid_out(wiring_valid_chain[i+1]),
             .wiring_data_out(wiring_data_chain[i+1]),
         // Wiring State
-            .enable(enable[i]),
+            .enable(buttons_wiring_sel[i]),
             .wiring(wiring[i])
     );
 
 end endgenerate
 
-// always_ff @(posedge clk) solution_button_wirings <= light_wiring ^ wiring.xor(); not supported by Icarus Verilog :'(
-
 always_comb begin
-    solution_button_wirings = light_wiring;
-    for (int i = 0; i < MAX_BUTTON_WIRINGS; i++) begin
-        solution_button_wirings = solution_button_wirings ^ wiring[i];
+    indicator_lights = 0;
+    for (int j = 0; j < MAX_BUTTON_WIRINGS; j++) begin
+        indicator_lights = indicator_lights ^ wiring[j];
     end
 end
 
 assign solving_done = 1'b0;
-assign solution_valid = !(|solution_button_wirings) && run_solver;
+assign solution_valid = (indicator_lights == light_wiring) && run_solver;
 
 wire _unused_ok = 1'b0 && &{1'b0,
     wiring_sel,
-    light_wiring,
-    button_wiring,
+    buttons_wiring_valid,
     1'b0};
 endmodule
 `default_nettype wire
