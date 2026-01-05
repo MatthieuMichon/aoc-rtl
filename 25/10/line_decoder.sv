@@ -31,18 +31,25 @@ typedef enum byte {
     L_BRACE_CHAR = 8'h7B // `{`
 } char_t;
 
+localparam int BIT_CNT_WIDTH = $clog2(MAX_WIRING_WIDTH);
 typedef logic [MAX_WIRING_WIDTH-1:0] wiring_t;
+typedef logic [BIT_CNT_WIDTH-1:0] bit_cnt_t;
+
 wiring_t light_wiring = '0, button_wiring = '0;
+bit_cnt_t light_bit_index = '0;
 
 always_ff @(posedge clk) begin: decode_light_wiring
     if (inbound_valid) begin
         unique case (inbound_byte)
             DOT_CHAR, HASH_CHAR: begin
-                light_wiring <= {light_wiring[$left(light_wiring)-1:0],
-                        (inbound_byte == HASH_CHAR)};
+                // light_wiring <= {light_wiring[$left(light_wiring)-1:0],
+                //         (inbound_byte == HASH_CHAR)};
+                light_wiring[light_bit_index] <= (inbound_byte == HASH_CHAR);
+                light_bit_index <= light_bit_index + 1;
             end
             LF_CHAR: begin
                 light_wiring <= '0;
+                light_bit_index <= '0;
             end
             default: begin
             end

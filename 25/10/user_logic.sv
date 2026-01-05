@@ -23,6 +23,7 @@ localparam int RESULT_WIDTH = 16;
 
 typedef logic [MAX_WIRING_WIDTH-1:0] wiring_t;
 typedef logic [MAX_BUTTON_WIRINGS-1:0] button_wirings_t;
+typedef logic [RESULT_WIDTH-1:0] result_t;
 
 logic inbound_valid;
 logic [BYTE_WIDTH-1:0] inbound_data;
@@ -50,28 +51,29 @@ line_decoder #(.MAX_WIRING_WIDTH(MAX_WIRING_WIDTH)) line_decoder_i (
         .inbound_byte(inbound_data),
     // Decoded Line Contents
         .end_of_file(end_of_file), // held high
-        .end_of_line(end_of_line), // pulsed on valid cycle
+        .end_of_line(end_of_line),
         .wiring_valid(wiring_valid),
         .wiring_data(wiring_data)
 );
 
-logic solver_ready, solving_done, solution_valid;
-button_wirings_t solution_button_wirings;
+logic compute_finished, result_valid;
+result_t result_data;
 
-machine_wiring_solver #(
-        .MAX_WIRING_WIDTH(MAX_WIRING_WIDTH),
-        .MAX_BUTTON_WIRINGS(MAX_BUTTON_WIRINGS)
-) machine_wiring_solver_i (
+machine_compute_units #(
+    .MAX_WIRING_WIDTH(MAX_WIRING_WIDTH),
+    .MAX_BUTTON_WIRINGS(MAX_BUTTON_WIRINGS),
+    .RESULT_WIDTH(RESULT_WIDTH)
+) machine_compute_units_i (
     .clk(tck),
     // Decoded Line Contents
-        .solver_ready(solver_ready),
-        .end_of_line(end_of_line), // pulsed on valid cycle
+        .end_of_file(end_of_file),
+        .end_of_line(end_of_line),
         .wiring_valid(wiring_valid),
         .wiring_data(wiring_data),
     // Solver Outputs
-        .solving_done(solving_done),
-        .solution_valid(solution_valid),
-        .solution_button_wirings(solution_button_wirings)
+        .compute_finished(compute_finished),
+        .result_valid(result_valid),
+        .result_data(result_data)
 );
 
 logic outbound_valid;
@@ -82,9 +84,9 @@ always_ff @(posedge tck) begin
         outbound_valid <= 1'b0;
         outbound_data <= '0;
     end else begin
-        outbound_valid <= end_of_file;
-        if (wiring_valid) begin
-            outbound_data <= outbound_data + 16'(wiring_data);
+        outbound_valid <= compute_finished;
+        if (result_valid) begin
+            outbound_data <= outbound_data + result_data;
         end
     end
 end
@@ -104,13 +106,6 @@ tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
 
 wire _unused_ok = 1'b0 && &{1'b0,
     run_test_idle, test_logic_reset,
-    end_of_file,
-    end_of_line,
-    wiring_valid,
-    wiring_data,
-    solver_ready,
-    solving_done, solution_valid,
-    solution_button_wirings,
     1'b0};
 endmodule
 `default_nettype wire

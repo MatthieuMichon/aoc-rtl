@@ -12,7 +12,7 @@ module machine_wiring_solver #(
         input wire wiring_valid,
         input wire [MAX_WIRING_WIDTH-1:0] wiring_data,
     // Solver Outputs
-        output logic solving_done,
+        output logic solving_failed,
         output logic solution_valid,
         output logic [MAX_BUTTON_WIRINGS-1:0] solution_button_wirings
 );
@@ -63,7 +63,7 @@ always_comb begin: state_logic
             next_state = RUN_SOLVER;
         end
         RUN_SOLVER: begin
-            if (!solving_done) begin
+            if (!(solution_valid || buttons_wiring_enum_done)) begin
                 next_state = RUN_SOLVER;
             end else if (buttons_wiring_enum_done) begin
                 next_state = UNEXPECTED_BEHAVIOR;
@@ -77,6 +77,7 @@ always_comb begin: state_logic
 end
 
 always_comb begin: output_update
+    solving_failed = 1'b0;
     reset_button_wiring_units = 1'b0;
     wiring_sel = LIGHT;
     run_solver = 1'b0;
@@ -100,6 +101,7 @@ always_comb begin: output_update
         end
         default:begin
             solver_ready = 1'b0;
+            solving_failed = 1'b1;
         end
     endcase
 end
@@ -130,11 +132,8 @@ gospers_hack_counter #(.WIDTH(MAX_BUTTON_WIRINGS)) gospers_hack_counter_i (
     .bits(buttons_wiring_sel)
 );
 
-assign solution_button_wirings = buttons_wiring_sel;
-
 genvar i;
 generate for (i = 0; i < MAX_BUTTON_WIRINGS; i++) begin: button_wiring_gen
-
     button_wiring #(.MAX_WIRING_WIDTH(MAX_WIRING_WIDTH)) button_wiring_i (
         .clk(clk),
         .reset(reset_button_wiring_units), // clear wiring configuration
@@ -147,8 +146,9 @@ generate for (i = 0; i < MAX_BUTTON_WIRINGS; i++) begin: button_wiring_gen
             .enable(buttons_wiring_sel[i]),
             .wiring(wiring[i])
     );
-
 end endgenerate
+
+assign solution_button_wirings = buttons_wiring_sel;
 
 always_comb begin
     indicator_lights = 0;
@@ -157,12 +157,8 @@ always_comb begin
     end
 end
 
-assign solving_done = 1'b0;
-assign solution_valid = (indicator_lights == light_wiring) && run_solver;
+assign solution_valid =
+    buttons_wiring_valid && (indicator_lights == light_wiring) && run_solver;
 
-wire _unused_ok = 1'b0 && &{1'b0,
-    wiring_sel,
-    buttons_wiring_valid,
-    1'b0};
 endmodule
 `default_nettype wire
