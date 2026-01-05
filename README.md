@@ -57,11 +57,11 @@ Unless stated otherwise, I focused only the first part of the following puzzles.
 | [4.1](25/4/)   | :yellow_circle: Used smarter algorithm      | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box   | Two-dimensional neighboors comparison
 | [5.1](25/5/)   | :large_blue_circle: Brute force approach    | :yellow_circle: Barely fits in a Zynq-7020 | :large_blue_circle: Right out of the box   | Comparison of value ranges
 | [6.1](25/6/)   | :green_circle: Simple array-based design    | :yellow_circle: Some rework required       | :large_blue_circle: Right out of the box   | Arithmetics
-| [7.1](25/7/)   | :large_blue_circle: Combinatorial algorithm | :large_blue_circle: Synthesized right away | *To be done*                               | Binary graph
+| [7.1](25/7/)   | :large_blue_circle: Combinatorial algorithm | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box   | Binary graph
 | 8.1            | *To be done*                                | *To be done*                               | *To be done*                               | 
 | 9.1            | *To be done*                                | *To be done*                               | *To be done*                               | 
-| [10.1](25/10/) | In progress                                 | In progress                               | *To be done*                               | 
-| [11.1](25/11/) | :black_circle: Hello *dynamic programming*  | :black_circle: cursed DPRAM inference      | *To be done* :black_circle: Severe sim / synth mismatch | DAG with bottom-up **dynamic programming** :exploding_head:
+| [10.1](25/10/) | In progress                                 | In progress                                | *To be done*                               | 
+| [11.1](25/11/) | :black_circle: Hello *dynamic programming*  | :black_circle: cursed DPRAM inference      | :black_circle: Severe sim / synth mismatch | DAG with bottom-up **dynamic programming** :exploding_head:
 
 | Symbol              | Level       | Description      | Remarks                           |
 |---------------------|-------------|------------------|-----------------------------------|
