@@ -267,15 +267,47 @@ I had trouble validating the result using the custom `input.txt` puzzle contents
 | 1          | 20       | 67        | 55         | 56       | Failed  |
 | 1          | 10       | 28        | 27         | 25       | Failed  |
 | 1          | 5        | 16        | 12         | 12       | Failed  |
-| 1          | 3        | 7         | 7          | 7        | Passed  |
+| 1          | 3        | 7         | 7          | 7        | OK      |
 | 3          | 5        | 11        | 7          | 7        | Failed  |
 | 4          | 5        | 9         | 5          | 5        | Failed  |
-| 4          | 4        | 5         | 5          | 5        | Passed  |
-| 5          | 5        | 4         | 4          | 4        | Passed  |
+| 4          | 4        | 5         | 5          | 5        | OK      |
+| 5          | 5        | 4         | 4          | 4        | OK      |
 
 I observe two issues which may be unrelated. I will start by tacking the one occurring with the smallest number of inputs. They are:
 
 ```
 [#.#.#..##] (0,2,4,5,6,7,8) (0,2,4,8) (0,1,4,5) (3,6,8) (2,6,8) (0,1,2,3,5,6) (0,5,7) (0,3,4,5) (2,4,5,6,8) (0,1,3,5) {78,40,73,52,50,88,79,25,63}
 [###..#] (0,1,2,4,5) (0,4,5) (2,3) (1,3) (2,3,4,5) (0,1,4,5) (2,5) {33,38,44,37,46,51}
+```
+
+Reviewing the waveforms in the `machine_compute_units.sv` file, I noticed that the `compute_finished` was being set prematurely. This was due to the fact that the `end_of_file` signal was being set before all the `solver_ready` signals were asserted.
+
+| Start Line | End Line | Reference | Simulation | On-board | Verdict |
+|------------|----------|-----------|------------|----------|---------|
+| 1          | 162      | 449       | 408        | tbd      | Failed  |
+| 150        | 162      | 44        | 44         | tbd      | OK      |
+| 1          | 20       | 67        | 65         | tbd      | Failed  |
+| 1          | 10       | 28        | 27         | tbd      | Failed  |
+| 1          | 10       | 28        | 27         | tbd      | Failed  |
+
+Upon closer inspection, it appears that unused button wiring memorization units (implemented by the [`button_wiring`](button_wiring.sv) module) did not have their contents properly reset, meaning that machines with unused wiring diagrams can sometimes interfere causing incorrect results.
+
+```diff
+always_ff @(posedge clk) begin: button_wiring_capture
+    if (reset) begin
+        wiring_valid_out <= 1'b0;
+        conf_was_captured <= 1'b0;
++        capture_wiring = '0;
+    end else if (wiring_valid_in) begin
+        if (!conf_was_captured) begin: capture_conf
+            conf_was_captured <= 1'b1;
+            capture_wiring <= wiring_data_in;
+        end else begin
+            wiring_valid_out <= 1'b1;
+            wiring_data_out <= wiring_data_in;
+        end
+    end else begin
+        wiring_valid_out <= 1'b0;
+    end
+end
 ```

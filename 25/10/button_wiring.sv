@@ -25,10 +25,11 @@ initial begin
     capture_wiring = '0;
 end
 
-always_ff @(posedge clk) begin
+always_ff @(posedge clk) begin: button_wiring_capture
     if (reset) begin
         wiring_valid_out <= 1'b0;
         conf_was_captured <= 1'b0;
+        capture_wiring = '0;
     end else if (wiring_valid_in) begin
         if (!conf_was_captured) begin: capture_conf
             conf_was_captured <= 1'b1;

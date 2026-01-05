@@ -46,7 +46,7 @@ generate for (i = 0; i < SOLVER_UNITS; i++) begin
         .clk(clk),
         // Decoded Line Contents
             .solver_ready(solver_ready[i]),
-            .end_of_line(end_of_line),
+            .end_of_line(solver_sel[i] && end_of_line),
             .wiring_valid(solver_sel[i] && wiring_valid),
             .wiring_data(wiring_data),
         // Solver Outputs
@@ -56,7 +56,7 @@ generate for (i = 0; i < SOLVER_UNITS; i++) begin
     );
 end endgenerate
 
-always_ff @(posedge clk) compute_finished <= end_of_file;
+always_ff @(posedge clk) compute_finished <= end_of_file && &solver_ready;
 always_ff @(posedge clk) result_valid <= |solution_valid;
 always_comb begin: count_ones_array
     comb_result_data = '0;

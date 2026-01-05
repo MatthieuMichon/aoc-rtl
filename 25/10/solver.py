@@ -14,13 +14,6 @@ class Machine(NamedTuple):
     buttons: list[Button]
     joltages: Joltages
 
-    def simulate_joltage_configuration(self, presses: tuple[int, ...]) -> Joltages:
-        jolatages = [0] * len(self.joltages)
-        for i, press_amount in enumerate(presses):
-            for counter in self.buttons[i]:
-                jolatages[counter] += press_amount
-        return tuple(jolatages)
-
 
 def read_file(file_name: Path) -> list[Machine]:
     result: list[Machine] = []
@@ -73,6 +66,9 @@ def find_initialization_procedure(machine: Machine) -> int:
             new_lights = press_button(lights, button)
 
             if new_lights == target_lights:
+                print(
+                    f"{sum([1 << (b) for b in range(light_size) if new_lights[b]]):03x}: {button_presses + 1}"
+                )
                 return button_presses + 1
 
             if new_lights in seen:
