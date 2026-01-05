@@ -311,3 +311,19 @@ always_ff @(posedge clk) begin: button_wiring_capture
     end
 end
 ```
+
+Resource usage following fixes:
+
+| Ref Name | Used | Functional Category |
+|----------|------|---------------------|
+| FDRE     | 1385 |        Flop & Latch |
+| LUT4     |  916 |                 LUT |
+| LUT2     |  902 |                 LUT |
+| LUT3     |  732 |                 LUT |
+| CARRY4   |  295 |          CarryLogic |
+| LUT6     |  264 |                 LUT |
+| LUT5     |  101 |                 LUT |
+| LUT1     |   61 |                 LUT |
+| FDSE     |    8 |        Flop & Latch |
+| BUFG     |    1 |               Clock |
+| BSCANE2  |    1 |              Others |
