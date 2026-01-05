@@ -18,12 +18,24 @@ module machine_compute_units #(
         output logic [RESULT_WIDTH-1:0] result_data
 );
 
-localparam int SOLVER_UNITS = 1;
+localparam int SOLVER_UNITS = 4;
 typedef logic [MAX_WIRING_WIDTH-1:0] wiring_t;
 typedef logic [MAX_BUTTON_WIRINGS-1:0] button_wirings_t;
+typedef logic [RESULT_WIDTH-1:0] result_t;
+typedef logic [SOLVER_UNITS-1:0] dispatch_units_t;
 
-logic [SOLVER_UNITS-1:0] solver_ready, solver_failed, solution_valid;
+dispatch_units_t solver_sel = SOLVER_UNITS'(1);
+dispatch_units_t solver_ready, solver_failed, solution_valid;
 button_wirings_t solution_button_wirings [SOLVER_UNITS-1:0];
+logic prev_end_of_line = '0;
+result_t comb_result_data;
+
+always_ff @(posedge clk) begin: dispatch_machine_wiring_solver
+    if (prev_end_of_line && !end_of_line) begin: select_after_eol
+        solver_sel <= solver_ready & ~(solver_ready - 1);
+    end
+    prev_end_of_line <= end_of_line;
+end
 
 genvar i;
 generate for (i = 0; i < SOLVER_UNITS; i++) begin
@@ -35,7 +47,7 @@ generate for (i = 0; i < SOLVER_UNITS; i++) begin
         // Decoded Line Contents
             .solver_ready(solver_ready[i]),
             .end_of_line(end_of_line),
-            .wiring_valid(wiring_valid),
+            .wiring_valid(solver_sel[i] && wiring_valid),
             .wiring_data(wiring_data),
         // Solver Outputs
             .solving_failed(solver_failed[i]),
@@ -45,11 +57,17 @@ generate for (i = 0; i < SOLVER_UNITS; i++) begin
 end endgenerate
 
 always_ff @(posedge clk) compute_finished <= end_of_file;
-always_ff @(posedge clk) result_valid <= solution_valid[0];
-always_ff @(posedge clk) result_data <= $countones(solution_button_wirings[0]);
+always_ff @(posedge clk) result_valid <= |solution_valid;
+always_comb begin: count_ones_array
+    comb_result_data = '0;
+    for (int j = 0; j < SOLVER_UNITS; j++) begin
+        if (solution_valid[j])
+            comb_result_data += $countones(solution_button_wirings[j]);
+    end
+end
+always_ff @(posedge clk) result_data <= comb_result_data;
 
 wire _unused_ok = 1'b0 && &{1'b0,
-    solver_ready,
     solver_failed,
     1'b0};
 

@@ -23,6 +23,7 @@ end
 
 initial begin
     valid = 1'b0;
+    data = '0;
 end
 
 always_ff @(posedge tck) begin: update

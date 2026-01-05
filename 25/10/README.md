@@ -217,3 +217,65 @@ always_comb begin
     alignment = (flipped_bits >> 2) / lowest_set_bit;
 end
 ```
+
+## Fifth Stage
+
+As implemented, the time required for the module performing the machine wiring solving [`machine_wiring_solver`](machine_wiring_solver.sv) may at times take long enough that the light and button wirings of the following line arrive and cause havoc. With each line being fully independent, I simply opted to parallelize the processing by instantiating multiple instances of the `machine_wiring_solver` module.
+
+### Resource Usage
+
+Synthesizer estimates:
+
+|      |Cell    |Count |
+|------|--------|------|
+|1     |BSCANE2 |     1|
+|2     |CARRY4  |   297|
+|3     |LUT1    |    61|
+|4     |LUT2    |   856|
+|5     |LUT3    |   264|
+|6     |LUT4    |   916|
+|7     |LUT5    |   100|
+|8     |LUT6    |   264|
+|9     |FDRE    |  1394|
+|10    |FDSE    |     8|
+
+Final usage:
+
+| Ref Name | Used | Functional Category |
+|----------|------|---------------------|
+| FDRE     | 1385 |        Flop & Latch |
+| LUT4     |  916 |                 LUT |
+| LUT2     |  846 |                 LUT |
+| CARRY4   |  295 |          CarryLogic |
+| LUT6     |  264 |                 LUT |
+| LUT3     |  264 |                 LUT |
+| LUT5     |  100 |                 LUT |
+| LUT1     |   61 |                 LUT |
+| FDSE     |    8 |        Flop & Latch |
+| BUFG     |    1 |               Clock |
+| BSCANE2  |    1 |              Others |
+
+### Verification
+
+I had trouble validating the result using the custom `input.txt` puzzle contents. My design behaved as expected with the example and when running some basic test patterns. To avoid spending more time I decided to grab the implementation in Python from somebody else and bisect the contents for finding where is located the first unexpected behavior.
+
+| Start Line | End Line | Reference | Simulation | On-board | Verdict |
+|------------|----------|-----------|------------|----------|---------|
+| 1          | 162      | 449       | 405        | 407      | Failed  |
+| 1          | 81       | 233       | 210        | 213      | Failed  |
+| 1          | 40       | 117       | 106        | 111      | Failed  |
+| 1          | 20       | 67        | 55         | 56       | Failed  |
+| 1          | 10       | 28        | 27         | 25       | Failed  |
+| 1          | 5        | 16        | 12         | 12       | Failed  |
+| 1          | 3        | 7         | 7          | 7        | Passed  |
+| 3          | 5        | 11        | 7          | 7        | Failed  |
+| 4          | 5        | 9         | 5          | 5        | Failed  |
+| 4          | 4        | 5         | 5          | 5        | Passed  |
+| 5          | 5        | 4         | 4          | 4        | Passed  |
+
+I observe two issues which may be unrelated. I will start by tacking the one occurring with the smallest number of inputs. They are:
+
+```
+[#.#.#..##] (0,2,4,5,6,7,8) (0,2,4,8) (0,1,4,5) (3,6,8) (2,6,8) (0,1,2,3,5,6) (0,5,7) (0,3,4,5) (2,4,5,6,8) (0,1,3,5) {78,40,73,52,50,88,79,25,63}
+[###..#] (0,1,2,4,5) (0,4,5) (2,3) (1,3) (2,3,4,5) (0,1,4,5) (2,5) {33,38,44,37,46,51}
+```

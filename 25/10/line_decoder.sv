@@ -80,6 +80,7 @@ initial begin
     end_of_file = 1'b0;
     end_of_line = 1'b0;
     wiring_valid = 1'b0;
+    wiring_data = '0;
 end
 
 always_ff @(posedge clk) begin: output_sel
