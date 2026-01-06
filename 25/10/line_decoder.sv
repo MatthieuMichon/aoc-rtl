@@ -42,8 +42,6 @@ always_ff @(posedge clk) begin: decode_light_wiring
     if (inbound_valid) begin
         unique case (inbound_byte)
             DOT_CHAR, HASH_CHAR: begin
-                // light_wiring <= {light_wiring[$left(light_wiring)-1:0],
-                //         (inbound_byte == HASH_CHAR)};
                 light_wiring[light_bit_index] <= (inbound_byte == HASH_CHAR);
                 light_bit_index <= light_bit_index + 1;
             end

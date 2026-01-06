@@ -44,8 +44,8 @@ Simplest way would be to breakdown this operation into several elementary steps:
 
 Just like other puzzles, the first stage consists in copy-pasting the common design files.
 
-| Module | Description | Complexity | Mindblowness | Remarks |
-| --- | --- | --- | --- | --- |
+| Module | Description | Complexity | Implementation | Remarks |
+|--------|-------------|------------|----------------|----------|
 | [`user_logic_tb`](user_logic_tb.sv) | Testbench | :large_blue_circle: | :kissing_smiling_eyes: | Small refactor and misc improvements |
 | [`user_logic`](user_logic.sv) | Logic top-level | :large_blue_circle: | :kissing_smiling_eyes: | Wire harness |
 | [`tap_decoder`](tap_decoder.sv) | BSCANE2 interface for inbound signals | :large_blue_circle: | :kissing_smiling_eyes: | Copy-paste from previous puzzle |
@@ -330,7 +330,14 @@ cnt["Accumulator"]
 tap-enc["TAP Encoder"]
 subgraph mcu["Machine Compute Units"]
     disp["Dispatch to Solver Unit"]
-    msw0["Machine Wiring Solver #0"]
+    subgraph msw0["Machine Wiring Solver #0"]
+        seq["Sequencer"]
+        ghc["Gosper's Hack Counter"]
+        bw0["Button Wiring #0"]
+        bw1["Button Wiring #1"]
+        bwn["Button Wiring #N"]
+        xor["XOR and Comparison"]
+    end
     msw1["Machine Wiring Solver #1"]
     msw2["Machine Wiring Solver #2"]
     msw3["Machine Wiring Solver #3"]
@@ -341,12 +348,24 @@ tb --Input Bits--> tap
 tap --JTAG-TAP--> tap-dec
 tap-dec --Bytes--> line-dec
 line-dec --Wirings--> disp
-disp --> msw0
+disp --Wiring Conf--> seq
+seq --> ghc
+seq --Wiring Conf--> bw0
+bw0 --Wiring Conf--> bw1
+bw1 --Wiring Conf--> bwn
+ghc --Enable--> bw0
+ghc --Enable--> bw1
+ghc --Enable--> bwn
 disp --> msw1
 disp --> msw2
 disp --> msw3
-msw0 --ready--> disp
-msw0 --> aggreg
+seq --ready--> disp
+seq --Light Wiring--> xor
+bw0 --> xor
+bw1 --> xor
+bwn --> xor
+ghc --Button Presses--> aggreg
+xor --Valid--> aggreg
 msw1 --ready--> disp
 msw1 --> aggreg
 msw2 --ready--> disp
@@ -376,3 +395,17 @@ Resource usage following fixes:
 | FDSE     |    8 |        Flop & Latch |
 | BUFG     |    1 |               Clock |
 | BSCANE2  |    1 |              Others |
+
+### Final Ratings
+
+| Module                                              | Description | Complexity | Thoughts       | Remarks |
+|-----------------------------------------------------|-------------|------------|----------------|----------|
+| [`user_logic_tb`](user_logic_tb.sv)                 | Testbench | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+| [`user_logic`](user_logic.sv)                       | Logic top-level | :large_blue_circle: | :relaxed: Wire harness and trivial logic | |
+| [`tap_decoder`](tap_decoder.sv)                     | BSCANE2 interface for inbound signals | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+| [`line_decoder`](line_decoder.sv)                   | Converts bytes to wiring data | :green_circle: | :slightly_smiling_face: Simple parser | At a point got confused by bit ordering |
+| [`machine_compute_units`](machine_compute_units.sv) | Contains the computing units with dispatch and aggregation logic | :yellow_circle: Implements parallel processing | :slightly_smiling_face: | About to use round-robin but opted for a priority encoder |
+| [`machine_wiring_solver`](machine_wiring_solver.sv) | Forwards wiring conf and apply selective enabling patterns | :red_circle: | :face_exhaling: Dodged the bullet | Implementation turned out to be simpler then expected |
+| [`gospers_hack_counter`](gospers_hack_counter.sv)   | Bit combinations sorted by number of bits set | :black_circle: | :exploding_head: Used [a Python source](https://rosettacode.org/wiki/Gosper%27s_hack#Python) as reference | Mindblown by just looking at the waveforms |
+| [`button_wiring`](button_wiring.sv)                 | Stores button wiring configuration | :green_circle: | :cursing_face: Let a stupid mistake get through | Thankfully the issue was occuring frequently enough |
+| [`tap_encoder`](tap_encoder.sv)                     | BSCANE2 interface for outbound signals | :large_blue_circle: | :kissing_smiling_eyes: | Copy-paste from previous puzzle | :kissing_smiling_eyes: |
