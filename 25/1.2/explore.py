@@ -3,8 +3,6 @@
 Design Space Exploration for Advent of Code 25: Day 1
 """
 
-import enum
-import math
 import os
 import sys
 from collections.abc import Iterable
@@ -38,7 +36,23 @@ def user_logic(file: Path) -> int:
         print(f"Total: {len(rotations)} rotations")
         (dir_, clicks) = zip(*rotations)
         print(f"Clicks: min={min(clicks)}, max={max(clicks)}")
-    return 0
+    password = 0
+    dial = 50
+    for right_turn, clicks in decode_inputs(file=file):
+        print(f"{'R' if right_turn else 'L'}{clicks} Dial {dial}")
+        if right_turn:
+            zero_crossings = (dial + clicks) // 100
+            if zero_crossings:
+                print(f"Zero crossings: {zero_crossings}")
+                password += zero_crossings
+            dial = (dial + clicks) % 100
+        else:
+            zero_crossings = -(((100 - dial) - clicks) // 100)
+            if zero_crossings:
+                print(f"Zero crossings: {zero_crossings}")
+                password += zero_crossings
+            dial = (dial - clicks) % 100
+    return password
 
 
 def main() -> int:
@@ -50,7 +64,7 @@ def main() -> int:
     os.chdir(Path(__file__).resolve().parent)
     f = "./input.txt" if len(sys.argv) < 2 else sys.argv[1]
     print(f"{f=}")
-    user_logic(file=Path(f))
+    print(user_logic(file=Path(f)))
 
     return 0
 
