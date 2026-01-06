@@ -44,7 +44,7 @@ Computing the area is simply a matter of subtracting, rectifying and multiplying
 
 ## Content Decoding
 
-First step is to copy-paste a cradle from an other puzzle implementation, on top of which I added a content parser (`[line_decoder`](line_decoder.sv)) specific to this puzzle.
+First step is to copy-paste a cradle from an other puzzle implementation, on top of which I added a content parser ([`line_decoder`](line_decoder.sv)) specific to this puzzle.
 
 ### Resource Usage
 
