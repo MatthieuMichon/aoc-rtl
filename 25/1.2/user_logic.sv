@@ -18,6 +18,7 @@ module user_logic (
 localparam int BYTE_WIDTH = $bits(byte);
 // From design space exploration
 localparam int CLICK_BITS = 10;
+localparam int DIAL_CLICKS = 100;
 localparam int RESULT_WIDTH = 16;
 
 typedef logic [CLICK_BITS-1:0] click_cnt_t;
@@ -52,6 +53,21 @@ line_decoder #(.CLICK_BITS(CLICK_BITS)) line_decoder_i (
         .click_valid(click_valid),
         .click_right_left(click_right_left),
         .click_count(click_count)
+);
+
+click_cnt_t zero_crossings;
+
+dial_tracker #(
+    .CLICK_BITS(CLICK_BITS),
+    .DIAL_CLICKS(DIAL_CLICKS)
+) clockwise_counter_i (
+    .clk(tck),
+    // Decoded Line Contents
+        .click_valid(click_valid),
+        .click_right_left(click_right_left),
+        .click_count(click_count),
+    // Computed Values
+        .zero_crossings(zero_crossings)
 );
 
 logic outbound_valid;
