@@ -2,6 +2,9 @@
 
 # Lessons Learnt
 
+- Units containing data with variable length present a blind spot where elements at the tail, which may not be updated nor used for all entries, may contain stale data from prior entries. This may trigger undefined behavior depending on the contents.
+- Dynamic dispatching introduces sequencing behavior which is very likely to differ due to minute differences (at the clock cycle level) in inbound arrival of new data vs processing units readiness.
+
 # Design Space Exploration
 
 The puzzle input format is slightly more complex compared to others. The input contents consist in variable length lists, between four to ten elements with an average of about seven elements. The contents are spread on 162 lines with a total of 1150 elements.
@@ -398,7 +401,7 @@ Resource usage following fixes:
 
 ### Final Ratings
 
-| Module                                              | Description | Complexity | Thoughts       | Remarks |
+| Module                                              | Description | Complexity | Thoughts       | Remarks  |
 |-----------------------------------------------------|-------------|------------|----------------|----------|
 | [`user_logic_tb`](user_logic_tb.sv)                 | Testbench | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
 | [`user_logic`](user_logic.sv)                       | Logic top-level | :large_blue_circle: | :relaxed: Wire harness and trivial logic | |

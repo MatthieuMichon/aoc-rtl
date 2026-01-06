@@ -59,7 +59,7 @@ Unless stated otherwise, I focused only the first part of the following puzzles.
 | [6.1](25/6/)   | :green_circle: Simple array-based design    | :yellow_circle: Some rework required       | :large_blue_circle: Right out of the box        | Arithmetics
 | [7.1](25/7/)   | :large_blue_circle: Combinatorial algorithm | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Binary graph
 | 8.1            | *To be done*                                | *To be done*                               | *To be done*                                    | 
-| 9.1            | *To be done*                                | *To be done*                               | *To be done*                                    | 
+| [9.1](25/9/)   | *In progress*                               | *To be done*                               | *To be done*                                    | 
 | [10.1](25/10/) | :red_circle: Forgot to check a blind side   | :large_blue_circle: Synthesized right away | :large_blue_circle: Initialy got a sim mismatch | Processing load fan-out accross multiple units making it running at line rate                              | 
 | [11.1](25/11/) | :black_circle: Hello *dynamic programming*  | :black_circle: cursed DPRAM inference      | :black_circle: Severe sim / synth mismatch      | DAG with bottom-up **dynamic programming** :exploding_head:
 
