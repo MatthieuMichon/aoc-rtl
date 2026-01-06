@@ -269,9 +269,9 @@ I had trouble validating the result using the custom `input.txt` puzzle contents
 | 1          | 5        | 16        | 12         | 12       | Failed  |
 | 1          | 3        | 7         | 7          | 7        | OK      |
 | 3          | 5        | 11        | 7          | 7        | Failed  |
-| 4          | 5        | 9         | 5          | 5        | Failed  |
-| 4          | 4        | 5         | 5          | 5        | OK      |
-| 5          | 5        | 4         | 4          | 4        | OK      |
+| 4          | 5        | 9         | 5          | 5        | **Failed**  |
+| 4          | 4        | 5         | 5          | 5        | Passed  |
+| 5          | 5        | 4         | 4          | 4        | Passed  |
 
 I observe two issues which may be unrelated. I will start by tacking the one occurring with the smallest number of inputs. They are:
 
@@ -311,6 +311,55 @@ always_ff @(posedge clk) begin: button_wiring_capture
     end
 end
 ```
+
+| Start Line | End Line | Reference | Simulation | On-board | Verdict |
+|------------|----------|-----------|------------|----------|---------|
+| 1          | 162      | 449       | 449        | 449      | OK      |
+
+Interestingly fixing this missing initialization issue also addressed the discrepancy between the simulation and on-board testing. Since no memory blocks are involved, I am confident that the processing dispatch sequencing slightly differs between the simulation and the FPGA firmware due to minute clock cycles inaccuracy in the JTAG TAP behavior. With a long enough runtime the chance that a difference in allocation of the workload by the dispatcher becomes significant (roughly one every ten processing events). Since the un-initialization issue mentioned earlier is spatially fixed to a single `machine_wiring_solving` module, any changes in the dispatch behavior will trigger a sim/synth difference.
+
+### Diagram
+
+```mermaid
+flowchart
+tb["Testbench"]
+tap["TAP Interface"]
+tap-dec["TAP Decoder"]
+line-dec["Line Decoder"]
+cnt["Accumulator"]
+tap-enc["TAP Encoder"]
+subgraph mcu["Machine Compute Units"]
+    disp["Dispatch to Solver Unit"]
+    msw0["Machine Wiring Solver #0"]
+    msw1["Machine Wiring Solver #1"]
+    msw2["Machine Wiring Solver #2"]
+    msw3["Machine Wiring Solver #3"]
+    aggreg["Solver Units Result Aggregator"]
+end
+
+tb --Input Bits--> tap
+tap --JTAG-TAP--> tap-dec
+tap-dec --Bytes--> line-dec
+line-dec --Wirings--> disp
+disp --> msw0
+disp --> msw1
+disp --> msw2
+disp --> msw3
+msw0 --ready--> disp
+msw0 --> aggreg
+msw1 --ready--> disp
+msw1 --> aggreg
+msw2 --ready--> disp
+msw2 --> aggreg
+msw3 --ready--> disp
+msw3 --> aggreg
+aggreg --Min Presses--> cnt
+cnt --Total Min Presses--> tap-enc
+tap-enc --JTAG-TAP--> tap
+tap --Result Bits--> tb
+```
+
+### Resource Usage
 
 Resource usage following fixes:
 
