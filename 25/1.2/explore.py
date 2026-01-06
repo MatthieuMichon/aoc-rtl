@@ -47,7 +47,7 @@ def user_logic(file: Path) -> int:
                 password += zero_crossings
             dial = (dial + clicks) % 100
         else:
-            zero_crossings = -(((100 - dial) - clicks) // 100)
+            zero_crossings = (((100 - dial) % 100) + clicks) // 100
             if zero_crossings:
                 print(f"Zero crossings: {zero_crossings}")
                 password += zero_crossings
