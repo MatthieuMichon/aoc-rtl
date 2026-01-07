@@ -58,7 +58,7 @@ always_ff @(posedge clk) begin: output_ctrl
                 tile_row <= position;
             end
             LF_CHAR: begin
-                tile_valid <= 1'b1;
+                tile_valid <= (prev_inbound_byte != LF_CHAR);
                 tile_col <= position;
             end
             NULL_CHAR: begin

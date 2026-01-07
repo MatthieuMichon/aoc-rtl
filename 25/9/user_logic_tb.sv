@@ -3,6 +3,8 @@
 
 module user_logic_tb;
 
+localparam int RESULT_WIDTH = 40;
+
 logic tck, tdi = 1'b0, tdo;
 logic test_logic_reset, run_test_idle, ir_is_user = 1'b0, capture_dr, shift_dr, update_dr;
 
@@ -134,7 +136,6 @@ task automatic serialize(input string bytes_);
     end
 endtask
 
-localparam int RESULT_WIDTH = 16;
 localparam int SEEK_SET = 0;
 localparam int SEEK_END = 2;
 

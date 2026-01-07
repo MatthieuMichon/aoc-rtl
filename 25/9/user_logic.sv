@@ -18,9 +18,11 @@ module user_logic (
 localparam int BYTE_WIDTH = $bits(byte);
 // From design space exploration
 localparam int GRID_BITS = 18;
-localparam int RESULT_WIDTH = 16;
+localparam int MAX_TILES = 512;
+localparam int RESULT_WIDTH = 40;
 
 typedef logic [GRID_BITS-1:0] position_t;
+typedef logic [2*GRID_BITS-1:0] area_t;
 typedef logic [RESULT_WIDTH-1:0] result_t;
 
 logic inbound_valid;
@@ -54,6 +56,25 @@ line_decoder #(.GRID_BITS(GRID_BITS)) line_decoder_i (
         .tile_col(tile_col)
 );
 
+logic area_done, area_valid;
+area_t area_data;
+
+tile_store #(
+    .GRID_BITS(GRID_BITS),
+    .MAX_TILES(MAX_TILES)
+) tile_store_i (
+    .clk(tck),
+    // Decoded Line Contents
+        .end_of_file(end_of_file), // held high
+        .tile_valid(tile_valid),
+        .tile_row(tile_row),
+        .tile_col(tile_col),
+    // Tile Areas
+        .area_done(area_done),
+        .area_valid(area_valid),
+        .area_data(area_data)
+);
+
 logic outbound_valid;
 logic [RESULT_WIDTH-1:0] outbound_data = '0;
 
@@ -62,9 +83,11 @@ always_ff @(posedge tck) begin
         outbound_valid <= 1'b0;
         outbound_data <= '0;
     end else begin
-        outbound_valid <= end_of_file;
-        if (tile_valid) begin
-            outbound_data <= outbound_data + $countones(tile_row) + $countones(tile_col);
+        outbound_valid <= area_done;
+        if (area_valid) begin
+            if (RESULT_WIDTH'(area_data) > outbound_data) begin
+                outbound_data <= RESULT_WIDTH'(area_data);
+            end
         end
     end
 end
@@ -84,6 +107,7 @@ tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
 
 wire _unused_ok = 1'b0 && &{1'b0,
     run_test_idle, test_logic_reset,
+    area_data,
     1'b0};
 endmodule
 `default_nettype wire

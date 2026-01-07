@@ -127,11 +127,11 @@ proc ::load_inputs {arg_dict} {
 }
 
 proc ::read_result {} {
-    set result_width 16
+    set result_width 40
     set result 0x0
     puts -nonewline "Waiting for non-zero result... "
     while {$result == 0} {
-        set result 0x[scan_dr_hw_jtag 16 -tdi 0]
+        set result 0x[scan_dr_hw_jtag $result_width -tdi 0]
     }
     puts "done."
     puts "Result readback: [format %d $result] ($result)"
