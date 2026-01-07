@@ -209,5 +209,5 @@ tap --Result Bits--> tb
 | [`tap_decoder`](tap_decoder.sv)                 | JTAG TAP deserializer            | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
 | [`line_decoder`](line_decoder.sv)               | Converts bytes to dial clicks    | :large_blue_circle: | :relaxed: Simple decimal converter | Quite happy with the simple code and low resource usage |
 | [`dial_tracker`](dial_tracker.sv)               | Calculates new dial position     | :red_circle:        | :face_with_head_bandage: Modulo arithmetics hurts | Had to pause for sizing the right amount of precision for the division by fixed point multiplication |
-| [`fixed_point_div_100`](fixed_point_div_100.sv) | Converts bytes to tile positions | :yellow_circle:     | :hot_face: Simple decimal converter | Tried signed division computation, but thought better and worked around doing so :grin: |
+| [`fixed_point_div_100`](fixed_point_div_100.sv) | Implements `/100` and `mod 100`  | :yellow_circle:     | :hot_face: Keep calm and stay with unsigned arithmetics | Tried signed division computation, but thought better and worked around doing so :grin: |
 | [`tap_encoder`](tap_encoder.sv)                 | JTAG TAP serializer              | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
