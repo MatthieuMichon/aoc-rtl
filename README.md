@@ -1,3 +1,5 @@
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 # Advent of Code on FPGA
 
 Below are some designs solving select Advent of Code (AoC) puzzles.
@@ -33,15 +35,14 @@ tap-enc --JTAG-TAP--> tap
 
 These implementations share the following common features:
 
+- The source code uses the BSCANE2 primitive with TCL commands for transferring the puzzle input contents, meaning that changing the inputs contents does not require re-building the firmware
 - Source code in vanilla System Verilog
 - The generated firmware can run on any board featuring a Xilinx 7-series FPGA, assuming the device density is enough to fit the design
-- The source code **does not embedded the puzzle input contents**, meaning that changing the contents does not require re-building the firmware
 - All the puzzles are solved in matter of seconds, be it on board or in simulation
-  - Applicable for both simulation and synthesized firmware
 
 ## Porting to Other Targets
 
-As mentioned earlier, the default target device is a Xilinx Zynq 7020. Due to the usage of a **BSCANE2** primitive, small changes may be required to port the design to UltraScale devices (if I recall correctly, these devices use a different BSCANE2 clock constraint: `INTERNAL_TCK`). For Versal families, the porting may be more involved with BSCANE2 primitives being superseded by the **CIPS** component.
+The default target device is a Xilinx Zynq 7020. Due to the usage of a **BSCANE2** primitive, small changes may be required to port the design to UltraScale devices (if I recall correctly, these devices use a different BSCANE2 clock constraint: `INTERNAL_TCK`). For Versal families, the porting may be more involved with BSCANE2 primitives being superseded by the **CIPS** component.
 
 Porting to other vendors should also be straightforward, as the design is written in System Verilog and the only primitive requiring instantiating is a JTAG TAP controller.
 
@@ -53,7 +54,7 @@ Porting to other vendors should also be straightforward, as the design is writte
 
 ## Getting Started
 
-Apart from copy/paste issues, all the puzzles contain a makefile that supports the following commands.
+Each puzzle directory includes a Makefile supporting the following make targets.
 
 ### Simulation with Verilator
 
@@ -89,6 +90,16 @@ make isim [INPUT_FILE=filename]
 
 - `INPUT_FILE`: puzzle contents input file, default is `input.txt` 
 
+### Python Exploration Script
+
+Available in select puzzles.
+
+```
+explore.py [filename]
+```
+
+- `INPUT_FILE`: puzzle contents input file, default is `input.txt` 
+
 # 2025 Season Puzzles
 
 I opted to focus my efforts on the first part of the puzzles, thus most of them haven't the second part done.
@@ -103,7 +114,7 @@ I opted to focus my efforts on the first part of the puzzles, thus most of them 
 | [7.1](25/7/)     | :large_blue_circle: Combinatorial algorithm | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Binary graph
 | [9.1](25/9/)     | :green_circle: Storage and readback         | :large_blue_circle: Synthesized right away | :green_circle: Initialy got a sim/syn mismatch  | Mismatch due to non initialized enum types 
 | [10.1](25/10/)   | :red_circle: Forgot to check a blind side   | :large_blue_circle: Synthesized right away | :large_blue_circle: Initialy got a sim mismatch | Processing load fan-out accross multiple units making it running at line rate                              | 
-| [11.1](25/11/)   | :black_circle: Hello *dynamic programming*  | :black_circle: cursed DPRAM inference      | :black_circle: Severe sim / synth mismatch      | DAG with bottom-up **dynamic programming** :exploding_head:
+| [11.1](25/11/)   | :black_circle: Hello *dynamic programming*  | :black_circle: cursed DPRAM inference      | :black_circle: Had to fix sim / synth mismatch  | DAG with bottom-up **dynamic programming** :exploding_head:
 
 | Symbol              | Level       | Description      | Remarks                           |
 |---------------------|-------------|------------------|-----------------------------------|
@@ -113,6 +124,6 @@ I opted to focus my efforts on the first part of the puzzles, thus most of them 
 | :red_circle:        | Challenging | Serious thinking | Required some serious thinking |
 | :black_circle:      | Tedious     | Cursed puzzle    | Much harder than expected; learnt something new
 
-## Achivements
+## Achievements
 
 - Found an issue with the `run_state_hw_jtag` Vivado TCL command and opened a [support request](https://adaptivesupport.amd.com/s/question/0D5Pd00001772mvKAA/)
