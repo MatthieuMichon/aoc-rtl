@@ -5,3 +5,5 @@
 - As of late 2025, Yosys doesn't support 2d arrays
 - `run_state_hw_jtag -state IDLE IDLE` does not cycle `tck` (related [support request](https://adaptivesupport.amd.com/s/question/0D5Pd00001772mvKAA/) and [repository](https://github.com/MatthieuMichon/vivado_jtag_run-test-idle))
 - dual-port RAM inference has some side effects, some corner cases may exhibit different behavior between simulation and synthesis
+- Modulo arithmetics are cursed, even worse with using signed integers
+- Using a dot `.` in a directory name is asking for trouble (upsets the Python debugger in Zed)
