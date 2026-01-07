@@ -14,21 +14,29 @@ module fixed_point_div_100 #(
         output logic [ARG_WIDTH-1:0] remainder
 );
 
-localparam int PRESCALER = 164;
-localparam int PRESCALER_WIDTH = $clog2(PRESCALER);
-localparam int MULT_WIDTH = ARG_WIDTH + PRESCALER_WIDTH;
+// IMPORTANT: computation is correct for argument values up to 1820 (included)
+
+localparam int MUILTIPLIER = 1311;
+localparam int RIGHT_SHIFT = 17;
+localparam int MULT_WIDTH = ARG_WIDTH + RIGHT_SHIFT;
 
 logic [MULT_WIDTH-1:0] mult_reg;
-logic [ARG_WIDTH-1:0] argument_pipe;
+logic [ARG_WIDTH-1:0] argument_reg;
 logic valid_sr;
 
 always_ff @(posedge clk) begin
-    mult_reg <= argument * PRESCALER_WIDTH'(PRESCALER);
-    quotient <= mult_reg >> 14;
+    mult_reg <= MULT_WIDTH'(argument) * MULT_WIDTH'(MUILTIPLIER);
 
-    argument_pipe <= argument;
-    remainder <= argument_pipe - ((mult_reg >> 14) * 7'd100);
+    quotient <= ARG_WIDTH'(mult_reg >> RIGHT_SHIFT);
+    argument_reg <= argument;
+    remainder <= ARG_WIDTH'(argument_reg - ((mult_reg >> RIGHT_SHIFT) * 7'd100));
+end
 
+initial begin
+    outputs_valid = 1'b0;
+end
+
+always_ff @(posedge clk) begin: shift_reg
     valid_sr <= input_valid;
     outputs_valid <= valid_sr;
 end

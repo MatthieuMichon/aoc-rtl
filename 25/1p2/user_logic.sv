@@ -55,19 +55,21 @@ line_decoder #(.CLICK_BITS(CLICK_BITS)) line_decoder_i (
         .click_count(click_count)
 );
 
-click_cnt_t zero_crossings;
+logic zero_crossings_valid;
+click_cnt_t zero_crossings_count;
 
 dial_tracker #(
     .CLICK_BITS(CLICK_BITS),
     .DIAL_CLICKS(DIAL_CLICKS)
-) clockwise_counter_i (
+) dial_tracker_i (
     .clk(tck),
     // Decoded Line Contents
         .click_valid(click_valid),
         .click_right_left(click_right_left),
         .click_count(click_count),
     // Computed Values
-        .zero_crossings(zero_crossings)
+        .zero_crossings_valid(zero_crossings_valid),
+        .zero_crossings_count(zero_crossings_count)
 );
 
 logic outbound_valid;
@@ -79,8 +81,8 @@ always_ff @(posedge tck) begin
         outbound_data <= '0;
     end else begin
         outbound_valid <= end_of_file;
-        if (click_valid) begin
-            outbound_data <= outbound_data + $countones({click_right_left, click_count});
+        if (zero_crossings_valid) begin
+            outbound_data <= outbound_data + RESULT_WIDTH'(zero_crossings_count);
         end
     end
 end
@@ -101,5 +103,6 @@ tap_encoder #(.DATA_WIDTH(RESULT_WIDTH)) tap_encoder_i (
 wire _unused_ok = 1'b0 && &{1'b0,
     run_test_idle, test_logic_reset,
     1'b0};
+
 endmodule
 `default_nettype wire

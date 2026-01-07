@@ -52,7 +52,7 @@ I prefer focus my efforts on the first part of the puzzles, thus most of them ha
 | Puzzle           | Simulation                                  | Synthesis                                  | On-board                                        | Remarks                               |
 |------------------|---------------------------------------------|--------------------------------------------|-------------------------------------------------|---------------------------------------|
 | [1.1](25/1/)     | :yellow_circle: Design creation             | :green_circle: Integrate BSCANE2 primitive | :yellow_circle: Get familiar with JTAG TAP      | First attempts were rough 
-| [1.2](25/1.2/)   | *In progress*                               | *To be done*                               | *To be done*                                    | Part 2
+| [1.2](25/1p2/)   | :yellow_circle: Modulo arithmetics          | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Part 2
 | 2.1              | *To be done*                                | *To be done*                               | *To be done*                                    | Repeating pattern matching
 | 3.1              | *To be done*                                | *To be done*                               | *To be done*                                    | Char sweep and comparison
 | [4.1](25/4/)     | :yellow_circle: Used smarter algorithm      | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Two-dimensional neighboors comparison

@@ -60,7 +60,7 @@ always_ff @(posedge clk) begin: output_ctrl
                 click_right_left <= 1'b1;
             end
             LF_CHAR: begin
-                click_valid <= 1'b1;
+                click_valid <= (prev_inbound_byte != LF_CHAR);
             end
             NULL_CHAR: begin
                 end_of_file <= 1'b1;
