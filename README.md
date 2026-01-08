@@ -74,7 +74,7 @@ make synth [VVD_MODE=batch] [PART=part] [VVD_TASK=task] [INPUT_FILE=filename]
 - `VVD_MODE`: Vivado invocation mode, default `batch` 
 - `PART`: FPGA targeted part, default is `xc7z020clg484-1`
 - `VVD_TASK`: tasks executed in the `vivado.tcl`, default is `all` 
-  - `all`: all tasks below
+  - `all`: all tasks below except `lint`
   - `build`: synthesis, pnr and bitstream generation
   - `program`: configures FPGA with current bitstream
   - `run`: `program`, load puzzle contents into the FPGA and readback results
@@ -99,7 +99,7 @@ Available in select puzzles.
 explore.py [filename]
 ```
 
-- `INPUT_FILE`: puzzle contents input file, default is `input.txt` 
+- `filename`: puzzle contents input file, default is `input.txt` 
 
 # 2025 Season Puzzles
 
