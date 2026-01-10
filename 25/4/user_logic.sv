@@ -2,14 +2,17 @@
 `default_nettype none
 
 module user_logic (
-    input wire tck,
-    input wire tdi,
-    output logic tdo,
-    input wire test_logic_reset,
-    input wire ir_is_user,
-    input wire capture_dr,
-    input wire shift_dr,
-    input wire update_dr
+    // raw JTAG signals
+        input wire tck,
+        input wire tdi,
+        output logic tdo,
+    // TAP controller states
+        input wire test_logic_reset,
+        input wire run_test_idle,
+        input wire ir_is_user,
+        input wire capture_dr,
+        input wire shift_dr,
+        input wire update_dr
 );
 
 localparam int BYTE_WIDTH = $bits(byte);
