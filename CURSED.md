@@ -8,3 +8,4 @@
 - Modulo arithmetics are cursed, even worse with using signed integers
 - Using a dot `.` in a directory name is asking for trouble (upsets the Python debugger in Zed)
 - Beware of mismatches due to non initialized enum types
+- Vivado `cs_server` may be left running, ending up spinning-up one CPU core for absolutely no reason
