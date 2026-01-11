@@ -111,6 +111,7 @@ I opted to focus my efforts on the first part of the puzzles, thus most of them 
 | [1.2](25/1p2/)   | :yellow_circle: Modulo arithmetics          | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Part 2
 | [4.1](25/4/)     | :yellow_circle: Used smarter algorithm      | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Two-dimensional neighboors comparison
 | [5.1](25/5/)     | :large_blue_circle: Brute force approach    | :yellow_circle: Barely fits in a Zynq-7020 | :large_blue_circle: Right out of the box        | Comparison of value ranges
+| [5.2](25/5p2/)   | *Preliminary design stage*                  | *Not started yet*                          | *Not started yet*                               | Part 2
 | [6.1](25/6/)     | :green_circle: Simple array-based design    | :yellow_circle: Some rework required       | :large_blue_circle: Right out of the box        | Arithmetics
 | [7.1](25/7/)     | :large_blue_circle: Combinatorial algorithm | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Binary graph
 | [9.1](25/9/)     | :green_circle: Storage and readback         | :large_blue_circle: Synthesized right away | :green_circle: Initialy got a sim/syn mismatch  | Mismatch due to non initialized enum types 
