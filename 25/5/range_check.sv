@@ -32,7 +32,6 @@ state_t current_state, next_state;
 logic sel_lower_bound;
 logic sel_upper_bound;
 logic forward_range;
-logic filter_id;
 
 initial current_state = WAIT_LOWER_BOUND;
 
@@ -78,7 +77,6 @@ always_comb begin: output_logic
     sel_lower_bound = (current_state == WAIT_LOWER_BOUND);
     sel_upper_bound = (current_state == WAIT_UPPER_BOUND);
     forward_range = (current_state == WAIT_ID_SEL);
-    filter_id = (current_state == FILTER_ID);
 end
 
 always_ff @(posedge clk) begin: update_range
@@ -94,6 +92,12 @@ function logic is_id_out_of_range(data_t ingredient_id);
         (ingredient_id < lower_bound) ||
         (ingredient_id > upper_bound);
 endfunction
+
+initial begin
+    downstream_id_range_sel = 1'b0;
+    downstream_id_range_valid = 1'b0;
+    downstream_id_range_data = '0;
+end
 
 always_ff @(posedge clk) begin: output_register
     if (forward_range) begin

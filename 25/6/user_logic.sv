@@ -2,15 +2,17 @@
 `default_nettype none
 
 module user_logic (
-    input wire tck,
-    input wire tdi,
-    output logic tdo,
-
-    input wire test_logic_reset,
-    input wire ir_is_user,
-    input wire capture_dr,
-    input wire shift_dr,
-    input wire update_dr
+    // raw JTAG signals
+        input wire tck,
+        input wire tdi,
+        output logic tdo,
+    // TAP controller states
+        input wire test_logic_reset,
+        input wire run_test_idle,
+        input wire ir_is_user,
+        input wire capture_dr,
+        input wire shift_dr,
+        input wire update_dr
 );
 
 // From puzzle description
@@ -133,7 +135,7 @@ initial grand_total = '0;
 always_ff @(posedge tck) grand_total_valid <= 1'b1;
 always_ff @(posedge tck) begin
     if (problem_valid) begin
-        grand_total <= grand_total + problem_data;
+        grand_total <= grand_total + GRAND_TOTAL_WIDTH'(problem_data);
     end
 end
 
@@ -149,6 +151,11 @@ tap_encoder #(.DATA_WIDTH(GRAND_TOTAL_WIDTH)) tap_encoder_i (
         .data(grand_total),
         .valid(grand_total_valid)
 );
+
+wire _unused_ok = 1'b0 && &{1'b0,
+    run_test_idle,
+    test_logic_reset,
+    1'b0};
 
 endmodule
 `default_nettype wire

@@ -30,6 +30,12 @@ always_ff @(posedge clk) begin: reg_byte_data
     end
 end
 
+initial begin
+    cell_last = 1'b0;
+    cell_valid = 1'b0;
+    cell_rop = 1'b0;
+end
+
 always_ff @(posedge clk) begin: decoder
     cell_valid <= 1'b0;
     if (byte_valid) begin

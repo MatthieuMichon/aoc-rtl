@@ -16,7 +16,7 @@ module tap_encoder #(
 );
 
 typedef logic [DATA_WIDTH-1:0] data_t;
-data_t data_r, shift_reg;
+data_t data_r = '0, shift_reg = '0;
 
 always_ff @(posedge tck) begin: capture_data
     if (valid) begin

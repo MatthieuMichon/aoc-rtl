@@ -3,229 +3,217 @@
 
 module user_logic_tb;
 
-string input_file = "input.txt";
+localparam int RESULT_WIDTH = 16;
 
-localparam time TCK_PERIOD = 10ps;
+logic tck, tdi = 1'b0, tdo;
+logic test_logic_reset, run_test_idle, ir_is_user = 1'b0, capture_dr, shift_dr, update_dr;
+
 initial begin
     tck = 0;
     forever #1 tck = ~tck;
 end
 
-/* Example from the problem statement:
-    ```
-    L68
-    L30
-    R48
-    L5
-    R60
-    L55
-    L1
-    L99
-    R14
-    L82
-    ```
-*/
-//localparam string ROTATIONS_STR = "L68\nL30\nR48\nL5\nR60\nL55\nL1\nL99\nR14\nL82\n";
+localparam int IR_LENGTH = 6;
 
-logic tck, tdi, tdo;
-logic test_logic_reset, ir_is_user, capture_dr, shift_dr, update_dr;
+typedef enum {
+    TEST_LOGIC_RESET,
+    RUN_TEST_IDLE,
+    SELECT_DR_SCAN,
+    CAPTURE_DR,
+    SHIFT_DR,
+    EXIT1_DR,
+    PAUSE_DR,
+    EXIT2_DR,
+    UPDATE_DR,
+    IR
+} state_t;
+
+task automatic run_state_hw_jtag(state_t tap_state);
+    unique case (tap_state)
+        TEST_LOGIC_RESET: begin
+            test_logic_reset = 1'b1;
+            run_test_idle = 1'b0;
+            capture_dr = 1'b0;
+            shift_dr = 1'b0;
+            update_dr = 1'b0;
+        end
+        RUN_TEST_IDLE: begin
+            test_logic_reset = 1'b0;
+            run_test_idle = 1'b1;
+            capture_dr = 1'b0;
+            shift_dr = 1'b0;
+            update_dr = 1'b0;
+        end
+        SELECT_DR_SCAN: begin
+            test_logic_reset = 1'b0;
+            run_test_idle = 1'b0;
+            capture_dr = 1'b0;
+            shift_dr = 1'b0;
+            update_dr = 1'b0;
+        end
+        CAPTURE_DR: begin
+            test_logic_reset = 1'b0;
+            run_test_idle = 1'b0;
+            capture_dr = 1'b1;
+            shift_dr = 1'b0;
+            update_dr = 1'b0;
+        end
+        SHIFT_DR: begin
+            test_logic_reset = 1'b0;
+            run_test_idle = 1'b0;
+            capture_dr = 1'b0;
+            shift_dr = 1'b1;
+            update_dr = 1'b0;
+        end
+        EXIT1_DR: begin
+            test_logic_reset = 1'b0;
+            run_test_idle = 1'b0;
+            capture_dr = 1'b0;
+            shift_dr = 1'b0;
+            update_dr = 1'b0;
+        end
+        PAUSE_DR: begin
+            test_logic_reset = 1'b0;
+            run_test_idle = 1'b0;
+            capture_dr = 1'b0;
+            shift_dr = 1'b0;
+            update_dr = 1'b0;
+        end
+        EXIT2_DR: begin
+            test_logic_reset = 1'b0;
+            run_test_idle = 1'b0;
+            capture_dr = 1'b0;
+            shift_dr = 1'b0;
+            update_dr = 1'b0;
+        end
+        UPDATE_DR: begin
+            test_logic_reset = 1'b0;
+            run_test_idle = 1'b0;
+            capture_dr = 1'b0;
+            shift_dr = 1'b0;
+            update_dr = 1'b1;
+        end
+        IR: begin
+            test_logic_reset = 1'b0;
+            run_test_idle = 1'b0;
+            capture_dr = 1'b0;
+            shift_dr = 1'b0;
+            update_dr = 1'b0;
+        end
+    endcase
+    @(posedge tck);
+endtask
 
 task automatic serialize(input string bytes_);
-
     int num_bytes = bytes_.len();
+    int deci = num_bytes / 10;
     byte char;
-
-    for (int i=0; i<num_bytes; i++) begin
-
-        if (i % 1000 == 0)
-            $display("Processing byte %0d of %0d", i, num_bytes);
-
-        // transition from `run-test/idle` to `capture-DR`
-
-            test_logic_reset = 1'b0;
-            capture_dr = 1'b0;
-            shift_dr = 1'b0;
-            update_dr = 1'b0;
-            @(posedge tck); // `run-test/idle`
-            test_logic_reset = 1'b0;
-            capture_dr = 1'b0;
-            shift_dr = 1'b0;
-            update_dr = 1'b0;
-            @(posedge tck); // `select-DR-scan`
-            test_logic_reset = 1'b0;
-            capture_dr = 1'b1; // set bit
-            shift_dr = 1'b0;
-            update_dr = 1'b0;
-            @(posedge tck); // `capture-DR`
-
-        // transition to `shift-DR`
-
-            test_logic_reset = 1'b0;
-            capture_dr = 1'b0;
-            shift_dr = 1'b1; // set bit
-            update_dr = 1'b0;
-
-        // shift eight bits
-
-            char = bytes_[i];
-            for (int j=0; j<8; j++) begin
-                tdi = char[j];
-                @(posedge tck); // commit bit shift
-            end
-
-        // transition to `update-DR`
-
-            test_logic_reset = 1'b0;
-            capture_dr = 1'b0;
-            shift_dr = 1'b0;
-            update_dr = 1'b0;
-            @(posedge tck); // `exit-DR`
-            test_logic_reset = 1'b0;
-            capture_dr = 1'b0;
-            shift_dr = 1'b0;
-            update_dr = 1'b1; // set bit
-            @(posedge tck); // `update-DR`
-
-    end
-
-    // transition to `run-test/idle`
-
-        test_logic_reset = 1'b0;
-        capture_dr = 1'b0;
-        shift_dr = 1'b0;
-        update_dr = 1'b0;
-        @(posedge tck); // `run-test/idle`
-
-endtask
-
-task automatic deserialize_password(output logic [16-1:0] password);
-
-    // transition from `run-test/idle` to `capture-DR`
-
-        test_logic_reset = 1'b0;
-        capture_dr = 1'b0;
-        shift_dr = 1'b0;
-        update_dr = 1'b0;
-        @(posedge tck); // `select-DR-scan`
-        test_logic_reset = 1'b0;
-        capture_dr = 1'b1; // set bit
-        shift_dr = 1'b0;
-        update_dr = 1'b0;
-        @(posedge tck); // `capture-DR`
-
-    // transition to `shift-DR`
-
-        test_logic_reset = 1'b0;
-        capture_dr = 1'b0;
-        shift_dr = 1'b1; // set bit
-        update_dr = 1'b0;
-
-    // shift 16 bits
-
-        tdi = 1'b0; // replicate TCL script behavior
-        for (int j=0; j<16; j++) begin
-            password[j]= tdo;
-            @(posedge tck); // commit bit shift
+    for (int i=0; i<num_bytes; i++) begin: for_each_char
+        if (i % deci == 0)
+            $display("Processed %d %%", 100*i/num_bytes);
+        run_state_hw_jtag(SELECT_DR_SCAN);
+        run_state_hw_jtag(CAPTURE_DR);
+        char = bytes_[i];
+        for (int j=0; j<8; j++) begin
+            tdi = char[j];
+            run_state_hw_jtag(SHIFT_DR);
         end
-
-    // transition to `update-DR`
-
-        test_logic_reset = 1'b0;
-        capture_dr = 1'b0;
-        shift_dr = 1'b0;
-        update_dr = 1'b0;
-        @(posedge tck); // `exit-DR`
-        test_logic_reset = 1'b0;
-        capture_dr = 1'b0;
-        shift_dr = 1'b0;
-        update_dr = 1'b1; // set bit
-        @(posedge tck); // `update-DR`
-
-    // transition to `run-test/idle`
-
-        test_logic_reset = 1'b0;
-        capture_dr = 1'b0;
-        shift_dr = 1'b0;
-        update_dr = 1'b0;
-        @(posedge tck); // `run-test/idle`
-
+        run_state_hw_jtag(EXIT1_DR);
+        run_state_hw_jtag(UPDATE_DR);
+        run_state_hw_jtag(RUN_TEST_IDLE);
+    end
+    begin: finish_with_null_byte
+        run_state_hw_jtag(SELECT_DR_SCAN);
+        run_state_hw_jtag(CAPTURE_DR);
+        char = 8'h0A;
+        for (int j=0; j<8; j++) begin
+            tdi = char[j];
+            run_state_hw_jtag(SHIFT_DR);
+        end
+        run_state_hw_jtag(EXIT1_DR);
+        run_state_hw_jtag(UPDATE_DR);
+        run_state_hw_jtag(RUN_TEST_IDLE);
+    end
 endtask
 
-localparam int ZYNQ7_IR_LENGTH = 10;
 localparam int SEEK_SET = 0;
 localparam int SEEK_END = 2;
 
-string rotations = "";
+task automatic deserialize(output logic [RESULT_WIDTH-1:0] result);
+    run_state_hw_jtag(SELECT_DR_SCAN);
+    run_state_hw_jtag(CAPTURE_DR);
 
-initial begin
-    logic [16-1:0] password;
-    int fd, file_size;
-    int char;
-
-    if ($value$plusargs("INPUT_FILE=%s", input_file)) begin
-        $display("Overriding input filename: %s", input_file);
-    end else begin
-        $display("Using default filename: %s", input_file);
+    tdi = 1'b0; // replicate TCL script behavior
+    for (int j=0; j<$bits(result); j++) begin
+        @(negedge tck);
+        result[j]= tdo;
+        run_state_hw_jtag(SHIFT_DR);
     end
+
+    run_state_hw_jtag(EXIT1_DR);
+    run_state_hw_jtag(UPDATE_DR);
+    run_state_hw_jtag(RUN_TEST_IDLE);
+endtask
+
+string input_file = "input.txt";
+string input_contents = "";
+byte char = 0;
+
+initial begin: main_seq
+    int fd, file_size;
+
+    logic [RESULT_WIDTH-1:0] result;
 
     // load file contents
 
+        if ($value$plusargs("INPUT_FILE=%s", input_file)) begin
+            $display("Overriding input filename: %s", input_file);
+        end else begin
+            $display("Using default filename: %s", input_file);
+        end
         fd = $fopen(input_file, "r");
         if (fd==0) $fatal(1, "Failed to open file %s", input_file);
         $fseek(fd, 0, SEEK_END);
         file_size = $ftell(fd);
         $display("file_size: %d bytes", file_size);
         $fseek(fd, 0, SEEK_SET);
-        while (1) begin
+        while (char != -1) begin
             char = $fgetc(fd);
-            if (char == -1)
-                break;
-            rotations = $sformatf("%s%c", rotations, char);
+            if (char != -1)
+                input_contents = $sformatf("%s%c", input_contents, char);
         end
         $fclose(fd);
-        if (rotations.len() != file_size)
+        if (input_contents.len() != file_size)
             $fatal(1, "Failed to open file %s", input_file);
         $display("Loaded %d bytes", file_size);
+        
+    // initialize JTAG
 
-    // start with TAP state in `test-logic-reset`
-
-        test_logic_reset = 1'b1;
-        capture_dr = 1'b0;
-        shift_dr = 1'b0;
-        update_dr = 1'b0;
-        // instruction register is set to `bypass` in state `test-logic-reset`
-        ir_is_user = 1'b0;
-        tdi = 1'b0; // whatever value
-        repeat(42) @(posedge tck); // may as well wait 42 because why not
-
-    // transition out of `test-logic-reset`
-
-        test_logic_reset = 1'b0;
-        capture_dr = 1'b0;
-        shift_dr = 1'b0;
-        update_dr = 1'b0;
-        ir_is_user = 1'b0;
-        repeat(5+ZYNQ7_IR_LENGTH) @(posedge tck); // five transitions for reaching state `shift-IR`
+        run_state_hw_jtag(TEST_LOGIC_RESET);
+        run_state_hw_jtag(RUN_TEST_IDLE);
 
     // set instruction register to `USER4`
 
-        test_logic_reset = 1'b0;
-        capture_dr = 1'b0;
-        shift_dr = 1'b0;
-        update_dr = 1'b0;
-        ir_is_user = 1'b0;
-        repeat(5) @(posedge tck); // five transitions for reaching state `shift-IR`
-        repeat(ZYNQ7_IR_LENGTH) @(posedge tck); // shift `USER4` JTAG instruction bits
-        repeat(2) @(posedge tck); // two transitions for reaching state `update-IR`
+        run_state_hw_jtag(SELECT_DR_SCAN);
+        run_state_hw_jtag(IR); // SELECT_IR_SCAN wait state
+        run_state_hw_jtag(IR); // CAPTURE_IR wait state
+        for (int j=0; j<IR_LENGTH; j++) begin
+            run_state_hw_jtag(IR); // SHIFT_IR wait state
+        end
+        run_state_hw_jtag(IR); // EXIT1_IR wait state
+        run_state_hw_jtag(IR); // UPDATE_IR wait state
         ir_is_user = 1'b1;
-        @(posedge tck); // transition to state `run-test/idle`
+        run_state_hw_jtag(RUN_TEST_IDLE);
 
-    // serialize rotation commands and readback password
+    // serialize inputs into the user logic and readback result
 
-        serialize(rotations);
-        repeat(10) @(posedge tck); // account for pipeline stages by cycling tck
-        deserialize_password(password);
-        $display("Password readback: %d (0x%h)", password, password);
+        serialize(input_contents);
+        result = 0;
+        while (result == 0 || $isunknown(result)) begin: loop_until_result
+            @(posedge tck);
+            deserialize(result);
+        end
+        $display("Result: %d (0x%h)", result, result);
 
     $finish;
 end
@@ -236,10 +224,17 @@ user_logic user_logic_i (
         .tdi(tdi),
         .tdo(tdo),
         .test_logic_reset(test_logic_reset),
+        .run_test_idle(run_test_idle),
         .ir_is_user(ir_is_user),
         .capture_dr(capture_dr),
         .shift_dr(shift_dr),
         .update_dr(update_dr));
 
+`ifndef VERILATOR
+initial begin
+    $dumpfile("wave.vcd");
+    $dumpvars(0, user_logic_tb);
+end
+`endif
 endmodule
 `default_nettype wire

@@ -1,5 +1,22 @@
 # Day 4: Printing Department
 
+# Lessons Learned
+
+- Icarus Verilog may yield unexpected behavior when the `$bits()` system task is called with a signal name as argument.
+
+```verilog
+typedef logic [1:0] delay_t;
+delay_t cell_rop_sr = '0;
+
+logic [$bits(delay_t)+1:0] aggreg_cell_rop_sr_ok;
+logic [$bits(cell_rop_sr)+1:0] aggreg_cell_rop_sr_ng;
+
+assign aggreg_cell_rop_sr_ok = {cell_rop_sr, cell_rop};
+assign aggreg_cell_rop_sr_ng = {cell_rop_sr, cell_rop};
+
+// aggreg_cell_rop_sr_ok and aggreg_cell_rop_sr_ng will DIFFER with only aggreg_cell_rop_sr_ok being set to the expected value
+```
+
 # Design Space Exploration
 
 ## Input Data

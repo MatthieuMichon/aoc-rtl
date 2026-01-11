@@ -38,22 +38,50 @@ problem_t mult_problem[1:8], add_problem[1:8];
 problem_t sel_mult_problem, sel_add_problem;
 
 always_ff @(posedge clk) begin
-    mult_problem[1] <= rd_arg_data_row0;
-    mult_problem[2] <= rd_arg_data_row0 * rd_arg_data_row1;
-    mult_problem[3] <= rd_arg_data_row0 * rd_arg_data_row1 * rd_arg_data_row2;
+    mult_problem[1] <= PROBLEM_DATA_WIDTH'(rd_arg_data_row0);
+    mult_problem[2] <= PROBLEM_DATA_WIDTH'(rd_arg_data_row0 * rd_arg_data_row1);
+    mult_problem[3] <= PROBLEM_DATA_WIDTH'(rd_arg_data_row0 * rd_arg_data_row1 * rd_arg_data_row2);
     mult_problem[4] <= mult_problem[3] * rd_arg_data_row3;
     mult_problem[5] <= mult_problem[3] * rd_arg_data_row3 * rd_arg_data_row4;
     mult_problem[6] <= mult_problem[5] * rd_arg_data_row5;
     mult_problem[7] <= mult_problem[5] * rd_arg_data_row5 * rd_arg_data_row6;
     mult_problem[8] <= mult_problem[5] * rd_arg_data_row5 * rd_arg_data_row6 * rd_arg_data_row7;
-    add_problem[1] <= rd_arg_data_row0;
-    add_problem[2] <= rd_arg_data_row0 + rd_arg_data_row1;
-    add_problem[3] <= rd_arg_data_row0 + rd_arg_data_row1 + rd_arg_data_row2;
-    add_problem[4] <= rd_arg_data_row0 + rd_arg_data_row1 + rd_arg_data_row2 + rd_arg_data_row3;
-    add_problem[5] <= rd_arg_data_row0 + rd_arg_data_row1 + rd_arg_data_row2 + rd_arg_data_row3 + rd_arg_data_row4;
-    add_problem[6] <= rd_arg_data_row0 + rd_arg_data_row1 + rd_arg_data_row2 + rd_arg_data_row3 + rd_arg_data_row4 + rd_arg_data_row5;
-    add_problem[7] <= rd_arg_data_row0 + rd_arg_data_row1 + rd_arg_data_row2 + rd_arg_data_row3 + rd_arg_data_row4 + rd_arg_data_row5 + rd_arg_data_row6;
-    add_problem[8] <= rd_arg_data_row0 + rd_arg_data_row1 + rd_arg_data_row2 + rd_arg_data_row3 + rd_arg_data_row4 + rd_arg_data_row5 + rd_arg_data_row6 + rd_arg_data_row7;
+    add_problem[1] <= PROBLEM_DATA_WIDTH'(rd_arg_data_row0);
+    add_problem[2] <= PROBLEM_DATA_WIDTH'(rd_arg_data_row0) + 
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row1);
+    add_problem[3] <= PROBLEM_DATA_WIDTH'(rd_arg_data_row0) + 
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row1) + 
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row2);
+    add_problem[4] <= PROBLEM_DATA_WIDTH'(rd_arg_data_row0) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row1) + 
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row2) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row3);
+    add_problem[5] <= PROBLEM_DATA_WIDTH'(rd_arg_data_row0) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row1) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row2) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row3) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row4);
+    add_problem[6] <= PROBLEM_DATA_WIDTH'(rd_arg_data_row0) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row1) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row2) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row3) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row4) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row5);
+    add_problem[7] <= PROBLEM_DATA_WIDTH'(rd_arg_data_row0) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row1) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row2) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row3) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row4) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row5) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row6);
+    add_problem[8] <= PROBLEM_DATA_WIDTH'(rd_arg_data_row0) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row1) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row2) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row3) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row4) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row5) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row6) +
+            PROBLEM_DATA_WIDTH'(rd_arg_data_row7);
 end
 
 always_ff @(posedge clk) begin

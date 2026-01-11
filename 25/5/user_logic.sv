@@ -2,25 +2,28 @@
 `default_nettype none
 
 module user_logic (
-    input wire tck,
-    input wire tdi,
-    output logic tdo,
-    input wire test_logic_reset,
-    input wire ir_is_user,
-    input wire capture_dr,
-    input wire shift_dr,
-    input wire update_dr
+    // raw JTAG signals
+        input wire tck,
+        input wire tdi,
+        output logic tdo,
+    // TAP controller states
+        input wire test_logic_reset,
+        input wire run_test_idle,
+        input wire ir_is_user,
+        input wire capture_dr,
+        input wire shift_dr,
+        input wire update_dr
 );
 
 localparam int BYTE_WIDTH = 8;
 // From design space exploration
 localparam int INGREDIENT_ID_RANGE_WIDTH = 49;
 localparam int RANGE_CHECK_INSTANCES = 200;
-localparam int MAX_INGREDIENT_QTY = 1000;
 
 localparam int RESULT_DATA_WIDTH = 16;
 
 typedef logic [INGREDIENT_ID_RANGE_WIDTH-1:0] id_range_data_t;
+typedef logic [RESULT_DATA_WIDTH-1:0] result_data_t;
 
 logic inbound_valid;
 logic [BYTE_WIDTH-1:0] inbound_data;
@@ -76,13 +79,12 @@ generate
     end
 endgenerate
 
-typedef logic [RESULT_DATA_WIDTH-1:0] result_data_t;
 result_data_t total_ingredients, spoiled_ingredients, result_data;
 logic result_valid;
 
 initial begin
-    result_data = '0;
     total_ingredients = '0;
+    spoiled_ingredients = '0;
 end
 
 always_ff @(posedge tck) begin: count_ingredients
@@ -92,6 +94,10 @@ always_ff @(posedge tck) begin: count_ingredients
     if (valid_array[$size(valid_array)-1]) begin
         spoiled_ingredients <= spoiled_ingredients + 1;
     end
+end
+
+initial begin
+    result_valid = 1'b0;
 end
 
 always_ff @(posedge tck) begin: update_result_valid_both_ends
@@ -116,6 +122,10 @@ tap_encoder #(.DATA_WIDTH(RESULT_DATA_WIDTH)) tap_encoder_i (
         .data(result_data),
         .valid(result_valid)
 );
+
+wire _unused_ok = 1'b0 && &{1'b0,
+    run_test_idle,
+    1'b0};
 
 endmodule
 `default_nettype wire

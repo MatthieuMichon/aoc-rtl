@@ -53,7 +53,7 @@ end
 
 always_ff @(posedge clk) arg_row <= arg_row_int;
 
-localparam arg_row_t OPERAND_ROW = 2'b11;
+//localparam arg_row_t OPERAND_ROW = 2'b11;
 
 logic char_is_text, prev_char_was_text;
 assign char_is_text =
@@ -92,9 +92,9 @@ always_ff @(posedge clk) begin: accumulate_arg
     if (byte_valid) begin
         if (char_is_digit) begin
             if (!prev_char_was_digit) begin: first_digit
-                arg_data <= byte_data & 8'h0F;
+                arg_data <= ARG_DATA_WIDTH'(byte_data & 8'h0F);
             end else begin: subsequent_digit
-                arg_data <= 10 * arg_data + (byte_data & 8'h0F);
+                arg_data <= 10 * arg_data + ARG_DATA_WIDTH'(byte_data & 8'h0F);
             end
         end else begin
             if (prev_char_was_digit) begin: arg_complete

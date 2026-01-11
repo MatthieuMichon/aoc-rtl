@@ -3,19 +3,35 @@
 
 module ascii_decoder (
     input wire clk,
-    input wire [8-1:0] ascii_data,
-    input wire ascii_valid,
-    output logic [8-1:0] right_steps,
-    output logic right_steps_valid
+    // Inbound Byte Stream
+        input wire ascii_valid,
+        input wire [8-1:0] ascii_data,
+    // Decoded Line Contents
+        output logic end_of_file, // held high
+        output logic right_steps_valid,
+        output logic [8-1:0] right_steps
 );
 
 // from `man ascii`
-localparam byte L_CHAR = 8'h4C, R_CHAR = 8'h52,
-    ZERO_CHAR = 8'h30, NINE_CHAR = 8'h39, LF_CHAR = 8'h0A;
+typedef enum byte {
+    NULL_CHAR = 8'h00,
+    LF_CHAR = 8'h0A,
+    ZERO_CHAR = 8'h30, // `0`
+    NINE_CHAR = 8'h39, // `9`
+    L_CHAR = 8'h4C, // upper-case `L`
+    R_CHAR = 8'h52 // upper-case `R`
+} char_t;
+
+// from `man ascii`
+// localparam byte L_CHAR = 8'h4C, R_CHAR = 8'h52,
+//     ZERO_CHAR = 8'h30, NINE_CHAR = 8'h39, LF_CHAR = 8'h0A;
+
+localparam int DECIMAL_DIGITS_WIDTH = $clog2(10);
+typedef logic [DECIMAL_DIGITS_WIDTH-1:0] digit_t;
 
 logic ascii_data_is_digit;
 assign ascii_data_is_digit = (ascii_data >= ZERO_CHAR) && (ascii_data <= NINE_CHAR);
-int dozens, units_;
+digit_t dozens, units_;
 
 typedef enum logic [2:0] {
     CAPTURE_DIRECTION,
@@ -90,7 +106,7 @@ end
 logic [8-1:0] steps;
 
 always_comb begin: output_logic
-    steps = 10 * dozens + units_;
+    steps = DECIMAL_DIGITS_WIDTH'(10) * dozens + $bits(steps)'(units_);
     if (current_state == PUSH_CCW_STEPS) begin
         right_steps = 8'd100 - steps;
         right_steps_valid = 1'b1;
@@ -103,12 +119,18 @@ always_comb begin: output_logic
     end
 end
 
+initial begin
+    end_of_file = 1'b0;
+end
+
 always_ff @(posedge clk) begin: ascii_digit_capture
     if (ascii_valid) begin
         if (ascii_data_is_digit) begin
             dozens <= units_;
             units_ <= ascii_data[4-1:0];
         end else if (ascii_data == LF_CHAR) begin: do_nothing
+        end else if (ascii_data == NULL_CHAR) begin: eof
+            end_of_file <= 1'b1;
         end else begin
             dozens <= 0;
             units_ <= 0;

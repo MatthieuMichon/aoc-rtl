@@ -17,7 +17,7 @@ module adjacent_col_counter #(
 );
 
 typedef logic [1:0] delay_t;
-logic [1:0] cell_rop_sr = '0;
+delay_t cell_rop_sr = '0;
 logic next_cell_is_first = 1'b1;
 logic prev_cell_is_last = 1'b0;
 logic prev_cell_is_rop = 1'b0;
@@ -35,12 +35,23 @@ always_ff @(posedge clk) begin: shift_inputs
     end
 end
 
+initial begin
+    adj_col_last = 1'b0;
+    adj_col_valid = 1'b0;
+    adj_col_rop_count = '0;
+    adj_col_rop_mask = '0;
+
+end
+
+logic [$bits(delay_t):0] aggreg_cell_rop_sr;
+assign aggreg_cell_rop_sr = {cell_rop_sr, cell_rop};
+
 always_ff @(posedge clk) begin: count
     adj_col_valid <= 1'b0;
     if (cell_valid) begin
         adj_col_last <= 1'b0;
         adj_col_valid <= !next_cell_is_first;  // disregard first cell
-        adj_col_rop_count <= $countones({cell_rop_sr, cell_rop});
+        adj_col_rop_count <= $countones(aggreg_cell_rop_sr);
         adj_col_rop_mask <= prev_cell_is_rop;
     end else if (prev_cell_is_last) begin: handle_last_cell
         adj_col_last <= 1'b1;

@@ -14,18 +14,25 @@ module prev_row_stores #(
     // Adject count rows
         output logic [$clog2(MAX_COLS)-1:0] row_index,
         output logic next_row,
-        output logic [MAX_COLS-1:0][0:COUNT_ROP_WIDTH-1] upper_row_rop_count,
-        output logic [MAX_COLS-1:0][0:COUNT_ROP_WIDTH-1] center_row_rop_count,
+        output logic [MAX_COLS-1:0][COUNT_ROP_WIDTH-1:0] upper_row_rop_count,
+        output logic [MAX_COLS-1:0][COUNT_ROP_WIDTH-1:0] center_row_rop_count,
         output logic [MAX_COLS-1:0] center_row_rop_mask
 );
 
-typedef logic [MAX_COLS-1:0][0:COUNT_ROP_WIDTH-1] row_rop_count_t;
+typedef logic [MAX_COLS-1:0][COUNT_ROP_WIDTH-1:0] row_rop_count_t;
 typedef logic [MAX_COLS-1:0] row_rop_mask_t;
 
-row_rop_count_t hot_row_rop_count = '{default: '0};
-row_rop_mask_t hot_row_mask, upper_row_mask;
+row_rop_count_t hot_row_rop_count;
+row_rop_mask_t hot_row_mask;
 
 logic [$clog2(MAX_COLS)-1:0] current_col = '0;
+initial begin
+    integer i;
+    for (i = 0; i < (2**MAX_COLS); i = i + 1) begin
+        hot_row_rop_count[i] = '0;
+    end
+    hot_row_mask = '0;
+end
 always_ff @(posedge clk) begin: hot_row_filler
     if (adj_col_valid) begin
         hot_row_rop_count[current_col] <= adj_col_rop_count;
@@ -39,6 +46,16 @@ always_ff @(posedge clk) begin: hot_row_filler
 end
 
 logic prev_adj_col_last;
+
+initial begin
+    prev_adj_col_last = 1'b0;
+    row_index = '0;
+    next_row = '0;
+    upper_row_rop_count = '0;
+    center_row_rop_count = '0;
+    center_row_rop_mask = '0;
+end
+
 always_ff @(posedge clk) prev_adj_col_last <= (adj_col_last && adj_col_valid);
 
 always_ff @(posedge clk) begin: row_shifter

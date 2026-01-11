@@ -35,7 +35,12 @@ always_ff @(posedge clk) begin
     end
 end
 
-initial id_range_sel = 1'b0;
+initial begin
+    id_range_sel = 1'b0;
+    id_range_valid = 1'b0;
+    id_range_data = '0;
+end
+
 always_ff @(posedge clk) begin: detect_blank_line
     if (byte_valid) begin
         if (!is_digit(prev_byte_data) && (byte_data == LF_CHAR)) begin: blank_line
@@ -48,9 +53,9 @@ always_ff @(posedge clk) begin: data_accumulator
     id_range_valid <= 1'b0;
     if (byte_valid) begin
         if (!is_digit(prev_byte_data) && is_digit(byte_data)) begin: first_digit
-            id_range_data <= byte_data - ZERO_CHAR;
+            id_range_data <= INGREDIENT_ID_RANGE_WIDTH'(byte_data - ZERO_CHAR);
         end else if (is_digit(prev_byte_data) && is_digit(byte_data)) begin: next_digit
-            id_range_data <= 10*id_range_data + (byte_data - ZERO_CHAR);
+            id_range_data <= 10*id_range_data + INGREDIENT_ID_RANGE_WIDTH'(byte_data - ZERO_CHAR);
         end else if (is_digit(prev_byte_data) && !is_digit(byte_data)) begin: end_of_number
             id_range_valid <= 1'b1;
         end

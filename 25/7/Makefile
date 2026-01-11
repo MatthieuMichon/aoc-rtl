@@ -19,7 +19,10 @@ sim: obj_dir/Vuser_logic_tb
 	obj_dir/Vuser_logic_tb +INPUT_FILE=$(INPUT_FILE)
 
 .PHONY: isim
-isim:
+isim: a.out
+	./a.out +INPUT_FILE=$(INPUT_FILE)
+
+a.out: $(SV_SOURCES)
 	iverilog -o a.out -g2012 -gsupported-assertions $(SV_SOURCES)
 
 .PHONY: synth

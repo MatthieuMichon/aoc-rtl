@@ -20,7 +20,7 @@ localparam int BYTE_WIDTH = $bits(byte);
 localparam int MAX_COLS = 160;
 localparam int RESULT_WIDTH = 16;
 
-localparam int MAX_ROW_COL_WIDTH = $clog2(MAX_COLS);
+//localparam int MAX_ROW_COL_WIDTH = $clog2(MAX_COLS);
 
 logic inbound_valid;
 logic [BYTE_WIDTH-1:0] inbound_data;
@@ -76,8 +76,8 @@ adjacent_col_counter #(.COUNT_ROP_WIDTH(COUNT_ROP_WIDTH)) adjacent_col_counter_i
 
 logic [$clog2(MAX_COLS)-1:0] row_index;
 logic next_row;
-logic [MAX_COLS-1:0][0:COUNT_ROP_WIDTH-1] upper_row_rop_count;
-logic [MAX_COLS-1:0][0:COUNT_ROP_WIDTH-1] center_row_rop_count;
+logic [MAX_COLS-1:0][COUNT_ROP_WIDTH-1:0] upper_row_rop_count;
+logic [MAX_COLS-1:0][COUNT_ROP_WIDTH-1:0] center_row_rop_count;
 logic [MAX_COLS-1:0] center_row_rop_mask;
 
 prev_row_stores #(
@@ -133,8 +133,13 @@ tap_encoder #(.DATA_WIDTH(16)) tap_encoder_i (
         .shift_dr(shift_dr),
     // Encoded signals
         .data(accessible_rop_count),
-        .valid(1'b1)
+        .valid(accessible_rop_valid)
 );
+
+wire _unused_ok = 1'b0 && &{1'b0,
+    run_test_idle,
+    accessible_rop_valid,
+    1'b0};
 
 endmodule
 `default_nettype wire
