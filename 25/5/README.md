@@ -46,7 +46,6 @@ tb["Testbench"]
 tap["TAP Interface"]
 tap-dec["TAP Decoder"]
 dec["Input Decoder"]
-beam["Beam Tracker"]
 tap-enc["TAP Encoder"]
 cnt["Fresh Ingredients Count"]
 subgraph generate
