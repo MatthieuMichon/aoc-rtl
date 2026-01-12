@@ -9,3 +9,6 @@
 - Using a dot `.` in a directory name is asking for trouble (upsets the Python debugger in Zed)
 - Beware of mismatches due to non initialized enum types
 - Vivado `cs_server` may be left running, ending up spinning-up one CPU core for absolutely no reason
+- Model and verify intuitions before committing to them
+- Deep pipelining fills FPGAs real fast and require optimized simulation testbenchs
+- Each tool has limitations with regards to SystemVerilog constructs, all of them must be frequently invoked for avoiding lengthy code rewrites

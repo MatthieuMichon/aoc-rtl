@@ -2,7 +2,9 @@
 
 # Lessons Learnt
 
-*To be completed*
+- Model and verify intuitions before committing to them
+- Deep pipelining fills FPGAs real fast and require optimized simulation testbenchs
+- Each tool has limitations with regards to SystemVerilog constructs, all of them must be frequently invoked for avoiding lengthy code rewrites
 
 # Implementation
 
