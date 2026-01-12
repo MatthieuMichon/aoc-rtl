@@ -3,7 +3,7 @@
 
 module user_logic_tb;
 
-localparam int RESULT_WIDTH = 16;
+localparam int RESULT_WIDTH = 64;
 
 logic tck, tdi = 1'b0, tdo;
 logic test_logic_reset, run_test_idle, ir_is_user = 1'b0, capture_dr, shift_dr, update_dr;

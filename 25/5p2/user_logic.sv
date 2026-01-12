@@ -17,15 +17,15 @@ module user_logic (
 
 localparam int BYTE_WIDTH = 8;
 // From design space exploration
-localparam int RANGE_WIDTH = 49;
+localparam int RESULT_DATA_WIDTH = 64;
+localparam int ID_WIDTH = 49;
 localparam int RANGE_CHECK_INSTANCES = 200;
-localparam int RESULT_DATA_WIDTH = 16;
 
-typedef logic [RANGE_WIDTH-1:0] id_range_data_t;
+typedef logic [ID_WIDTH-1:0] id_t;
 typedef logic [RESULT_DATA_WIDTH-1:0] result_data_t;
 
 logic inbound_valid;
-logic [BYTE_WIDTH-1:0] inbound_data;
+logic [BYTE_WIDTH-1:0] inbound_byte;
 
 tap_decoder #(.DATA_WIDTH(BYTE_WIDTH)) tap_decoder_i (
     // TAP signals
@@ -36,43 +36,49 @@ tap_decoder #(.DATA_WIDTH(BYTE_WIDTH)) tap_decoder_i (
         .shift_dr(shift_dr),
         .update_dr(update_dr),
     // Decoded signals
-        .data(inbound_data),
+        .data(inbound_byte),
         .valid(inbound_valid)
 );
 
-logic conf_done_array[0:RANGE_CHECK_INSTANCES];
-logic valid_array[0:RANGE_CHECK_INSTANCES];
-id_range_data_t data_array[0:RANGE_CHECK_INSTANCES];
+logic [RANGE_CHECK_INSTANCES:0] dump_done_array;
+logic [RANGE_CHECK_INSTANCES:0] conf_done_array;
+logic [RANGE_CHECK_INSTANCES:0] valid_array;
+id_t lower_id_array[0:RANGE_CHECK_INSTANCES], upper_id_array[0:RANGE_CHECK_INSTANCES];
 
-input_decoder #(
-    .RANGE_WIDTH(RANGE_WIDTH)
-) input_decoder_i (
+line_decoder #(.ID_WIDTH(ID_WIDTH)) input_decoder_i (
     .clk(tck),
     // Inbound Byte Stream
         .inbound_valid(inbound_valid),
-        .inbound_byte(inbound_data),
+        .inbound_byte(inbound_byte),
     // Decoded signals
         .end_of_file(conf_done_array[0]),
         .range_valid(valid_array[0]),
-        .range_data(data_array[0])
+        .lower_id(lower_id_array[0]),
+        .upper_id(upper_id_array[0])
 );
+
+always_ff @(posedge tck) dump_done_array[0] <= conf_done_array[0];
 
 genvar i;
 generate
     for (i = 0; i < RANGE_CHECK_INSTANCES; i++) begin : range_check_gen
 
         range_check #(
-            .RANGE_WIDTH(RANGE_WIDTH)
+            .ID_WIDTH(ID_WIDTH)
         ) range_check_i (
             .clk(tck),
             // Upstream Range Check Unit
+                .upstream_dump_done(dump_done_array[i]),
                 .upstream_conf_done(conf_done_array[i]),
                 .upstream_valid(valid_array[i]),
-                .upstream_data(data_array[i]),
+                .upstream_lower_id(lower_id_array[i]),
+                .upstream_upper_id(upper_id_array[i]),
             // Downstream Range Check Unit
+                .downstream_dump_done(dump_done_array[1+i]),
                 .downstream_conf_done(conf_done_array[1+i]),
                 .downstream_valid(valid_array[1+i]),
-                .downstream_data(data_array[1+i])
+                .downstream_lower_id(lower_id_array[1+i]),
+                .downstream_upper_id(upper_id_array[1+i])
         );
 
     end
@@ -87,9 +93,12 @@ initial begin
 end
 
 always_ff @(posedge tck) begin
-    if (conf_done_array[$high(valid_array)]) begin
-        result_valid <= 1'b1;
-        result_data <= 16'hCAFE; // test purposes only
+    result_valid <= dump_done_array[$high(dump_done_array)];
+    if (valid_array[$high(valid_array)]) begin
+        result_data <= result_data +
+            1 +
+            RESULT_DATA_WIDTH'(upper_id_array[$high(upper_id_array)]) -
+            RESULT_DATA_WIDTH'(lower_id_array[$high(lower_id_array)]);
     end
 end
 
@@ -107,6 +116,7 @@ tap_encoder #(.DATA_WIDTH(RESULT_DATA_WIDTH)) tap_encoder_i (
 );
 
 wire _unused_ok = 1'b0 && &{1'b0,
+    conf_done_array,
     run_test_idle,
     1'b0};
 

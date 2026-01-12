@@ -58,7 +58,7 @@ proc ::build {arg_dict} {
     report_disable_timing -user_disabled -file disable_timing.txt
     report_drc -no_waivers -file drc.txt
     report_exceptions -file exceptions.txt
-    ::xilinx::designutils::report_failfast -detailed_reports synth -file failfast.txt 
+    ::xilinx::designutils::report_failfast -detailed_reports synth -file failfast.txt
     report_high_fanout_nets -timing -load_types -max_nets 99 -file high_fanout_nets.txt
     report_methodology -no_waivers -file methodology.txt
     report_power -file power.txt
@@ -129,7 +129,7 @@ proc ::load_inputs {arg_dict} {
 }
 
 proc ::read_result {} {
-    set result_width 16
+    set result_width 64
     set result 0x0
     puts -nonewline "Waiting for non-zero result... "
     while {$result == 0} {
