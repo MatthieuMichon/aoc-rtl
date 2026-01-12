@@ -116,19 +116,19 @@ tap --Result Bits--> tb
 
 | Ref Name | Used | Functional Category |
 |----------|------|---------------------|
-| RAMD64E  | 1024 |  Distributed Memory |
-| LUT6     |  511 |                 LUT |
-| FDRE     |  443 |        Flop & Latch |
-| LUT3     |  137 |                 LUT |
+| RAMD64E  |  992 |  Distributed Memory |
+| LUT6     |  567 |                 LUT |
+| FDRE     |  459 |        Flop & Latch |
+| LUT3     |  143 |                 LUT |
 | MUXF7    |   90 |               MuxFx |
-| LUT4     |   85 |                 LUT |
-| LUT2     |   55 |                 LUT |
-| LUT5     |   40 |                 LUT |
+| LUT4     |   73 |                 LUT |
+| LUT2     |   60 |                 LUT |
+| LUT5     |   44 |                 LUT |
 | MUXF8    |   39 |               MuxFx |
-| CARRY4   |   17 |          CarryLogic |
-| LUT1     |   15 |                 LUT |
+| CARRY4   |   19 |          CarryLogic |
 | RAMB36E1 |   13 |        Block Memory |
-| FDSE     |    5 |        Flop & Latch |
+| LUT1     |   11 |                 LUT |
+| FDSE     |    9 |        Flop & Latch |
 | RAMB18E1 |    3 |        Block Memory |
 | BUFG     |    1 |               Clock |
 | BSCANE2  |    1 |              Others |
@@ -276,6 +276,8 @@ I reworked the JTAG result readout which now loops until a non-zero result is ob
 
 (1) Randomly picked valid node ID in the trimed region from the simulation waveform.
 (2) Statically assigning the start node identifier yields the expected results, making things interesting.
+
+The last discrepancy was solved after fixing all initialization issues appearing in Icarus Verilog. Being a four-state (`X` and `Z` in addition to the usual `0` and `1`) simulator, it requires initialization of all signals to a known state before simulation starts. Conversely, Verilator is a two-state simulator and does not require initialization of signals similar to Vivado. This similarity starts to break down when dealing with higher-level constructs (enums, FSM, and of course RAM and DSP inference).
 
 # Take Aways
 

@@ -123,12 +123,12 @@ logic start_node_found;
 always_ff @(posedge clk) begin: start_end_nodes
     start_node_found <= 1'b0;
     if (src_node_idx_valid && (src_node_str == start_node_str)) begin
-        start_node_idx <= src_node_idx; //10'h145; // FIXME: src_node_idx;
+        start_node_idx <= src_node_idx;
         start_node_captured <= 1'b1;
         start_node_found <= 1'b1;
     end
     if (prev_dst_node_str_valid && (prev_dst_node_str == end_node_str)) begin
-        end_node_idx <= 10'h0a9; // FIXME: dst_node_idx;
+        end_node_idx <= dst_node_idx;
         end_node_captured <= 1'b1;
     end
     start_end_nodes_valid <= start_node_captured && end_node_captured;
