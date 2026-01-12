@@ -157,7 +157,7 @@ When using a `genvar` to index an unpacked array, Iverilog appears to have troub
 +logic [RANGE_CHECK_INSTANCES:0] valid_array;
 ```
 
-##Diagram
+## Diagram
 
 ```mermaid
 flowchart
