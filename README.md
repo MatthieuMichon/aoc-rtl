@@ -112,7 +112,9 @@ explore.py [filename]
 
 - `filename`: puzzle contents input file, default is `input.txt` 
 
-# 2025 Season Puzzles
+# Puzzles
+
+## 2025 Season
 
 I opted to focus my efforts on the first part of the puzzles, thus most of them haven't the second part done.
 
@@ -129,6 +131,17 @@ I opted to focus my efforts on the first part of the puzzles, thus most of them 
 | [10.1](25/10/)   | :red_circle: Forgot to check a blind side   | :large_blue_circle: Synthesized right away | :large_blue_circle: Initialy got a sim mismatch | Processing load fan-out accross multiple units making it running at line rate                              | 
 | [11.1](25/11/)   | :black_circle: Hello *dynamic programming*  | :black_circle: cursed DPRAM inference      | :black_circle: Had to fix sim / synth mismatch  | DAG with bottom-up **dynamic programming** :exploding_head:
 
+## 2015 Season
+
+Figured I shall start from the ground up.
+
+| Puzzle           | Simulation                                  | Synthesis                                  | On-board                                        | Remarks                               |
+|------------------|---------------------------------------------|--------------------------------------------|-------------------------------------------------|---------------------------------------|
+| [1.1](15/1-1/)   | :large_blue_circle: Added Xilinx Xsim       | :large_blue_circle: Synthesized right away | *Not tested*                                    | Didn't expect xsim to be so pedantic  |
+| [1.2](15/1-2/)   | :large_blue_circle: Simple changes          | :large_blue_circle: Synthesized right away | *Not tested*                                    | Easiest part 2                        |
+
+## Symbology
+
 | Symbol              | Level       | Description      | Remarks                           |
 |---------------------|-------------|------------------|-----------------------------------|
 | :large_blue_circle: | Trivial     | Straightforward  | Copy-paste; wiring or basic logic |
@@ -136,13 +149,6 @@ I opted to focus my efforts on the first part of the puzzles, thus most of them 
 | :yellow_circle:     | Average     | Some thoughts    | Required multiple iterations
 | :red_circle:        | Challenging | Serious thinking | Required some serious thinking |
 | :black_circle:      | Tedious     | Cursed puzzle    | Much harder than expected; learnt something new
-
-# 2015 Season Puzzles
-
-| Puzzle           | Simulation                                  | Synthesis                                  | On-board                                        | Remarks                               |
-|------------------|---------------------------------------------|--------------------------------------------|-------------------------------------------------|---------------------------------------|
-| [1.1](15/1-1/)   | :large_blue_circle: Added Xilinx Xsim       | :large_blue_circle: Synthesized right away | *Not tested*                                    | Didn't expect xsim to be so pedantic  |
-| [1.2](15/1-2/)   | :large_blue_circle: Simple changes          | :large_blue_circle: Synthesized right away | *Not tested*                                    | Easiest part 2                        |
 
 ## Achievements
 
