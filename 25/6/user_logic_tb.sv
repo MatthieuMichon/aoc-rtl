@@ -122,7 +122,7 @@ task automatic serialize(input string bytes_);
         run_state_hw_jtag(UPDATE_DR);
         run_state_hw_jtag(RUN_TEST_IDLE);
     end
-    begin: finish_with_null_byte
+    begin: finish_with_extra_new_line
         run_state_hw_jtag(SELECT_DR_SCAN);
         run_state_hw_jtag(CAPTURE_DR);
         char = 8'h0A;
@@ -186,7 +186,7 @@ initial begin: main_seq
         if (input_contents.len() != file_size)
             $fatal(1, "Failed to open file %s", input_file);
         $display("Loaded %d bytes", file_size);
-        
+
     // initialize JTAG
 
         run_state_hw_jtag(TEST_LOGIC_RESET);

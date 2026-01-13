@@ -122,7 +122,7 @@ task automatic serialize(input string bytes_);
         run_state_hw_jtag(UPDATE_DR);
         run_state_hw_jtag(RUN_TEST_IDLE);
     end
-    begin: finish_with_null_byte
+    begin: finish_with_extra_new_line
         run_state_hw_jtag(SELECT_DR_SCAN);
         run_state_hw_jtag(CAPTURE_DR);
         char = 8'h0A;
