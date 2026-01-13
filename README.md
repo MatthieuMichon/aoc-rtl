@@ -142,6 +142,7 @@ I opted to focus my efforts on the first part of the puzzles, thus most of them 
 | Puzzle           | Simulation                                  | Synthesis                                  | On-board                                        | Remarks                               |
 |------------------|---------------------------------------------|--------------------------------------------|-------------------------------------------------|---------------------------------------|
 | [1.1](15/1-1/)   | :large_blue_circle: Added Xilinx Xsim       | :large_blue_circle: Synthesized right away | *Not tested*                                    | Didn't expect xsim to be so pedantic  |
+| [1.2](15/1-2/)   | :large_blue_circle: Simple changes          | :large_blue_circle: Synthesized right away | *Not tested*                                    | Easiest part 2                        |
 
 ## Achievements
 

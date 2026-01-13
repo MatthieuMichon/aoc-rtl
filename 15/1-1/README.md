@@ -124,7 +124,7 @@ This puzzle being simple, a single iteration easily covers the complete puzzle s
 
 ### Implementation
 
-I moved the decoding logic in a separate module `input_decoder` module.
+I moved the decoding logic in a separate module [`floor_tracker`](floor_tracker.sv) module.
 
 ```diff
 always_ff @(posedge tck) begin
