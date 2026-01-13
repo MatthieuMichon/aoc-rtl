@@ -137,6 +137,12 @@ I opted to focus my efforts on the first part of the puzzles, thus most of them 
 | :red_circle:        | Challenging | Serious thinking | Required some serious thinking |
 | :black_circle:      | Tedious     | Cursed puzzle    | Much harder than expected; learnt something new
 
+# 2015 Season Puzzles
+
+| Puzzle           | Simulation                                  | Synthesis                                  | On-board                                        | Remarks                               |
+|------------------|---------------------------------------------|--------------------------------------------|-------------------------------------------------|---------------------------------------|
+| [1.1](15/1-1/)   | :large_blue_circle: Added Xilinx Xsim       | :large_blue_circle: Synthesized right away | *Not tested*                                    | Didn't expect xsim to be so pedantic  |
+
 ## Achievements
 
 - Found an issue with the `run_state_hw_jtag` Vivado TCL command and opened a [support request](https://adaptivesupport.amd.com/s/question/0D5Pd00001772mvKAA/)
