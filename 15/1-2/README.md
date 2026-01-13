@@ -14,7 +14,7 @@ Status:
 
 # Lessons Learnt
 
-- *Nothing yet*
+- No need to deal with `signed` signal declarations if there is no sign-extending operations involved, obviously signal length must be set accordingly
 
 # Puzzle Statement
 
