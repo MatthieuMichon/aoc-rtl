@@ -106,7 +106,7 @@ Full simulation: compilation and runtime (low-spec laptop):
 ### Resource Usage
 
 | Ref Name | Used | Functional Category |
-+----------+------+---------------------+
+|----------|------|---------------------|
 | FDRE     |   60 |        Flop & Latch |
 | LUT3     |   17 |                 LUT |
 | CARRY4   |    4 |          CarryLogic |
