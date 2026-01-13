@@ -35,16 +35,27 @@ tap-enc --JTAG-TAP--> tap
 
 These implementations share the following common features:
 
-- The source code uses the BSCANE2 primitive with TCL commands for transferring the puzzle input contents, meaning that changing the inputs contents does not require re-building the firmware
-- Source code in vanilla System Verilog
-- The generated firmware can run on any board featuring a Xilinx 7-series FPGA, assuming the device density is enough to fit the design
-- All the puzzles are solved in matter of seconds, be it on board or in simulation
+- All the puzzle FPGA firmwares **only use the JTAG interface**. The `vivado.tcl` TCL script uses the `scan_dr_hw_jtag` command for transfering the puzzle input contents via a `BSCANE2` primitive instantiated in the firmware in the `shell.sv` top-level module
+  - Puzzle contents are NOT embedded in the firmware bitstream
+  - No UART interfaces are used
+  - No IOs nor external clocks are used (see `constraints.xdc`), thus all the puzzle firmwares **are agnostic of the board**
+- Source code in plain/vanilla SystemVerilog
+- The puzzle firmwares can be built and run on any board featuring a Xilinx 7-series FPGA, assuming the device density is enough to fit the design
+- All the puzzles are solved on-board in a fraction of seconds, simulating most of them takes a few seconds with Verilator (compilation times usually largely being a bit longer)
 
 ## Porting to Other Targets
 
-The default target device is a Xilinx Zynq 7020. Due to the usage of a **BSCANE2** primitive, small changes may be required to port the design to UltraScale devices (if I recall correctly, these devices use a different BSCANE2 clock constraint: `INTERNAL_TCK`). For Versal families, the porting may be more involved with BSCANE2 primitives being superseded by the **CIPS** component.
+The default target device is a Xilinx Zynq 7020. Different devices or families may have a different JTAG chains (with or without ARM DAP and PS TAP, single die or multi-SLR) resulting in different instruction register (IR) and data register (DR) lengths. Both are defined in the `vivado.tcl` script:
 
-Porting to other vendors should also be straightforward, as the design is written in System Verilog and the only primitive requiring instantiating is a JTAG TAP controller.
+```tcl
+set zynq7_ir_length 10; # must match FPGA device family / SLR count
+set zynq7_ir_user4 0x3e3; # same thing
+set zynq7_dr_length_byte 9; # zynq7: extra bit for ARM DAP bypass reg
+```
+
+Due to the usage of a **BSCANE2** primitive, small changes may be required to port the design to UltraScale devices (if I recall correctly, these devices use a different BSCANE2 clock constraint: `INTERNAL_TCK`). For Versal families, the porting may be more involved with BSCANE2 primitives being superseded by the **CIPS** component.
+
+Porting to other vendors should also be straightforward, as the design is written in System Verilog and the only primitive requiring instantiating is a JTAG TAP controller and updating the three variables mentioned above.
 
 ## Tools Used
 
