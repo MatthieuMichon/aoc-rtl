@@ -148,8 +148,8 @@ Figured I shall start from the ground up.
 
 | Puzzle           | Simulation                                  | Synthesis                                  | On-board                                        | Remarks                               |
 |------------------|---------------------------------------------|--------------------------------------------|-------------------------------------------------|---------------------------------------|
-| [1.1](15/1-1/)   | :large_blue_circle: Added Xilinx Xsim       | :large_blue_circle: Synthesized right away | *Not tested*                                    | Didn't expect xsim to be so pedantic  |
-| [1.2](15/1-2/)   | :large_blue_circle: Simple changes          | :large_blue_circle: Synthesized right away | *Not tested*                                    | Easiest part 2                        |
+| [1.1](15/1-1/)   | :large_blue_circle: Added Xilinx Xsim       | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Didn't expect xsim to be so pedantic  |
+| [1.2](15/1-2/)   | :large_blue_circle: Simple changes          | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Easiest part 2                        |
 
 ## Symbology
 
