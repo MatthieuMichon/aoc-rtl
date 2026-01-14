@@ -10,7 +10,7 @@ Status:
 | Simulation: Verilator      | :white_check_mark: Ok |
 | Simulation: Vivado Xsim    | :white_check_mark: Ok |
 | Synthesis: Vivado Zynq7    | :white_check_mark: Ok |
-| On-board: Zynq7            | *Not tested*          |
+| On-board: Zynq7            | :white_check_mark: Ok |
 
 # Lessons Learnt
 
@@ -28,7 +28,12 @@ Second part does not change the analysis.
 
 ### Implementation
 
-Thankfully the changes are rather limited, consisting in some changes to the `floor_tracker` module.
+Thankfully the changes are rather limited, consisting in some changes to the `floor_tracker` module:
+
+- Minor changes to exsisting processes
+- Addition of a synchronous process `result_capture`
+
+![](floor_tracker_yosys.png)
 
 ### Design Components
 

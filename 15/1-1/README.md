@@ -10,7 +10,7 @@ Status:
 | Simulation: Verilator      | :white_check_mark: Ok |
 | Simulation: Vivado Xsim    | :white_check_mark: Ok |
 | Synthesis: Vivado Zynq7    | :white_check_mark: Ok |
-| On-board: Zynq7            | *Not tested*          |
+| On-board: Zynq7            | :white_check_mark: Ok |
 
 # Lessons Learnt
 
@@ -176,7 +176,6 @@ The solving logic synthesizes nicely:
 | [`tap_decoder`](tap_decoder.sv)                 | JTAG TAP deserializer            | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
 | [`floor_tracker`](floor_tracker.sv)             | Puzzle solving logic             | :large_blue_circle: | :kissing_smiling_eyes: Totaly as expected | Maps very nicely in digital logic |
 | [`tap_encoder`](tap_encoder.sv)                 | JTAG TAP serializer              | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
-
 
 ### Run Times
 
