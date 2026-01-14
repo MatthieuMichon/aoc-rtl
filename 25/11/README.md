@@ -53,8 +53,12 @@ And boy! Looking for something challenging, implementing DP on an FPGA didn't di
 
 The design consists in a pipeline containing the following main steps:
 
-- Mapping of the arbitrary node names into sequential node IDs
-- Topological sorting of the nodes using [Khan's algorithm](https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm)
+- Mapping of the arbitrary node names into sequential node IDs, see [`node_id_mapper.sv`](node_id_mapper.sv)
+- Topological sorting of the nodes using [Khan's algorithm](https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm), see [`topological_sort.sv`](topological_sort.sv)
+- Nodes preceding and trailing respectively the start and end nodes are trimmed, see [`node_trim.sv`](node_trim.sv)
+- The trimmed and sorted node list is then iterated over to count the number of possible distinct paths, see [`node_path_counter.sv`](node_path_counter.sv)
+
+## Diagram
 
 ```mermaid
 flowchart
@@ -98,19 +102,15 @@ tap-enc --JTAG-TAP--> tap
 tap --Result Bits--> tb
 ```
 
-| Module | Description | Complexity | Mindblowness | Remarks |
-| --- | --- | --- | --- | --- |
-| [`user_logic_tb`](user_logic_tb.sv) | Testbench | :green_circle: | :kissing_smiling_eyes: | Small refactor and misc improvements |
-| [`user_logic`](user_logic.sv) | Logic top-level | :large_blue_circle: | :kissing_smiling_eyes: | Wire harness |
-| [`tap_decoder`](tap_decoder.sv) | BSCANE2 interface for inbound signals | :large_blue_circle: | :kissing_smiling_eyes: | Copy-paste from previous puzzle |
-| [`input_decoder`](input_decoder.sv) | Simple text parser | :green_circle: | :kissing_smiling_eyes: | Extra non-text char required for end-of-file flag |
-| [`node_id_mapper`](node_id_mapper.sv) | Converts encoded (15-bit) node names into sequential identifiers | :yellow_circle: | :slightly_smiling_face: | Single-cycle lookup or new assignation |
-| [`adjacency_map`](adjacency_map.sv) | Adjacent outbound nodes per node | :orange_circle: | :raised_eyebrow: | Backpressure with staged memories |
-| [`indegree_list`](indegree_list.sv) | Track inbound edges per node | :green_circle: | :slightly_smiling_face: | Dual-port RAM |
-| [`topological_sort`](topological_sort.sv) | Pipelined implementation of Kahn's algorithm | :black_circle: | :face_with_spiral_eyes: | Trouble with parallel requests/replies orchastration, late addition of backpressure |
-| [`node_list_trim`](node_list_trim.sv) | Removed nodes preceeding a given start node | :green_circle: | :kissing_smiling_eyes: | Trivial |
-| [`node_path_counter`](node_path_counter.sv) | Path counting using bottom-up dynamic programming | :red_circle: | :exploding_head: | Source code appears deceptively simple, waveforms not so much :upside_down_face: |
-| [`tap_encoder`](tap_encoder.sv) | BSCANE2 interface for outbound signals | :large_blue_circle: | :kissing_smiling_eyes: | Copy-paste from previous puzzle | :kissing_smiling_eyes: |
+## Waveforms
+
+Looking at the complete run, the sorting process runs in a fraction of the time required for uploading the input contents (13 clocks per byte due bit deserialization and JTAG TAP state machine overhead).
+
+![](wave_complete_run.png)
+
+The final downstream stage `node_path_counter` has execution time headroom (materialized by `query_ready` being high while waiting for `trimed_valid` to be asserted high), Optimizing the sorting process would thus compress the overall execution time.
+
+![](wave_wait_states_node_path_counter.png)
 
 ## Resource Usage
 
@@ -132,6 +132,22 @@ tap --Result Bits--> tb
 | RAMB18E1 |    3 |        Block Memory |
 | BUFG     |    1 |               Clock |
 | BSCANE2  |    1 |              Others |
+
+## Final Ratings
+
+| Module | Description | Complexity | Mindblowness | Remarks |
+| --- | --- | --- | --- | --- |
+| [`user_logic_tb`](user_logic_tb.sv) | Testbench | :green_circle: | :kissing_smiling_eyes: | Small refactor and misc improvements |
+| [`user_logic`](user_logic.sv) | Logic top-level | :large_blue_circle: | :kissing_smiling_eyes: | Wire harness |
+| [`tap_decoder`](tap_decoder.sv) | BSCANE2 interface for inbound signals | :large_blue_circle: | :kissing_smiling_eyes: | Copy-paste from previous puzzle |
+| [`input_decoder`](input_decoder.sv) | Simple text parser | :green_circle: | :kissing_smiling_eyes: | Extra non-text char required for end-of-file flag |
+| [`node_id_mapper`](node_id_mapper.sv) | Converts encoded (15-bit) node names into sequential identifiers | :yellow_circle: | :slightly_smiling_face: | Single-cycle lookup or new assignation |
+| [`adjacency_map`](adjacency_map.sv) | Adjacent outbound nodes per node | :orange_circle: | :raised_eyebrow: | Backpressure with staged memories |
+| [`indegree_list`](indegree_list.sv) | Track inbound edges per node | :green_circle: | :slightly_smiling_face: | Dual-port RAM |
+| [`topological_sort`](topological_sort.sv) | Pipelined implementation of Kahn's algorithm | :black_circle: | :face_with_spiral_eyes: | Trouble with parallel requests/replies orchastration, late addition of backpressure |
+| [`node_list_trim`](node_list_trim.sv) | Removed nodes preceeding a given start node | :green_circle: | :kissing_smiling_eyes: | Trivial |
+| [`node_path_counter`](node_path_counter.sv) | Path counting using bottom-up dynamic programming | :red_circle: | :exploding_head: | Source code appears deceptively simple, waveforms not so much :upside_down_face: |
+| [`tap_encoder`](tap_encoder.sv) | BSCANE2 interface for outbound signals | :large_blue_circle: | :kissing_smiling_eyes: | Copy-paste from previous puzzle | :kissing_smiling_eyes: |
 
 ## Encountered Issues
 

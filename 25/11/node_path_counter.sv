@@ -162,15 +162,10 @@ adjacency_map adjacency_map_i (
         .reply_no_edges_found(reply_no_edges_found)
 );
 
-/* verilator lint_off UNUSEDSIGNAL */
 wire _unused_ok = 1'b0 && &{1'b0,
-    // trimed_done,
-    // query_ready,
     path_count_rd_en,
     reply_last,
-    // reply_no_edges_found,
     1'b0};
-/* verilator lint_on UNUSEDSIGNAL */
 
 endmodule
 `default_nettype wire
