@@ -63,7 +63,7 @@ Porting to other vendors should also be straightforward, as the design is writte
 
 - Text editors: Zed, VSCodium, PyCharm
 - FPGA tools: Vivado 2025.2, [Yosys online schematic viewer](https://digitaljs.tilk.eu/)
-- Simulators: Verilator 5, Icarus Verilog 12
+- Simulators: Icarus Verilog 12, Verilator 5, Vivado 2025.2 (xsim)
 - VCD viewers: Surfer, Vaporview, GTKWave
 
 ## Getting Started
