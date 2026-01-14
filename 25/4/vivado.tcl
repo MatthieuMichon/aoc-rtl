@@ -108,7 +108,7 @@ proc ::load_inputs {arg_dict} {
 
     # upload file contents
     set zynq7_dr_length_byte 9; # zynq7: extra bit for ARM DAP bypass reg
-    set new_line 0x00a; # `\n`
+    set new_line 0x0a; # `\n`
     set input_file [dict get $arg_dict INPUT_FILE]
     set lines [::textio::load ../$input_file]
     puts -nonewline "Uploading bytes... "
@@ -117,30 +117,27 @@ proc ::load_inputs {arg_dict} {
         set len [string length $line]
         for {set i 0} {$i<$len} {incr i} {
             scan [string index $line $i] %c char
-            set hex_char [format "%02x" $char]
+            set hex_char [format "0x%02x" $char]
             scan_dr_hw_jtag $zynq7_dr_length_byte -tdi $hex_char
-            run_state_hw_jtag IDLE; # run through state `UPDATE`
             incr bytes_uploaded
         }
         scan_dr_hw_jtag $zynq7_dr_length_byte -tdi $new_line
-        run_state_hw_jtag IDLE; # run through state `UPDATE`
         incr bytes_uploaded
-        run_state_hw_jtag DRPAUSE
-        run_state_hw_jtag IDLE
     }
+    scan_dr_hw_jtag $zynq7_dr_length_byte -tdi $new_line
     puts "done. ($bytes_uploaded bytes)"
-
-    # cycle tck for purging data stuck between register stages
-    for {set i 0} {$i<50} {incr i} {
-        run_state_hw_jtag -state IDLE IDLE;
-    }
-
 }
 
-proc ::read_password {} {
-    run_state_hw_jtag IDLE
-    set password 0x[scan_dr_hw_jtag 16 -tdi 0]
-    puts "Password readback: [format %d $password] ($password)"
+proc ::read_result {} {
+    set result_width 16
+    set result 0x0
+    puts -nonewline "Waiting for non-zero result... "
+    while {$result == 0} {
+        set result 0x[scan_dr_hw_jtag $result_width -tdi 0]
+    }
+    puts "done."
+    puts "Result readback: [format %d $result] ($result)"
+    close_hw_target -quiet
 }
 
 proc run {argv} {
@@ -150,7 +147,7 @@ proc run {argv} {
             ::build $arg_dict
             ::program
             ::load_inputs  $arg_dict
-            ::read_password
+            ::read_result
         }
         "build" {
             ::build $arg_dict
@@ -161,7 +158,7 @@ proc run {argv} {
         "run" {
             ::program
             ::load_inputs  $arg_dict
-            ::read_password
+            ::read_result
         }
         "lint" {
             ::lint  $arg_dict

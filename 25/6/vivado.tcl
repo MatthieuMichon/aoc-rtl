@@ -4,7 +4,7 @@ namespace eval ::textio {
     proc load {file} {
         set lines [list]
         set fhandle [open $file]
-        while {[gets $fhandle line]>0} {
+        while {[gets $fhandle line]>=0} {
             lappend lines $line
         }
         close $fhandle
@@ -29,7 +29,6 @@ proc ::build {arg_dict} {
 
     set directive RuntimeOptimized; # speed-run the build process
     synth_design -top [lindex [find_top] 0] \
-        -verilog_define USER_LOGIC_DEF=user_logic \
         -directive $directive \
         -flatten_hierarchy none \
         -debug_log -verbose
@@ -59,7 +58,7 @@ proc ::build {arg_dict} {
     report_disable_timing -user_disabled -file disable_timing.txt
     report_drc -no_waivers -file drc.txt
     report_exceptions -file exceptions.txt
-    ::xilinx::designutils::report_failfast -detailed_reports synth -file failfast.txt 
+    ::xilinx::designutils::report_failfast -detailed_reports synth -file failfast.txt
     report_high_fanout_nets -timing -load_types -max_nets 99 -file high_fanout_nets.txt
     report_methodology -no_waivers -file methodology.txt
     report_power -file power.txt
@@ -113,29 +112,31 @@ proc ::load_inputs {arg_dict} {
     set input_file [dict get $arg_dict INPUT_FILE]
     set lines [::textio::load ../$input_file]
     puts -nonewline "Uploading bytes... "
-    foreach rotation $lines {
-        set len [string length $rotation]
+    set bytes_uploaded 0
+    foreach line $lines {
+        set len [string length $line]
         for {set i 0} {$i<$len} {incr i} {
-            scan [string index $rotation $i] %c char
-            set hex_char [format "%02x" $char]
-            scan_dr_hw_jtag 9 -tdi 0${hex_char}
-            run_state_hw_jtag IDLE; # run through state `UPDATE`
+            scan [string index $line $i] %c char
+            set hex_char [format "0x%02x" $char]
+            scan_dr_hw_jtag $zynq7_dr_length_byte -tdi $hex_char
+            incr bytes_uploaded
         }
-        scan_dr_hw_jtag 9 -tdi $new_line
-        run_state_hw_jtag IDLE; # run through state `UPDATE`
+        scan_dr_hw_jtag $zynq7_dr_length_byte -tdi $new_line
+        incr bytes_uploaded
     }
-
-    # cycle tck for purging data stuck between register stages
-    for {set i 0} {$i<10} {incr i} {
-        run_state_hw_jtag -state IDLE IDLE;
-    }
-    puts "done."
+    scan_dr_hw_jtag $zynq7_dr_length_byte -tdi $new_line
+    puts "done. ($bytes_uploaded bytes)"
 }
 
-proc ::read_password {} {
-    run_state_hw_jtag IDLE
-    set password 0x[scan_dr_hw_jtag 64 -tdi 0]
-    puts "Password readback: [format %d $password] ($password)"
+proc ::read_result {} {
+    set result_width 64
+    set result 0x0
+    puts -nonewline "Waiting for non-zero result... "
+    while {$result == 0} {
+        set result 0x[scan_dr_hw_jtag $result_width -tdi 0]
+    }
+    puts "done."
+    puts "Result readback: [format %d $result] ($result)"
     close_hw_target -quiet
 }
 
@@ -146,7 +147,7 @@ proc run {argv} {
             ::build $arg_dict
             ::program
             ::load_inputs  $arg_dict
-            ::read_password
+            ::read_result
         }
         "build" {
             ::build $arg_dict
@@ -157,7 +158,7 @@ proc run {argv} {
         "run" {
             ::program
             ::load_inputs  $arg_dict
-            ::read_password
+            ::read_result
         }
         "lint" {
             ::lint  $arg_dict
