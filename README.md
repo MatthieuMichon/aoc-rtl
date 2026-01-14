@@ -14,6 +14,7 @@ flowchart
 mk["Makefile"]
 txt["Puzzle Input File"]
 tcl["Vivado TCL Script"]
+ans["(stdout) Puzzle Answer"]
 
 subgraph shell["Shell Module (shell.sv)"]
   tap["BSCANE2"]
@@ -25,8 +26,9 @@ subgraph shell["Shell Module (shell.sv)"]
 end
 
 mk -- Invokes Vivado --> tcl
-txt -- Contents --> tcl
+txt -- File Contents --> tcl
 tcl <-- JTAG Interface --> tap
+tcl -- Result --> ans
 tap --JTAG-TAP--> tap-dec
 tap-dec -- Puzzle Input Bytes --> log
 log -- Computed Result --> tap-enc
