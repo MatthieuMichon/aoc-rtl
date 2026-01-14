@@ -73,7 +73,7 @@ Each puzzle directory includes a Makefile supporting the following make targets.
 ### Simulation with Icarus Verilog
 
 ```
-make isim [INPUT_FILE=filename]
+make isim [INPUT_FILE=input.txt]
 ```
 
 - `INPUT_FILE`: puzzle contents input file, default is `input.txt` 
@@ -81,7 +81,7 @@ make isim [INPUT_FILE=filename]
 ### Simulation with Verilator
 
 ```
-make sim [INPUT_FILE=filename]
+make sim [INPUT_FILE=input.txt]
 ```
 
 - `INPUT_FILE`: puzzle contents input file, default is `input.txt` 
@@ -92,7 +92,7 @@ make sim [INPUT_FILE=filename]
 > The Vivado xsim simuation target is only available on select puzzles (the ones in the [`15/`](/15/) directory).
 
 ```
-make xsim [INPUT_FILE=filename]
+make xsim [INPUT_FILE=input.txt]
 ```
 
 - `INPUT_FILE`: puzzle contents input file, default is `input.txt` 
@@ -100,7 +100,7 @@ make xsim [INPUT_FILE=filename]
 ### Synthesis / configuration / execution with Vivado
 
 ```
-make synth [VVD_MODE=batch] [PART=part] [VVD_TASK=task] [INPUT_FILE=filename]
+make synth [VVD_MODE=batch] [PART=xc7z020clg484-1] [VVD_TASK=all] [INPUT_FILE=input.txt]
 ```
 
 - `VVD_MODE`: Vivado invocation mode, default `batch` 
