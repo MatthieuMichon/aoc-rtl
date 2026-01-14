@@ -133,6 +133,44 @@ The final downstream stage `node_path_counter` has execution time headroom (mate
 | BUFG     |    1 |               Clock |
 | BSCANE2  |    1 |              Others |
 
+Quite a bunch of MUXF7 :turtle: and worse MUXF8 :snail: instances. Not a concern at 50 MHz though, but interesting :monocle_face:
+
+```tcl
+Vivado% foreach c [get_cells -hier -filter {REF_NAME == MUXF7}] { puts $c}
+user_logic_i/adjacency_map_i/dst_node_list_rd_ptr_reg_rep[0]_i_2
+user_logic_i/adjacency_map_i/dst_node_list_rd_ptr_reg_rep[0]_i_3
+# (...)
+user_logic_i/adjacency_map_i/node_has_edges_reg_i_2
+user_logic_i/adjacency_map_i/node_has_edges_reg_i_3
+user_logic_i/adjacency_map_i/reply_ptr_last_reg[0]_i_2
+user_logic_i/adjacency_map_i/reply_ptr_last_reg[0]_i_3
+# (...)
+user_logic_i/node_path_counter_i/adjacency_map_i/dst_node_list_rd_ptr_reg_rep[0]_i_2
+user_logic_i/node_path_counter_i/adjacency_map_i/dst_node_list_rd_ptr_reg_rep[0]_i_3
+# (...)
+user_logic_i/node_path_counter_i/adjacency_map_i/reply_ptr_last_reg[0]_i_2
+user_logic_i/node_path_counter_i/adjacency_map_i/reply_ptr_last_reg[0]_i_3
+# (...)
+```
+
+```tcl
+Vivado% foreach c [get_cells -hier -filter {REF_NAME == MUXF8}] { puts $c}
+user_logic_i/adjacency_map_i/dst_node_list_rd_ptr_reg_rep[10]_i_3
+user_logic_i/adjacency_map_i/dst_node_list_rd_ptr_reg_rep[2]_i_2
+# (...)
+user_logic_i/adjacency_map_i/node_has_edges_reg_i_1
+user_logic_i/adjacency_map_i/reply_ptr_last_reg[0]_i_1
+user_logic_i/adjacency_map_i/reply_ptr_last_reg[10]_i_1
+# (...)
+user_logic_i/node_path_counter_i/adjacency_map_i/dst_node_list_rd_ptr_reg_rep[10]_i_3
+user_logic_i/node_path_counter_i/adjacency_map_i/dst_node_list_rd_ptr_reg_rep[2]_i_2
+# (...)
+user_logic_i/node_path_counter_i/adjacency_map_i/reply_ptr_last_reg[0]_i_1
+user_logic_i/node_path_counter_i/adjacency_map_i/reply_ptr_last_reg[10]_i_1
+# (...)
+user_logic_i/node_path_counter_i/adjacency_map_i/reply_ptr_last_reg
+```
+
 ### Per-Module
 
 Unsurprisingly, the largest modules are the two `adjacency_map` instances.
