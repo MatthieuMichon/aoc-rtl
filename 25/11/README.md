@@ -45,9 +45,9 @@ An other important metric is the total number of edges which connect two adjacen
 
 # Computation Algorithm
 
-Rather than going down the beaten path of implementing a [depth-first search](https://en.wikipedia.org/wiki/Depth-first_search) (DFS), I was eager to try something different which I could learn from. I remember some Advent of Code puzzles from several years ago which required **dynamic programming** (DP) to be solved in reasonable time.
+Rather than going down the beaten path of implementing a [depth-first search](https://en.wikipedia.org/wiki/Depth-first_search) (DFS), I was eager to try something different which I could learn from. I remember some Advent of Code puzzles from several years ago which required **dynamic programming** (DP) to be solved in reasonable time. I relied on the explanations provided in [an introductory article on dynamic programming](https://www.geeksforgeeks.org/dsa/introduction-to-dynamic-programming-data-structures-and-algorithm-tutorials/).
 
-And boy! Looking for something challenging, implementing DP on an FPGA didn't disappoint :trollface:
+And boy! As I was looking for something a bit challenging, implementing dynamic programming on an FPGA didn't disappoint :trollface:
 
 # Implementation
 
@@ -132,6 +132,73 @@ The final downstream stage `node_path_counter` has execution time headroom (mate
 | RAMB18E1 |    3 |        Block Memory |
 | BUFG     |    1 |               Clock |
 | BSCANE2  |    1 |              Others |
+
+### Per-Module
+
+Unsurprisingly, the largest modules are the two `adjacency_map` instances.
+
+|             Instance             |          Module          | Total LUTs | Logic LUTs | LUTRAMs | SRLs | FFs | RAMB36 | RAMB18 | DSP Blocks |
+|----------------------------------|--------------------------|------------|------------|---------|------|-----|--------|--------|------------|
+| shell                            |                    (top) |       1814 |        822 |     992 |    0 | 458 |     13 |      3 |          0 |
+|   (shell)                        |                    (top) |          0 |          0 |       0 |    0 |   0 |      0 |      0 |          0 |
+|   user_logic_i                   |               user_logic |       1814 |        822 |     992 |    0 | 458 |     13 |      3 |          0 |
+|     adjacency_map_i              |         adjacency_map__1 |        782 |        270 |     512 |    0 |  63 |      1 |      0 |          0 |
+|     indegree_list_i              |            indegree_list |         41 |         41 |       0 |    0 |  22 |      0 |      1 |          0 |
+|       (indegree_list_i)          |            indegree_list |         41 |         41 |       0 |    0 |  22 |      0 |      0 |          0 |
+|       dpram_i                    |      indegree_list_dpram |          0 |          0 |       0 |    0 |   0 |      0 |      1 |          0 |
+|     input_decoder_i              |            input_decoder |         29 |         29 |       0 |    0 |  44 |      0 |      0 |          0 |
+|     node_id_mapper_i             |           node_id_mapper |         41 |         41 |       0 |    0 |  85 |     11 |      0 |          0 |
+|       (node_id_mapper_i)         |           node_id_mapper |         41 |         41 |       0 |    0 |  85 |      0 |      0 |          0 |
+|       node_id_mapper_dpram_i     |     node_id_mapper_dpram |          0 |          0 |       0 |    0 |   0 |     11 |      0 |          0 |
+|     node_list_trim_i             |           node_list_trim |         16 |         16 |       0 |    0 |  13 |      0 |      0 |          0 |
+|     node_path_counter_i          |        node_path_counter |        830 |        350 |     480 |    0 | 134 |      1 |      1 |          0 |
+|       (node_path_counter_i)      |        node_path_counter |         86 |         86 |       0 |    0 |  73 |      0 |      0 |          0 |
+|       adjacency_map_i            |            adjacency_map |        744 |        264 |     480 |    0 |  61 |      1 |      0 |          0 |
+|       node_path_counter_sdpram_i | node_path_counter_sdpram |          0 |          0 |       0 |    0 |   0 |      0 |      1 |          0 |
+|     tap_decoder_i                |              tap_decoder |          2 |          2 |       0 |    0 |   9 |      0 |      0 |          0 |
+|     tap_encoder_i                |              tap_encoder |         10 |         10 |       0 |    0 |  32 |      0 |      0 |          0 |
+|     topological_sort_i           |         topological_sort |         63 |         63 |       0 |    0 |  56 |      0 |      1 |          0 |
+
+
+### RAM
+
+| Memory Name                                                                 | Array Size | RAM_STYLE | Memory Type | Port 1 Dimension / Map | Port 2 Dimension / Map |
+|-----------------------------------------------------------------------------|------------|-----------|-------------|------------------------|------------------------|
+| user_logic_i/node_id_mapper_i/node_id_mapper_dpram_i/node_lut               |     360448 |           | RAM_TDP     | 32768x11               | 32768x11               |
+|  user_logic_i/node_id_mapper_i/node_id_mapper_dpram_i/node_lut_reg_0_0      |      32768 |      AUTO |             |  A:A:32768x1           |  B:B:32768x1           |
+|  user_logic_i/node_id_mapper_i/node_id_mapper_dpram_i/node_lut_reg_0_1      |      32768 |      AUTO |             |  A:A:32768x1           |  B:B:32768x1           |
+|  user_logic_i/node_id_mapper_i/node_id_mapper_dpram_i/node_lut_reg_0_2      |      32768 |      AUTO |             |  A:A:32768x1           |  B:B:32768x1           |
+|  user_logic_i/node_id_mapper_i/node_id_mapper_dpram_i/node_lut_reg_0_3      |      32768 |      AUTO |             |  A:A:32768x1           |  B:B:32768x1           |
+|  user_logic_i/node_id_mapper_i/node_id_mapper_dpram_i/node_lut_reg_0_4      |      32768 |      AUTO |             |  A:A:32768x1           |  B:B:32768x1           |
+|  user_logic_i/node_id_mapper_i/node_id_mapper_dpram_i/node_lut_reg_0_5      |      32768 |      AUTO |             |  A:A:32768x1           |  B:B:32768x1           |
+|  user_logic_i/node_id_mapper_i/node_id_mapper_dpram_i/node_lut_reg_0_6      |      32768 |      AUTO |             |  A:A:32768x1           |  B:B:32768x1           |
+|  user_logic_i/node_id_mapper_i/node_id_mapper_dpram_i/node_lut_reg_0_7      |      32768 |      AUTO |             |  A:A:32768x1           |  B:B:32768x1           |
+|  user_logic_i/node_id_mapper_i/node_id_mapper_dpram_i/node_lut_reg_0_8      |      32768 |      AUTO |             |  A:A:32768x1           |  B:B:32768x1           |
+|  user_logic_i/node_id_mapper_i/node_id_mapper_dpram_i/node_lut_reg_0_9      |      32768 |      AUTO |             |  A:A:32768x1           |  B:B:32768x1           |
+|  user_logic_i/node_id_mapper_i/node_id_mapper_dpram_i/node_lut_reg_0_10     |      32768 |      AUTO |             |  A:A:32768x1           |  B:B:32768x1           |
+| user_logic_i/adjacency_map_i/dst_node_list                                  |      20480 |           | RAM_SDP     | 2048x10                | 2048x10                |
+|  user_logic_i/adjacency_map_i/dst_node_list_reg                             |      20480 |      AUTO |             |  A:A:2048x10           |  B:B:2048x10           |
+| user_logic_i/node_path_counter_i/adjacency_map_i/dst_node_list              |      20480 |           | RAM_SDP     | 2048x10                | 2048x10                |
+|  user_logic_i/node_path_counter_i/adjacency_map_i/dst_node_list_reg         |      20480 |      AUTO |             |  A:A:2048x10           |  B:B:2048x10           |
+| user_logic_i/node_path_counter_i/node_path_counter_sdpram_i/path_count      |      16384 |           | RAM_SDP     | 1024x16                | 1024x16                |
+|  user_logic_i/node_path_counter_i/node_path_counter_sdpram_i/path_count_reg |      16384 |      AUTO |             |  A:A:1024x16           |  B:B:1024x16           |
+| user_logic_i/indegree_list_i/dpram_i/indegree_cnt_per_node                  |      10240 |           | RAM_TDP     | 1024x10                | 1024x10                |
+|  user_logic_i/indegree_list_i/dpram_i/indegree_cnt_per_node_reg             |      10240 |      AUTO |             |  A:A:1024x10           |  B:B:1024x10           |
+| user_logic_i/topological_sort_i/zero_indeg_nodes_fifo                       |      10240 |           | RAM_SDP     | 1024x10                | 1024x10                |
+|  user_logic_i/topological_sort_i/zero_indeg_nodes_fifo_reg                  |      10240 |      AUTO |             |  A:A:1024x10           |  B:B:1024x10           |
+
+### Timings
+
+Although 50 MHz is *walk in the park* for a 7-series FPGA, fan-out figures are higher then expected:
+
+| Net Name                                                                              | Fanout | Driver Type | Worst Slack(ns) | Worst Delay(ns) |
+|---------------------------------------------------------------------------------------|--------|-------------|-----------------|-----------------|
+| user_logic_i/node_id_mapper_i/src_node_idx[0]                                         |   1249 | FDRE        |          12.010 |           7.588 |
+| user_logic_i/node_id_mapper_i/src_node_idx[1]                                         |   1249 | FDRE        |          10.550 |           8.671 |
+| user_logic_i/node_id_mapper_i/src_node_idx[2]                                         |   1249 | FDRE        |          12.554 |           6.881 |
+| user_logic_i/node_id_mapper_i/src_node_idx[3]                                         |   1249 | FDRE        |          12.840 |           6.274 |
+| user_logic_i/node_id_mapper_i/src_node_idx[4]                                         |   1249 | FDRE        |          13.568 |           5.620 |
+| user_logic_i/node_id_mapper_i/src_node_idx[5]                                         |   1249 | FDRE        |          13.700 |           5.599 |
 
 ## Final Ratings
 
