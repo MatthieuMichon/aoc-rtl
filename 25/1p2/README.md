@@ -78,7 +78,7 @@ $$Max Error(ppm) < 10^6 \times \frac{1}{999+99} = 910.74$$
 
 According to the previous table, the appropriate values for the multiplier and divider are respectively 1311 and 131072 corresponding to right shift of 17.
 
-For reference with a ppm value of 213.62, the maximum divisor argument is 1820 after which the division returns incorrect results:
+For reference with a ppm value of 213.62, the maximum divisor argument is 4681 after which the division returns incorrect results:
 
 $$Max Arg = 10^6 \times \frac{1}{213.62} = 4681.43$$
 
