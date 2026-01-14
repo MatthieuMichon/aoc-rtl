@@ -70,10 +70,29 @@ Porting to other vendors should also be straightforward, as the design is writte
 
 Each puzzle directory includes a Makefile supporting the following make targets.
 
+### Simulation with Icarus Verilog
+
+```
+make isim [INPUT_FILE=filename]
+```
+
+- `INPUT_FILE`: puzzle contents input file, default is `input.txt` 
+
 ### Simulation with Verilator
 
 ```
 make sim [INPUT_FILE=filename]
+```
+
+- `INPUT_FILE`: puzzle contents input file, default is `input.txt` 
+
+### Simulation with Vivado Xsim
+
+> [!NOTE]
+> The Vivado xsim simuation target is only available on select puzzles (the ones in the [`15/`](/15/) directory).
+
+```
+make xsim [INPUT_FILE=filename]
 ```
 
 - `INPUT_FILE`: puzzle contents input file, default is `input.txt` 
@@ -92,16 +111,6 @@ make synth [VVD_MODE=batch] [PART=part] [VVD_TASK=task] [INPUT_FILE=filename]
   - `program`: configures FPGA with current bitstream
   - `run`: `program`, load puzzle contents into the FPGA and readback results
   - `lint`: run the Vivado linting tool
-- `INPUT_FILE`: puzzle contents input file, default is `input.txt` 
-
-### Simulation with Icarus Verilog
-
-Available in select puzzles.
-
-```
-make isim [INPUT_FILE=filename]
-```
-
 - `INPUT_FILE`: puzzle contents input file, default is `input.txt` 
 
 ### Python Exploration Script

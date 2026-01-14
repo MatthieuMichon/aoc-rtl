@@ -29,7 +29,7 @@ a.out: $(SV_SOURCES)
 xsim: $(SV_SOURCES)
 	xvlog --nolog -sv $(SV_SOURCES)
 	xelab --nolog $(USER_LOGIC)_tb -debug wave -snapshot $(USER_LOGIC)_tb
-	xsim -R -nolog $(USER_LOGIC)_tb
+	xsim -R -nolog $(USER_LOGIC)_tb -testplusarg INPUT_FILE=$(INPUT_FILE)
 
 .PHONY: synth
 synth:
