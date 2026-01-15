@@ -22,14 +22,13 @@ typedef enum byte {
     LF_CHAR = 8'h0A,
     ZERO_CHAR = 8'h30, // `0`
     NINE_CHAR = 8'h39, // `9`
-    X_CHAR = 8'h78 // `,`
+    X_CHAR = 8'h78 // lower-case `x`
 } char_t;
 
 typedef logic [SIZE_WIDTH-1:0] size_t;
 logic [8-1:0] prev_inbound_byte = '0;
-logic length_set = 1'b0, width_set = 1'b0;
+logic length_set = 1'b0;
 size_t size = '0;
-
 
 function automatic logic is_digit(input byte char);
     is_digit = ((char >= ZERO_CHAR) && (char <= NINE_CHAR));
@@ -47,27 +46,37 @@ always_ff @(posedge clk) begin: decimal_accumulator
 end
 
 always_ff @(posedge clk) begin: output_ctrl
-    tile_valid <= 1'b0;
-    if (inbound_valid) begin
-        unique case (inbound_byte)
-            X_CHAR: begin
-                if (!length_set) begin
-                    length_set <= 1'b1;
-                    length <= size;
-                end else begin
-                    width <= size;
+    if (reset) begin
+        end_of_file <= 1'b0;
+        size_valid <= 1'b0;
+    end else begin
+        size_valid <= 1'b0;
+        if (inbound_valid) begin
+            unique case (inbound_byte)
+                X_CHAR: begin
+                    if (!length_set) begin: recevied_first_arg
+                        length_set <= 1'b1;
+                        length <= size;
+                    end else begin: recevied_second_arg
+                        width <= size;
+                    end
                 end
-            end
-            LF_CHAR: begin
-                end_of_file <= (prev_inbound_byte == LF_CHAR);
-                tile_valid <= (prev_inbound_byte != LF_CHAR);
-                height <= size;
-                length_set <= 1'b0;
-            end
-            default: begin
-                end_of_file <= 1'b1;
-            end
-        endcase
+                LF_CHAR: begin
+                    if (prev_inbound_byte != LF_CHAR) begin: received_third_arg
+                        size_valid <= 1'b1;
+                    end else begin: double_new_line
+                        end_of_file <= 1'b1;
+                    end
+                    height <= size;
+                    length_set <= 1'b0;
+                end
+                default: begin
+                    if (!is_digit(inbound_byte)) begin: bail_out_on_non_text_char
+                        end_of_file <= 1'b1;
+                    end
+                end
+            endcase
+        end
     end
 end
 
