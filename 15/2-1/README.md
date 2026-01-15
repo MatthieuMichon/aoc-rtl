@@ -114,13 +114,13 @@ l --> lw
 w --> lw
 lw --> t
 
-w --> wh
-h --> wh
-wh --> f
-
 h --> hl
 l --> hl
 hl --> s
+
+h --> wh
+w --> wh
+wh --> f
 
 s --> add
 f --> add
