@@ -26,7 +26,7 @@ The solution corresponds to the character count once the above condition is met.
 
 Second part does not change the analysis.
 
-### Implementation
+## Implementation
 
 Thankfully the changes are rather limited, consisting in some changes to the `floor_tracker` module:
 
