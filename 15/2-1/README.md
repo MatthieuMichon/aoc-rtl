@@ -112,7 +112,7 @@ area["Final Area Value"]
 
 l --> lw
 w --> lw
-lw --> s
+lw --> t
 
 w --> wh
 h --> wh
@@ -120,7 +120,7 @@ wh --> f
 
 h --> hl
 l --> hl
-hl --> t
+hl --> s
 
 s --> add
 f --> add
