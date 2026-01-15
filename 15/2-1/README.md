@@ -157,9 +157,9 @@ Full simulation: compilation and runtime (low-spec laptop):
 
 | Run Times | Icarus Verilog | Verilator | Vivado Xsim | Vivado FPGA Build |
 |-----------|----------------|-----------|-------------|-------------------|
-| Real      | FIXME          | FIXME     | FIXME       | FIXME             |
-| User      | FIXME          | FIXME     | FIXME       | FIXME             |
-| Sys       | FIXME          | FIXME     | FIXME       | FIXME             |
+| Real      | 1.411s         | 6.915s    | 12.302s     | 1m55.586s         |
+| User      | 1.372s         | 26.553s   | 10.736s     | 2m22.679s         |
+| Sys       | 0.018s         | 2.651s    | 1.866s      | 0m8.439s          |
 
 ### Resource Usage
 
