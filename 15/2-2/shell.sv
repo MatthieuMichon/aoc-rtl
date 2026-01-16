@@ -7,7 +7,6 @@ localparam int JTAG_USER_ID = 4;
 logic tck, tdi, tdo;
 logic test_logic_reset, run_test_idle, ir_is_user, capture_dr, shift_dr, update_dr;
 
-(* X_INTERFACE_IGNORE = "true" *)
 BSCANE2 #(.JTAG_CHAIN(JTAG_USER_ID)) bscan_i (
     // raw JTAG signals
         .TCK(tck),
