@@ -9,7 +9,7 @@ localparam int IR_LENGTH_ARM_DAP = 4;
 localparam logic [IR_LENGTH_ARM_DAP-1:0] ARM_DAP_IR = 4'b0001;
 localparam int IR_LENGTH_7_SERIES = 6;
 localparam int IR_LENGTH = IR_LENGTH_ARM_DAP + IR_LENGTH_7_SERIES;
-localparam logic [IR_LENGTH-1:0] IR_USER4 = 10'b11_1110_0011;
+localparam logic [IR_LENGTH-1:0] IR_USER4 = {ARM_DAP_IR, 6'b100011};
 
 logic tck, tms  = 1'b1, tdi = 1'b1, tdo;
 logic test_logic_reset, run_test_idle, ir_is_user = 1'b0, capture_dr, shift_dr, update_dr;
