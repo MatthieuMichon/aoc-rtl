@@ -35,11 +35,22 @@ Due to the small number of combinations, I was thinking of using a one-hot encod
 
 ### Improved JTAG Data Serialization
 
-A sore point of my previous implementations was the relatively slow data transfer rate. This was primarily due to serializing data on a per byte basis. Improving this situation would require batching data bits into words larger or much larger words.
+A sore point of my previous implementations was the relatively slow data transfer rate. This was primarily due to serializing data on a per byte basis. Removing this per byte serialization and going straight for continuously streaming the whole inputs contents should yield a significant improvement.
 
-My initial thoughts on this matter were to use 16 byte blocks for serialization and pad the remaining bytes with null bytes. For a typical 12 kbyte input length, this implementation would cut down by 16 the number of individual TCL commands. A thing I nearly forgot was that JTAG uses a LSB-first encoding, thus the bytes in each block should be reversed prior to serialization (this process could not be implemented in the FPGA since this would require knowing in advance the number of bytes to be padded in the last block).
+The overhead of handling each byte separately is significant, as the JTAG TAP state machine must go through five states every byte. This increases the number of required `tck` cycles by 62.5 %. In practice this overhead is even higher on-board due to additional TCL commands required for transitioning between states.
+
+#### Simulation Testbench Changes
+
+Following the creation of a small [proof-of-concept project](https://github.com/MatthieuMichon/bscan-waves) for producing real waveforms of the BSCANE2 outputs. I decided to completely overhaul the implementation of the BSCANE2 emulation in the main simulation testbench:
+
+- Added states related to the IR shift register
+- Addition of the `tms` signal with the proper values reflecting the TAP state machine transitions
+- Correctly emulating the initialization of the BSCANE2 module with the proper IR value
+- Continuous streaming of input contents bytes
 
 #### Vivado TCL Script Changes
+
+My initial thoughts on this matter were to use 16 byte blocks for serialization and pad the remaining bytes with null bytes. For a typical 12 kbyte input length, this implementation would cut down by 16 the number of individual TCL commands. A thing I nearly forgot was that JTAG uses a LSB-first encoding, thus the bytes in each block should be reversed prior to serialization (this process could not be implemented in the FPGA since this would require knowing in advance the number of bytes to be padded in the last block).
 
 These changes mean breaking quite a lot of things in the TCL script, as it was operating on a per-line then per-byte basis. I changed the text file loading procedure to use blocks of N bytes instead of lines of text.
 

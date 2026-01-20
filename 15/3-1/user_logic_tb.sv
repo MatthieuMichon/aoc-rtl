@@ -5,16 +5,20 @@ module user_logic_tb;
 
 localparam int RESULT_WIDTH = 32;
 
+localparam int SEEK_SET = 0;
+localparam int SEEK_END = 2;
+
 localparam int IR_LENGTH_ARM_DAP = 4;
 localparam logic [IR_LENGTH_ARM_DAP-1:0] ARM_DAP_IR = 4'b0001;
 localparam int IR_LENGTH_7_SERIES = 6;
 localparam int IR_LENGTH = IR_LENGTH_ARM_DAP + IR_LENGTH_7_SERIES;
-localparam logic [IR_LENGTH-1:0] IR_USER4 = {ARM_DAP_IR, 6'b100011};
+typedef logic [IR_LENGTH-1:0] ir_t;
+localparam ir_t IR_USER4 = {ARM_DAP_IR, 6'b100011};
 
 logic tck, tms  = 1'b1, tdi = 1'b1, tdo;
 logic test_logic_reset, run_test_idle, ir_is_user = 1'b0, capture_dr, shift_dr, update_dr;
 
-initial begin
+initial begin: tck_clock_gen
     tck = 0;
     forever #1 tck = ~tck;
 end
@@ -22,170 +26,61 @@ end
 typedef enum {
     TEST_LOGIC_RESET,
     RUN_TEST_IDLE,
-    SELECT_DR_SCAN,
-    CAPTURE_DR,
-    SHIFT_DR,
-    EXIT1_DR,
-    PAUSE_DR,
-    EXIT2_DR,
-    UPDATE_DR,
-    IR
+    SELECT_DR_SCAN, SELECT_IR_SCAN,
+    CAPTURE_DR, SHIFT_DR, EXIT1_DR, PAUSE_DR, EXIT2_DR, UPDATE_DR,
+    CAPTURE_IR, SHIFT_IR, EXIT1_IR, PAUSE_IR, EXIT2_IR, UPDATE_IR
 } state_t;
 
-task automatic run_state_hw_jtag(state_t tap_state, next_tap_state);
+state_t current_state = TEST_LOGIC_RESET;
+
+task automatic run_state_hw_jtag(state_t next_tap_state);
     unique case (next_tap_state)
-        TEST_LOGIC_RESET: begin
-            tms = 1'b1;
-        end
-        RUN_TEST_IDLE: begin
-            tms = 1'b0;
-        end
-        SELECT_DR_SCAN: begin
-            tms = 1'b1;
-        end
-        CAPTURE_DR: begin
-            tms = 1'b0;
-        end
-        SHIFT_DR: begin
-            tms = 1'b0;
-        end
-        EXIT1_DR: begin
-            tms = 1'b1;
-        end
-        PAUSE_DR: begin
-            tms = 1'b0;
-        end
-        EXIT2_DR: begin
-            tms = 1'b1;
-        end
-        UPDATE_DR: begin
-            tms = 1'b1;
-        end
-        IR: begin
-        end
+        TEST_LOGIC_RESET, SELECT_DR_SCAN, SELECT_IR_SCAN, EXIT1_DR,
+        EXIT1_IR, EXIT2_DR, UPDATE_DR, EXIT2_IR, UPDATE_IR: tms = 1'b1;
+        default: tms = 1'b0;
     endcase
     @(negedge tck);
-    unique case (tap_state)
-        TEST_LOGIC_RESET: begin
-            test_logic_reset = 1'b1;
-            run_test_idle = 1'b0;
-            capture_dr = 1'b0;
-            shift_dr = 1'b0;
-            update_dr = 1'b0;
-        end
-        RUN_TEST_IDLE: begin
-            tms = 1'b0;
-            test_logic_reset = 1'b0;
-            run_test_idle = 1'b1;
-            capture_dr = 1'b0;
-            shift_dr = 1'b0;
-            update_dr = 1'b0;
-        end
-        SELECT_DR_SCAN: begin
-            test_logic_reset = 1'b0;
-            run_test_idle = 1'b0;
-            capture_dr = 1'b0;
-            shift_dr = 1'b0;
-            update_dr = 1'b0;
-        end
-        CAPTURE_DR: begin
-            test_logic_reset = 1'b0;
-            run_test_idle = 1'b0;
-            capture_dr = 1'b1;
-            shift_dr = 1'b0;
-            update_dr = 1'b0;
-        end
-        SHIFT_DR: begin
-            test_logic_reset = 1'b0;
-            run_test_idle = 1'b0;
-            capture_dr = 1'b0;
-            shift_dr = 1'b1;
-            update_dr = 1'b0;
-        end
-        EXIT1_DR: begin
-            test_logic_reset = 1'b0;
-            run_test_idle = 1'b0;
-            capture_dr = 1'b0;
-            shift_dr = 1'b0;
-            update_dr = 1'b0;
-        end
-        PAUSE_DR: begin
-            test_logic_reset = 1'b0;
-            run_test_idle = 1'b0;
-            capture_dr = 1'b0;
-            shift_dr = 1'b0;
-            update_dr = 1'b0;
-        end
-        EXIT2_DR: begin
-            test_logic_reset = 1'b0;
-            run_test_idle = 1'b0;
-            capture_dr = 1'b0;
-            shift_dr = 1'b0;
-            update_dr = 1'b0;
-        end
-        UPDATE_DR: begin
-            test_logic_reset = 1'b0;
-            run_test_idle = 1'b0;
-            capture_dr = 1'b0;
-            shift_dr = 1'b0;
-            update_dr = 1'b1;
-        end
-        IR: begin
-            test_logic_reset = 1'b0;
-            run_test_idle = 1'b0;
-            capture_dr = 1'b0;
-            shift_dr = 1'b0;
-            update_dr = 1'b0;
-        end
-    endcase
+    if (ir_is_user) begin
+        ir_is_user = !(current_state == TEST_LOGIC_RESET);
+        capture_dr = (current_state == CAPTURE_DR);
+        shift_dr = (current_state == SHIFT_DR);
+        update_dr = (current_state == UPDATE_DR);
+    end else begin
+        ir_is_user = (current_state == UPDATE_IR);
+        capture_dr = 1'b0;
+        shift_dr = 1'b0;
+        update_dr = 1'b0;
+    end
+    test_logic_reset = (current_state == TEST_LOGIC_RESET);
+    run_test_idle = (current_state == RUN_TEST_IDLE);
+    current_state = next_tap_state;
+endtask
+
+task automatic set_ir(ir_t ir);
+    run_state_hw_jtag(RUN_TEST_IDLE);
+    run_state_hw_jtag(SELECT_DR_SCAN);
+    run_state_hw_jtag(SELECT_IR_SCAN);
+    run_state_hw_jtag(CAPTURE_IR);
+    for (int i = 0; i < $size(ir); i++) begin
+        tdi = ir[i];
+        run_state_hw_jtag(SHIFT_IR);
+    end
+    run_state_hw_jtag(EXIT1_IR);
+    run_state_hw_jtag(UPDATE_IR);
+    ir_is_user = 1'b1;
+    run_state_hw_jtag(RUN_TEST_IDLE);
 endtask
 
 task automatic serialize(input string bytes_);
-    int num_bytes = bytes_.len();
-    int deci = num_bytes / 10;
-    byte char;
-    for (int i=0; i<num_bytes; i++) begin: for_each_char
-        if (i % deci == 0)
-            $display("Processed %d %%", 100*i/num_bytes);
-        run_state_hw_jtag(SELECT_DR_SCAN);
-        run_state_hw_jtag(CAPTURE_DR);
-        char = bytes_[i];
-        for (int j=0; j<8; j++) begin
-            tdi = char[j];
-            run_state_hw_jtag(SHIFT_DR);
-        end
-        run_state_hw_jtag(EXIT1_DR);
-        run_state_hw_jtag(UPDATE_DR);
-        run_state_hw_jtag(RUN_TEST_IDLE);
-    end
-    begin: finish_with_extra_new_line
-        run_state_hw_jtag(SELECT_DR_SCAN);
-        run_state_hw_jtag(CAPTURE_DR);
-        char = 8'h0A;
-        for (int j=0; j<8; j++) begin
-            tdi = char[j];
-            run_state_hw_jtag(SHIFT_DR);
-        end
-        run_state_hw_jtag(EXIT1_DR);
-        run_state_hw_jtag(UPDATE_DR);
-        run_state_hw_jtag(RUN_TEST_IDLE);
-    end
-endtask
+    int len = bytes_.len();
+    $display("Serializing %d bytes", len);
+    // logic [7:0] current_byte;
 
-localparam int SEEK_SET = 0;
-localparam int SEEK_END = 2;
-
-task automatic deserialize(output logic [RESULT_WIDTH-1:0] result);
+    run_state_hw_jtag(RUN_TEST_IDLE);
     run_state_hw_jtag(SELECT_DR_SCAN);
+    run_state_hw_jtag(SELECT_IR_SCAN);
     run_state_hw_jtag(CAPTURE_DR);
-
-    tdi = 1'b0; // replicate `scan_dr_hw_jtag $result_width -tdi 0` behavior
-    for (int j=0; j<$bits(result); j++) begin
-        @(negedge tck); // BSCANE2 falling-edge internal FF
-        result[j]= tdo;
-        run_state_hw_jtag(SHIFT_DR);
-    end
-
+    run_state_hw_jtag(SHIFT_DR);
     run_state_hw_jtag(EXIT1_DR);
     run_state_hw_jtag(UPDATE_DR);
     run_state_hw_jtag(RUN_TEST_IDLE);
@@ -195,18 +90,15 @@ string input_file = "input.txt";
 string input_contents = "";
 byte char = 0;
 
+int fd, file_size;
+logic [RESULT_WIDTH-1:0] result = '0;
+
 initial begin: main_seq
-    int fd, file_size;
-    logic [RESULT_WIDTH-1:0] result;
+    byte input_buffer [];
 
     // Initialize BSCANE2 Outputs
-        tdi = 1'b1;
-        test_logic_reset = 1'b1;
-        run_test_idle = 1'b0;
-        capture_dr = 1'b0;
-        shift_dr = 1'b0;
-        update_dr = 1'b0;
-        @(posedge tck);
+
+        run_state_hw_jtag(TEST_LOGIC_RESET);
 
     // load file contents
 
@@ -215,69 +107,60 @@ initial begin: main_seq
         end else begin
             $display("Using default filename: %s", input_file);
         end
-        fd = $fopen(input_file, "r");
+        fd = $fopen(input_file, "rb");
         if (fd==0) $fatal(2, "Failed to open file %s", input_file);
         if ($fseek(fd, 0, SEEK_END) != 0) $fatal(2, "Failed to read file %s", input_file);
         file_size = $ftell(fd);
-        $display("file_size: %d bytes", file_size);
+        $display("file_size: %0d bytes", file_size);
         if ($fseek(fd, 0, SEEK_SET) != 0) $fatal(2, "Failed to read file %s", input_file);
-        while (char != -1) begin
-            char = $fgetc(fd);
-            if (char != -1)
-                input_contents = $sformatf("%s%c", input_contents, char);
-        end
+        input_buffer = new[file_size];
+        if ($fread(input_buffer, fd) != file_size) begin
+                $display("Warning: Did not read expected number of bytes");
+            end
         $fclose(fd);
         if (input_contents.len() != file_size)
             $fatal(1, "Failed to open file %s", input_file);
-        $display("Loaded %d bytes", file_size);
+        $display("Loaded %0d bytes", file_size);
 
-    // initialize JTAG
+    // Upload file contents through JTAG
 
-        run_state_hw_jtag(RUN_TEST_IDLE);
-
-    // set instruction register to `USER4`
-
-        run_state_hw_jtag(SELECT_DR_SCAN);
-        run_state_hw_jtag(IR); // SELECT_IR_SCAN wait state
-        run_state_hw_jtag(IR); // CAPTURE_IR wait state
-        for (int j=0; j<IR_LENGTH; j++) begin
-            run_state_hw_jtag(IR); // SHIFT_IR wait state
-        end
-        run_state_hw_jtag(IR); // EXIT1_IR wait state
-        run_state_hw_jtag(IR); // UPDATE_IR wait state
-        ir_is_user = 1'b1;
-        run_state_hw_jtag(RUN_TEST_IDLE);
-
-    // serialize inputs into the user logic and readback result
-
+        set_ir(IR_USER4); // emulate setting IR to USER4 (user logic should do nothing)
         serialize(input_contents);
-        result = 0;
-        while (result == 0 || $isunknown(result)) begin: loop_until_result
-            @(posedge tck);
-            deserialize(result);
-        end
-        $display("Result: %d (0x%h)", result, result);
+
+    // Tail
+
+        repeat (5) run_state_hw_jtag(RUN_TEST_IDLE);
+
+
 
     $finish(2);
 end
 
 user_logic user_logic_i (
-    // BSCAN signals
+    // raw JTAG signals
         .tck(tck),
+        .tms(tms),
         .tdi(tdi),
         .tdo(tdo),
+    // TAP controller states
         .test_logic_reset(test_logic_reset),
-        .run_test_idle(run_test_idle),
         .ir_is_user(ir_is_user),
+        .run_test_idle(run_test_idle),
         .capture_dr(capture_dr),
         .shift_dr(shift_dr),
         .update_dr(update_dr));
 
-`ifndef VERILATOR
+wire _unused_ok = 1'b0 && &{1'b0,
+    tdo,
+    result,
+    1'b0};
+
+//`ifndef VERILATOR
 initial begin
     $dumpfile("wave.vcd");
     $dumpvars(0, user_logic_tb);
 end
-`endif
+//`endif
+
 endmodule
 `default_nettype wire
