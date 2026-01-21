@@ -118,6 +118,8 @@ scan_dr_hw_jtag 129 -tdi 0x0a404040404040404040404040404040; # byte swapped
 close_hw_target
 ```
 
+![](tap_load_chunk_ila_capture.png)
+
 The serialization process in the Vivado script `vivado.tcl` was completely revamped with the division of the file contents into blocks performed in a dedicated function `load_blocks`, and the per-block serialization process handled in the main loop of the input loading function `load_inputs`.
 
 My initial thoughts on this matter were to use 16 byte blocks for serialization and pad the remaining bytes with null bytes. For a typical 12 kbyte input length, this implementation would cut down by 16 the number of individual TCL commands. A thing I nearly forgot was that JTAG uses a LSB-first encoding, thus the bytes in each block should be reversed prior to serialization (this process could not be implemented in the FPGA since this would require knowing in advance the number of bytes to be padded in the last block).
