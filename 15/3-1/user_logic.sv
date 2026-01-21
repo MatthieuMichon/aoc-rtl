@@ -18,6 +18,7 @@ module user_logic (
 
 localparam int RESULT_WIDTH = 16;
 
+localparam int UPSTREAM_BYPASS_BITS = 1; // ARM DAP controller in BYPASS mode
 localparam int INBOUND_DATA_WIDTH = $bits(byte);
 typedef logic [INBOUND_DATA_WIDTH-1:0] inbound_data_t;
 typedef logic [RESULT_WIDTH-1:0] result_t;
@@ -27,7 +28,8 @@ logic inbound_valid;
 inbound_data_t inbound_data;
 
 tap_decoder #(
-    .INBOUND_DATA_WIDTH(INBOUND_DATA_WIDTH)
+    .INBOUND_DATA_WIDTH(INBOUND_DATA_WIDTH),
+    .UPSTREAM_BYPASS_BITS(UPSTREAM_BYPASS_BITS)
 ) tap_decoder_i (
     // JTAG TAP Controller Signals
         .tck(tck),
@@ -48,9 +50,10 @@ result_t outbound_data = '0;
 
 always_ff @(posedge tck) begin: shift_logic_on_negedge
     if (test_logic_reset) begin
+        outbound_valid <= 1'b0;
         outbound_data <= '0;
     end else if (inbound_valid) begin
-        outbound_valid <= (inbound_data == 8'h0A);
+        outbound_valid <= outbound_valid || (inbound_data == 8'h0A);
         outbound_data <= outbound_data + 1'b1;
     end
 end

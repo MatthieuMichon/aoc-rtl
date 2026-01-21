@@ -141,13 +141,16 @@ proc ::program {} {
 
 proc ::load_inputs {arg_dict} {
 
+    set input_file [dict get $arg_dict INPUT_FILE]
+
     # Cycle Target Connection to JTAG Mode
 
-        open_hw_manager -quiet
-        connect_hw_server -quiet
-        open_hw_target -quiet
-        close_hw_target -quiet
-        open_hw_target -jtag_mode on -quiet
+        set flags -quiet
+        open_hw_manager $flags
+        connect_hw_server $flags
+        open_hw_target $flags
+        close_hw_target $flags
+        open_hw_target -jtag_mode on $flags
 
     # Set FPGA PL TAP IR to USER4
 
@@ -157,23 +160,17 @@ proc ::load_inputs {arg_dict} {
         run_state_hw_jtag IDLE
         scan_ir_hw_jtag $zynq7_ir_length -tdi $zynq7_ir_user4
 
-
     # Load Contents
 
+        set bytes_uploaded 0
         set chunk_size 16
         set chunks [::load_blocks ../$input_file $chunk_size]
+        foreach chunk $chunks {
+            puts "Loading chunk"
+            incr bytes_uploaded 16
+        }
 
-    # upload file contents
 
-    set zynq7_dr_length_byte 9; # zynq7: extra bit for ARM DAP bypass reg
-    set new_line 0x0a; # `\n`
-    set input_file [dict get $arg_dict INPUT_FILE]
-    puts -nonewline "Uploading bytes... "
-    set bytes_uploaded 0
-    foreach chunk $chunks {
-        puts "Hello"
-    }
-    scan_dr_hw_jtag $zynq7_dr_length_byte -tdi $new_line
     puts "done. ($bytes_uploaded bytes)"
 }
 

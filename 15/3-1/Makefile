@@ -29,7 +29,7 @@ $(VIVADO_BUILD_DIR):
 	mkdir -p $@
 	cd $@ && vivado $(VIVADO_FLAGS) \
 	    -tclargs PART=$(PART) GIT_COMMIT=$(GIT_COMMIT_SHORT) \
-		TASK=build
+		TASK=$(VIVADO_TASK) INPUT_FILE=$(INPUT_FILE)
 
 .PHONY: sim_verilator
 sim_verilator: $(VERILATOR_BUILD_DIR)/V$(TB)

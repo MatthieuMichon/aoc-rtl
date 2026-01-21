@@ -78,6 +78,48 @@ close_hw_target
 
 ![](tap_sel_ila_capture.png)
 
+The second step is to ensure that the improved deserialization process behaves as expected. I opted for an incremental approach, starting with a single block of data with zero padding. I chose the at sign `@` due to its ASCII value of 0x40 making it easy to distinguish during the bit shifting operations.
+
+While testing I discovered that the first `tdi` value received once in *SHIFT_DR* state is invalid. This is due to the JTAG TAP being downstream of the ARM DAP controller, which in *BYPASS* mode behaves as a single bit register.
+
+For ensuring proper reusability, I decided to add a parameter `UPSTREAM_BYPASS_BITS` to the module.
+
+```diff
+module tap_decoder #(
+    parameter int INBOUND_DATA_WIDTH,
++    parameter int UPSTREAM_BYPASS_BITS
+)(
+    // JTAG TAP Controller Signals
+        input wire tck,
+        input wire tms,
+        input wire tdi,
+        input wire test_logic_reset,
+        input wire ir_is_user,
+        input wire shift_dr,
+        input wire update_dr,
+    // Deserialized Data
+        output logic inbound_alignment_error,
+        output logic inbound_valid,
+        output logic [INBOUND_DATA_WIDTH-1:0] inbound_data
+);
+```
+
+```tcl
+# Vivado TCL console invoked using `vivado -mode tcl`
+open_hw_manager
+connect_hw_server
+open_hw_target -jtag_mode on
+set zynq7_ir_length 10
+set zynq7_ir_user4 0x3e3
+run_state_hw_jtag RESET
+run_state_hw_jtag IDLE
+scan_ir_hw_jtag $zynq7_ir_length -tdi $zynq7_ir_user4
+scan_dr_hw_jtag 129 -tdi 0x0a404040404040404040404040404040; # byte swapped
+close_hw_target
+```
+
+The serialization process in the Vivado script `vivado.tcl` was completely revamped with the division of the file contents into blocks performed in a dedicated function `load_blocks`, and the per-block serialization process handled in the main loop of the input loading function `load_inputs`.
+
 My initial thoughts on this matter were to use 16 byte blocks for serialization and pad the remaining bytes with null bytes. For a typical 12 kbyte input length, this implementation would cut down by 16 the number of individual TCL commands. A thing I nearly forgot was that JTAG uses a LSB-first encoding, thus the bytes in each block should be reversed prior to serialization (this process could not be implemented in the FPGA since this would require knowing in advance the number of bytes to be padded in the last block).
 
 These changes mean breaking quite a lot of things in the TCL script, as it was operating on a per-line then per-byte basis. I changed the text file loading procedure to use blocks of N bytes instead of lines of text.

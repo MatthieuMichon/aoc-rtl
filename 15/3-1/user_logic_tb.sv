@@ -3,7 +3,7 @@
 
 module user_logic_tb;
 
-localparam int RESULT_WIDTH = 32;
+localparam int RESULT_WIDTH = 16;
 
 localparam int SEEK_SET = 0;
 localparam int SEEK_END = 2;
@@ -49,12 +49,12 @@ task automatic run_state_hw_jtag(state_t next_tap_state);
     endcase
     @(negedge tck);
     if (ir_is_user) begin
-        ir_is_user = !(current_state == TEST_LOGIC_RESET);
-        capture_dr = (current_state == CAPTURE_DR);
-        shift_dr = (current_state == SHIFT_DR);
-        update_dr = (current_state == UPDATE_DR);
+        ir_is_user = !(next_tap_state == TEST_LOGIC_RESET);
+        capture_dr = (next_tap_state == CAPTURE_DR);
+        shift_dr = (next_tap_state == SHIFT_DR);
+        update_dr = (next_tap_state == UPDATE_DR);
     end else begin
-        ir_is_user = (current_state == UPDATE_IR);
+        ir_is_user = (next_tap_state == UPDATE_IR);
         capture_dr = 1'b0;
         shift_dr = 1'b0;
         update_dr = 1'b0;
@@ -88,18 +88,20 @@ task automatic serialize(input int length);
 
         run_state_hw_jtag(RUN_TEST_IDLE);
         run_state_hw_jtag(SELECT_DR_SCAN);
-        run_state_hw_jtag(SELECT_IR_SCAN);
         run_state_hw_jtag(CAPTURE_DR);
 
     // Serialize file contents
 
-    for (int i = 0; i < length; i++) begin
-        byte b = input_buffer[i];
-        for (int j = 0; j < 8; j++) begin
-            tdi = b[j];
-            run_state_hw_jtag(SHIFT_DR);
+        run_state_hw_jtag(SHIFT_DR); // ARM DAP controller in BYPASS mode
+        tdi = 1'b0;
+
+        for (int i = 0; i < length; i++) begin
+            byte b = input_buffer[i];
+            for (int j = 0; j < 8; j++) begin
+                run_state_hw_jtag(SHIFT_DR);
+                tdi = b[j];
+            end
         end
-    end
 
     // Change JTAG TAP state to idle state
 
@@ -110,32 +112,32 @@ task automatic serialize(input int length);
 endtask
 
 task automatic deserialize_non_zero(output logic [RESULT_WIDTH-1:0] result);
+    result = 0;
+    while (result == 0) begin: loop_null_result
 
-    // Change JTAG TAP state to shift-DR state
+        // Change JTAG TAP state to shift-DR state
 
-        run_state_hw_jtag(RUN_TEST_IDLE);
-        run_state_hw_jtag(SELECT_DR_SCAN);
-        run_state_hw_jtag(SELECT_IR_SCAN);
-        run_state_hw_jtag(CAPTURE_DR);
-
-    // Deserialize Contents
-
-        result = 0;
-        while (result == 0) begin: loop_null_result
             tdi = 1'b0; // replicate `scan_dr_hw_jtag $result_width -tdi 0` behavior
-            for (int j=0; j<$bits(result); j++) begin
-                @(negedge tck); // BSCANE2 falling-edge internal FF
-                result[j] = tdo;
-                run_state_hw_jtag(SHIFT_DR);
-            end
-        end
+            run_state_hw_jtag(RUN_TEST_IDLE);
+            run_state_hw_jtag(SELECT_DR_SCAN);
+            run_state_hw_jtag(SELECT_IR_SCAN);
+            run_state_hw_jtag(CAPTURE_DR);
 
-    // Change JTAG TAP state to idle state
+        // Deserialize Contents
+
+            for (int j=0; j<$bits(result); j++) begin
+                run_state_hw_jtag(SHIFT_DR);
+                result[j] = tdo;
+            end
+            $display("Deserialized result: %b", result);
+
+        // Change JTAG TAP state to idle state
 
         run_state_hw_jtag(EXIT1_DR);
         run_state_hw_jtag(UPDATE_DR);
         run_state_hw_jtag(RUN_TEST_IDLE);
 
+    end
 endtask
 
 string input_file = "input.txt";
