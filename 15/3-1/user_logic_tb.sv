@@ -38,7 +38,7 @@ typedef enum {
     CAPTURE_IR, SHIFT_IR, EXIT1_IR, PAUSE_IR, EXIT2_IR, UPDATE_IR
 } state_t;
 
-state_t current_state = TEST_LOGIC_RESET;
+//state_t current_state = TEST_LOGIC_RESET;
 
 task automatic run_state_hw_jtag(state_t next_tap_state);
 
@@ -61,7 +61,7 @@ task automatic run_state_hw_jtag(state_t next_tap_state);
     end
     test_logic_reset = (next_tap_state == TEST_LOGIC_RESET);
     run_test_idle = (next_tap_state == RUN_TEST_IDLE);
-    current_state = next_tap_state;
+    //current_state = next_tap_state;
 endtask
 
 task automatic set_ir(ir_t ir);
@@ -129,7 +129,7 @@ task automatic deserialize_non_zero(output logic [RESULT_WIDTH-1:0] result);
                 run_state_hw_jtag(SHIFT_DR);
                 result[j] = tdo;
             end
-            $display("Deserialized result: %b", result);
+            //$display("Deserialized result: %b", result);
 
         // Change JTAG TAP state to idle state
 

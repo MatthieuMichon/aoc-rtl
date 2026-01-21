@@ -164,3 +164,26 @@ if {$swap_bytes} {
 Furthermore, I was thinking of doing without having to go through the UPDATE state of the JTAG TAP controller. The documentation of the `scan_dr_hw_jtag` in the TCL command reference user-guide (ug835) calls out a method for doing so:
 
 > To break up a long data register shift into multiple SDR shifts, specify an end_state of DRPAUSE. This will cause the first `scan_dr_hw_jtag` command to end in the DRPAUSE stable state, and then the subsequent scan_dr_hw_jtag commands will go to DREXIT2 state before going back to DRSHIFT.
+
+### Design Components
+
+| Module                                          | Description                      | Complexity          | Thoughts       | Remarks  |
+|-------------------------------------------------|----------------------------------|---------------------|----------------|----------|
+| [`user_logic_tb`](user_logic_tb.sv)             | Testbench                        | :yellow_circle:     | :expressionless: Copy-paste from previous puzzle | Overhauled JTAG serialization|
+| [`user_logic`](user_logic.sv)                   | Logic top-level                  | :large_blue_circle: | :kissing_smiling_eyes: Wire harness and trivial logic | |
+| [`tap_decoder`](tap_decoder.sv)                 | JTAG TAP deserializer            | :green_circle:      | :slightly_smiling_face: Add proper handling of upstream bypass bits | |
+| [`tap_encoder`](tap_encoder.sv)                 | JTAG TAP serializer              | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+
+### Run Times
+
+Full simulation: compilation and runtime (low-spec laptop):
+
+| Run Times | Icarus Verilog | Verilator | Vivado Xsim | Vivado FPGA Build |
+|-----------|----------------|-----------|-------------|-------------------|
+| Real      | 0.822s         | 4.432s    | 10.182s     | 2m3.612s          |
+| User      | 0.787s         | 12.464s   | 10.046s     | 2m9.192s          |
+| Sys       | 0.032s         | 0.768s    | 0.986s      | 0m6.701s          |
+
+## Second Iteration
+
+In this next step I will simply add the logic required for tracking the position, with a first module converting the received ASCII character into one of four possible moves, followed by a a bank of accumulators.

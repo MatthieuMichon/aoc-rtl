@@ -45,6 +45,22 @@ tap_decoder #(
         .inbound_data(inbound_data)
 );
 
+logic end_of_file;
+logic shift_valid;
+logic [4-1:0] shift_direction; // one-hot: NESW
+
+char_decoder #(.INBOUND_DATA_WIDTH(INBOUND_DATA_WIDTH)) char_decoder_i (
+    .clk(tck),
+    .reset(test_logic_reset),
+    // Deserialized Data
+        .inbound_valid(inbound_valid),
+        .inbound_data(inbound_data),
+    // Decoded Data
+        .end_of_file(end_of_file),
+        .shift_valid(shift_valid),
+        .shift_direction(shift_direction)
+);
+
 logic outbound_valid;
 result_t outbound_data = '0;
 
@@ -52,9 +68,9 @@ always_ff @(posedge tck) begin: shift_logic_on_negedge
     if (test_logic_reset) begin
         outbound_valid <= 1'b0;
         outbound_data <= '0;
-    end else if (inbound_valid) begin
-        outbound_valid <= outbound_valid || (inbound_data == 8'h0A);
-        outbound_data <= outbound_data + 1'b1;
+    end else begin
+        outbound_valid <= end_of_file;
+        outbound_data <= outbound_data + shift_valid;
     end
 end
 

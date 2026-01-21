@@ -51,22 +51,22 @@ proc ::build {arg_dict} {
 
     # Generate ILA Core
 
-        save_project_as -force test_[lindex [find_top] 0]
-        set ila_path [create_ip -name ila -vendor xilinx.com -module_name bscan_ila]
-        set_property -dict [list \
-            CONFIG.C_DATA_DEPTH 131072 \
-            CONFIG.C_NUM_OF_PROBES 1 \
-            CONFIG.C_PROBE0_WIDTH 11 \
-            CONFIG.C_INPUT_PIPE_STAGES 1 \
-            CONFIG.C_EN_STRG_QUAL False \
-        ] [get_ips bscan_ila]
-        generate_target {instantiation_template} [get_files $ila_path]
-        generate_target -force synthesis [get_files $ila_path]
-        config_ip_cache -export [get_ips -all bscan_ila]
-        export_ip_user_files -of_objects [get_files $ila_path] -no_script -sync -force -quiet
-        create_ip_run [get_files -of_objects [get_fileset sources_1] $ila_path]
-        launch_runs bscan_ila_synth_1
-        wait_on_run bscan_ila_synth_1
+        # save_project_as -force test_[lindex [find_top] 0]
+        # set ila_path [create_ip -name ila -vendor xilinx.com -module_name bscan_ila]
+        # set_property -dict [list \
+        #     CONFIG.C_DATA_DEPTH 131072 \
+        #     CONFIG.C_NUM_OF_PROBES 1 \
+        #     CONFIG.C_PROBE0_WIDTH 11 \
+        #     CONFIG.C_INPUT_PIPE_STAGES 1 \
+        #     CONFIG.C_EN_STRG_QUAL False \
+        # ] [get_ips bscan_ila]
+        # generate_target {instantiation_template} [get_files $ila_path]
+        # generate_target -force synthesis [get_files $ila_path]
+        # config_ip_cache -export [get_ips -all bscan_ila]
+        # export_ip_user_files -of_objects [get_files $ila_path] -no_script -sync -force -quiet
+        # create_ip_run [get_files -of_objects [get_fileset sources_1] $ila_path]
+        # launch_runs bscan_ila_synth_1
+        # wait_on_run bscan_ila_synth_1
 
     # Synthesize Design
 

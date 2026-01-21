@@ -37,6 +37,7 @@ user_logic user_logic_i (
         .shift_dr(shift_dr),
         .update_dr(update_dr));
 
+`ifdef ILA
 localparam int AXSS_WIDTH = 32;
 typedef logic[AXSS_WIDTH-1:0] axss_t;
 
@@ -77,6 +78,7 @@ bscan_ila bscan_ila_i (
     .clk(conf_clk_2x),
     .probe0(ila_signals)
 );
+`endif
 
 endmodule
 `default_nettype wire
