@@ -164,18 +164,19 @@ proc ::load_inputs {arg_dict} {
 
         set bytes_uploaded 0
         set chunk_size 16
+        set chunk_dr_length [expr $chunk_size * 8 + 1]
         set chunks [::load_blocks ../$input_file $chunk_size]
         foreach chunk $chunks {
-            puts "Loading chunk"
+            puts "Loading chunk $chunk"
+            scan_dr_hw_jtag $chunk_dr_length -tdi 0x$chunk
             incr bytes_uploaded 16
         }
-
 
     puts "done. ($bytes_uploaded bytes)"
 }
 
 proc ::read_result {} {
-    set result_width 32
+    set result_width 16
     set result 0x0
     puts -nonewline "Waiting for non-zero result... "
     while {$result == 0} {
