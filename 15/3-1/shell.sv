@@ -37,9 +37,46 @@ user_logic user_logic_i (
         .shift_dr(shift_dr),
         .update_dr(update_dr));
 
-wire _unused_ok = 1'b0 && &{1'b0,
-    drck,
-    1'b0};
+localparam int AXSS_WIDTH = 32;
+typedef logic[AXSS_WIDTH-1:0] axss_t;
+
+logic conf_clk, conf_clk_2x, axss_valid;
+axss_t axss_data;
+
+USR_ACCESSE2 (
+    .CFGCLK(conf_clk),
+    .DATAVALID(axss_valid),
+    .DATA(axss_data)
+);
+
+logic fbclk, locked;
+
+MMCME2_BASE #(
+    .CLKIN1_PERIOD(16.667),
+    .CLKFBOUT_MULT_F(16.0),
+    .DIVCLK_DIVIDE(1),
+    .CLKOUT0_DIVIDE_F(8.0)
+) mmcm_i (
+    .CLKIN1(conf_clk),
+    .CLKOUT0(conf_clk_2x),
+    .CLKFBOUT(fbclk),
+    .CLKFBIN(fbclk),
+    .PWRDWN(1'b0),
+    .RST(1'b0),
+    .LOCKED(locked)
+);
+
+logic [11-1:0] ila_signals;
+
+assign ila_signals = {
+    tck, tms, tdi, tdo,
+    drck, test_logic_reset, run_test_idle,
+    ir_is_user, capture_dr, shift_dr, update_dr};
+
+bscan_ila bscan_ila_i (
+    .clk(conf_clk_2x),
+    .probe0(ila_signals)
+);
 
 endmodule
 `default_nettype wire

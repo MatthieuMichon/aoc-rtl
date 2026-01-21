@@ -50,6 +50,34 @@ Following the creation of a small [proof-of-concept project](https://github.com/
 
 #### Vivado TCL Script Changes
 
+My first priority is getting the testbench to match as closely as possible the actual behavior of Xilinx's BSCANE2 primitive. I added a very deep ILA probe (128K samples) and embarked on a journey to capture the relevant events. The first one being the selection of the correct IR value.
+
+Due to the ILA and the user logic sharing the JTAG interface, I followed this sequence for capturing the data:
+
+- Program firmware and load probe file
+- Setup a trigger for rising edge of `SEL` (`ir_is_user` in my design)
+- Close the hardware manager
+- Open the hardware manager in JTAG mode
+- Execute the `scan_ir_hw_jtag` command with the relevant IR value
+- Close the hardware manager
+- Open the hardware manager in the ILA GUI
+- Download the ILA capture
+
+```tcl
+# Vivado TCL console invoked using `vivado -mode tcl`
+open_hw_manager
+connect_hw_server
+open_hw_target -jtag_mode on
+set zynq7_ir_length 10
+set zynq7_ir_user4 0x3e3
+run_state_hw_jtag RESET
+run_state_hw_jtag IDLE
+scan_ir_hw_jtag $zynq7_ir_length -tdi $zynq7_ir_user4
+close_hw_target
+```
+
+![](tap_sel_ila_capture.png)
+
 My initial thoughts on this matter were to use 16 byte blocks for serialization and pad the remaining bytes with null bytes. For a typical 12 kbyte input length, this implementation would cut down by 16 the number of individual TCL commands. A thing I nearly forgot was that JTAG uses a LSB-first encoding, thus the bytes in each block should be reversed prior to serialization (this process could not be implemented in the FPGA since this would require knowing in advance the number of bytes to be padded in the last block).
 
 These changes mean breaking quite a lot of things in the TCL script, as it was operating on a per-line then per-byte basis. I changed the text file loading procedure to use blocks of N bytes instead of lines of text.

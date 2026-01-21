@@ -35,7 +35,7 @@ $(VIVADO_BUILD_DIR):
 sim_verilator: $(VERILATOR_BUILD_DIR)/V$(TB)
 	$< +INPUT_FILE=$(INPUT_FILE)
 
-$(VERILATOR_BUILD_DIR)/V$(TB):
+$(VERILATOR_BUILD_DIR)/V$(TB): $(SV_SOURCES)
 	verilator $(VERILATOR_FLAGS) $(SV_SOURCES) --top-module $(TB)
 
 .PHONY: sim_iverilog
@@ -45,16 +45,16 @@ $(IVERILOG_BUILD_DIR): $(SV_SOURCES)
 	iverilog -o $@/a.out $(IVERILOG_FLAGS) $(SV_SOURCES)
 	$@/a.out
 
-.PHONY: xsim
-xsim: $(XSIM_BUILD_DIR)
+.PHONY: sim_xsim
+sim_xsim: $(XSIM_BUILD_DIR)
 $(XSIM_BUILD_DIR): $(SV_SOURCES)
 	mkdir -p $@
 	cd $@ && \
     	xvlog --nolog -sv $(addprefix ../, $^) && \
     	xelab --nolog $(TB) -debug wave -snapshot $(TB) && \
-    	xsim -R -nolog $(TB) -testplusarg INPUT_FILE=$(INPUT_FILE)
+    	xsim -R -nolog $(TB) -testplusarg INPUT_FILE=../$(INPUT_FILE)
 
 .PHONY: clean
 clean:
-	$(RM) -r synth__* sim_*
+	$(RM) -r synth__* sim_* __pycache__
 	$(RM) a.out wave.vcd *.jou *.wdb *.pb
