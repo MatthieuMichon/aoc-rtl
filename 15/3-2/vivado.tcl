@@ -1,11 +1,4 @@
-if {[catch {package require Vivado}]} {
-    # Assume called from xsim
-    open_vcd ../wave.vcd
-    log_vcd /*
-    run -all
-    close_vcd
-    exit
-}
+package require Vivado
 
 proc load_blocks {file block_size {swap_bytes True}} {
 

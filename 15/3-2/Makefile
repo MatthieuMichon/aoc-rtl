@@ -52,7 +52,8 @@ $(XSIM_BUILD_DIR): $(SV_SOURCES)
 	cd $@ && \
     	xvlog --nolog -sv $(addprefix ../, $^) && \
     	xelab --nolog $(TB) -debug wave -snapshot $(TB) && \
-    	xsim -nolog $(TB) -testplusarg INPUT_FILE=../$(INPUT_FILE) -t ../vivado.tcl
+    	xsim -nolog $(TB) -testplusarg INPUT_FILE=../$(INPUT_FILE) -R && \
+     	mv wave.vcd ../
 
 .PHONY: clean
 clean:

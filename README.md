@@ -152,7 +152,8 @@ Figured I shall start from the ground up.
 | [1.2](15/1-2/)   | :large_blue_circle: Simple changes          | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Easiest part 2                        |
 | [2.1](15/2-1/)   | :large_blue_circle: Math ops pipelining     | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Read description a bit too fast       |
 | [2.2](15/2-2/)   | :large_blue_circle: Math ops pipelining     | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Even easier part 2       |
-| [3.1](15/3-1/)   | :large_blue_circle: Math ops pipelining     | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Completely overhauled the JTAG TAP serialization logic |
+| [3.1](15/3-1/)   | :large_blue_circle: Quite simple            | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Completely overhauled the JTAG TAP serialization logic |
+| [3.2](15/3-2/)   | :green_circle: Got a reset corner-case      | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Mismatch from reset handling |
 
 ## Symbology
 

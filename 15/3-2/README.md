@@ -4,15 +4,15 @@ Status:
 
 | Test                       | Status                |
 |----------------------------|-----------------------|
-| Simulation: Icarus Verilog | *TBD* |
-| Simulation: Verilator      | *TBD* |
-| Simulation: Vivado Xsim    | *TBD* |
-| Synthesis: Vivado Zynq7    | *TBD* |
-| On-board: Zynq7            | *TBD* |
+| Simulation: Icarus Verilog | :white_check_mark: Ok |
+| Simulation: Verilator      | :white_check_mark: Ok |
+| Simulation: Vivado Xsim    | :white_check_mark: Ok |
+| Synthesis: Vivado Zynq7    | :white_check_mark: Ok |
+| On-board: Zynq7            | :white_check_mark: Ok |
 
 # Lessons Learnt
 
-- *TBD*
+- Pay careful attention to operations launched prior to reset
 
 # Design Space Exploration
 
@@ -100,17 +100,72 @@ Testing with other targets, I noticed the results were not uniform (the correct 
 |----------|-----------|------|------|
 | 2341     | 2340      | 2341 | 2340 |
 
-Looking at the VCD waveform the results are obvious. The following waveform was from Iverilog showing 
+Looking at the VCD waveform the results are obvious. The following waveform was from Iverilog showing that the position at (0, 0) is commited only once, which takes place after the reset pulse.
+
+![Iverilog Waveform](iverilog_waveform.png)
+
+Conversely, with Verilator the position at (0, 0) is commited twice, once before the reset pulse and once after.
+
+![Verilator Waveform](verilator_waveform.png)
+
+Since the information is written in a RAM it is by definition not possible to clear using the reset signal directly. Granted, scrubbing the RAM would be possible but would require holding back the inbound contents while the operation is pending.
+
+I am confident enough that changing the reset logic ensuring it is active since the start of execution or GSR release (in case of the physical FPGA implementation) is the best way forward.
+
+```diff
+
++logic reset;
++assign reset = test_logic_reset || !ir_is_user;
+
+(...)
+
+position_tracker #(
+    .POSITION_WIDTH(POSITION_WIDTH)
+) position_tracker_i (
+    .clk(tck),
+-    .reset(test_logic_reset),
++    .reset(reset),
+    // Decoded Data
+        .shift_valid(shift_valid),
+```
 
 ### Design Components
 
 | Module                                          | Description                      | Complexity          | Thoughts       | Remarks  |
 |-------------------------------------------------|----------------------------------|---------------------|----------------|----------|
-| [`user_logic_tb`](user_logic_tb.sv)             | Testbench                        | :yellow_circle:     | :expressionless: Copy-paste from previous puzzle | Overhauled JTAG serialization|
-| [`user_logic`](user_logic.sv)                   | Logic top-level                  | :large_blue_circle: | :kissing_smiling_eyes: Wire harness and trivial logic | |
+| [`user_logic_tb`](user_logic_tb.sv)             | Testbench                        | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+| [`user_logic`](user_logic.sv)                   | Logic top-level                  | :green_circle:      | :slightly_smiling_face: Wire harness and trivial logic | Had to change reset logic |
+| [`position_tracker`](position_tracker.sv)       | Keeps track of the coordinates   | :green_circle:      | :slightly_smiling_face: Still quite simple | Forgot corner case at init  |
+| [`visited_position`](visited_position.sv)       | Tag all visited positions        | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | Minus a typo|
 | [`tap_decoder`](tap_decoder.sv)                 | JTAG TAP deserializer            | :green_circle:      | :slightly_smiling_face: Add proper handling of upstream bypass bits | |
 | [`tap_encoder`](tap_encoder.sv)                 | JTAG TAP serializer              | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
 
 ### Resource Usage
 
+This second part uses about 40 % more logic resources, which matches the expected increase in complexity.
+
+|         Instance        |       Module      | Total LUTs | Logic LUTs | LUTRAMs | SRLs | FFs | RAMB36 | RAMB18 | DSP Blocks |
+|-------------------------|-------------------|------------|------------|---------|------|-----|--------|--------|------------|
+| shell                   |             (top) |         91 |         91 |       0 |    0 | 151 |      2 |      0 |          0 |
+
+| Ref Name | Used | Functional Category |
+|----------|------|---------------------|
+| FDRE     |  151 |        Flop & Latch |
+| LUT2     |   53 |                 LUT |
+| LUT3     |   35 |                 LUT |
+| CARRY4   |   24 |          CarryLogic |
+| LUT1     |   11 |                 LUT |
+| LUT6     |    7 |                 LUT |
+| LUT5     |    7 |                 LUT |
+| RAMB36E1 |    2 |        Block Memory |
+| LUT4     |    2 |                 LUT |
+| BUFG     |    1 |               Clock |
+| BSCANE2  |    1 |              Others |
+
 ### Run Times
+
+| Run Times | Icarus Verilog | Verilator | Vivado Xsim | Vivado FPGA Build |
+|-----------|----------------|-----------|-------------|-------------------|
+| Real      | 1.256s         | 4.884s    | 10.970s     | 2m9.082s          |
+| User      | 1.210s         | 13.906s   | 10.923s     | 2m36.573s         |
+| Sys       | 0.040s         | 0.939s    | 1.035s      | 0m9.874s          |

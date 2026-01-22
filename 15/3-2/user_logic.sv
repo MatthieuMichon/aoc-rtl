@@ -48,13 +48,16 @@ tap_decoder #(
         .inbound_data(inbound_data)
 );
 
+logic reset;
 logic end_of_file;
 logic shift_valid;
 logic [4-1:0] shift_direction; // one-hot: NESW
 
+assign reset = test_logic_reset || !ir_is_user;
+
 char_decoder #(.INBOUND_DATA_WIDTH(INBOUND_DATA_WIDTH)) char_decoder_i (
     .clk(tck),
-    .reset(test_logic_reset),
+    .reset(reset),
     // Deserialized Data
         .inbound_valid(inbound_valid),
         .inbound_data(inbound_data),
@@ -71,7 +74,7 @@ position_tracker #(
     .POSITION_WIDTH(POSITION_WIDTH)
 ) position_tracker_i (
     .clk(tck),
-    .reset(test_logic_reset),
+    .reset(reset),
     // Decoded Data
         .shift_valid(shift_valid),
         .shift_direction(shift_direction),
@@ -88,7 +91,7 @@ visited_positions  #(
     .POSITION_WIDTH(POSITION_WIDTH)
 ) visited_positions_i (
     .clk(tck),
-    .reset(test_logic_reset),
+    .reset(reset),
     // Position Data
         .pos_change(pos_change),
         .pos_x(pos_x),
@@ -102,7 +105,7 @@ logic outbound_valid;
 result_t visited_houses, outbound_data;
 
 always_ff @(posedge tck) begin: shift_logic_on_negedge
-    if (test_logic_reset) begin
+    if (reset) begin
         outbound_valid <= 1'b0;
         visited_houses <= '0;
     end else begin
