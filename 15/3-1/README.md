@@ -1,5 +1,21 @@
 # Day 3: Perfectly Spherical Houses in a Vacuum - Part 1
 
+Things are getting started!
+
+Status:
+
+| Test                       | Status                |
+|----------------------------|-----------------------|
+| Simulation: Icarus Verilog | :white_check_mark: Ok |
+| Simulation: Verilator      | :white_check_mark: Ok |
+| Simulation: Vivado Xsim    | :white_check_mark: Ok |
+| Synthesis: Vivado Zynq7    | :white_check_mark: Ok |
+| On-board: Zynq7            | :white_check_mark: Ok |
+
+# Lessons Learnt
+
+- Slapping a logic analyzer (ILA) is surprisingly easy, just a couple of lines of TCL and Verilog, and effective for gathering insights on device primitives behavior.
+
 # Design Space Exploration
 
 So, let's talk about the *infinite two-dimensional grid*, at a first glance there are 8192 (triggered the power of two decimal detection part in my brain) moves. This total is a reasonable amount speaking in terms of FPGA memory.
@@ -18,8 +34,6 @@ Min Y: -3
 Max X: 27
 Max Y: 73
 ```
-
-# Implementation
 
 All the moves can be boxed using coordinates between -128 and 127, resulting in a 32K address space. Since a single bit is sufficient for representing the visited status, all I need is a single 36K BRAM. Obviously this puzzle could have been a tad more complex if the amplitude of the walk was larger.
 
@@ -186,4 +200,109 @@ Full simulation: compilation and runtime (low-spec laptop):
 
 ## Second Iteration
 
-In this next step I will simply add the logic required for tracking the position, with a first module converting the received ASCII character into one of four possible moves, followed by a a bank of accumulators.
+In this next step I will simply add the logic required for tracking the position, with a first module converting the received ASCII character into one of four possible moves, followed by a a bank of accumulators for both positions (X and Y).
+
+Lastly the visited positions are tracked by module aptly named `visited_positions` which is nothing more than a simple-port RAM running in the read-before-write mode.
+
+### Further Improved JTAG Data Serialization
+
+The implementation of the data serialization has a major limitation, in that the testbench and Vivado TCL script do not behave identically. Although this wouldn't matter for simple designs such as this one, for more complex designs where the timings between process modules, these changes in the timing of data arrival may result in different behavior causing unexpected behavior being more difficult to reproduce and debug.
+
+According to common knowledge as presented by major LLMs, the TCL interpreter is efficient at string and binary manipulation, meaning that it can handle the byte swapping of the complete hex-string data from reading the input contents.
+
+### Design Components
+
+| Module                                          | Description                      | Complexity          | Thoughts       | Remarks  |
+|-------------------------------------------------|----------------------------------|---------------------|----------------|----------|
+| [`user_logic_tb`](user_logic_tb.sv)             | Testbench                        | :yellow_circle:     | :expressionless: Copy-paste from previous puzzle | Overhauled JTAG serialization|
+| [`user_logic`](user_logic.sv)                   | Logic top-level                  | :large_blue_circle: | :kissing_smiling_eyes: Wire harness and trivial logic | |
+| [`position_tracker`](position_tracker.sv)       | Keeps track of the coordinates   | :large_blue_circle: | :kissing_smiling_eyes: Very simple logic | |
+| [`visited_position`](visited_position.sv)       | Tag all visited positions        | :large_blue_circle: | :kissing_smiling_eyes: Very simple logic | |
+| [`tap_decoder`](tap_decoder.sv)                 | JTAG TAP deserializer            | :green_circle:      | :slightly_smiling_face: Add proper handling of upstream bypass bits | |
+| [`tap_encoder`](tap_encoder.sv)                 | JTAG TAP serializer              | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+
+### Resource Usage
+
+|         Instance        |       Module      | Total LUTs | Logic LUTs | LUTRAMs | SRLs | FFs | RAMB36 | RAMB18 | DSP Blocks |
+|-------------------------|-------------------|------------|------------|---------|------|-----|--------|--------|------------|
+| shell                   |             (top) |         59 |         59 |       0 |    0 | 115 |      2 |      0 |          0 |
+
+| Ref Name | Used | Functional Category |
+|----------|------|---------------------|
+| FDRE     |  115 |        Flop & Latch |
+| LUT2     |   35 |                 LUT |
+| CARRY4   |   24 |          CarryLogic |
+| LUT3     |   16 |                 LUT |
+| LUT5     |    9 |                 LUT |
+| LUT1     |    8 |                 LUT |
+| LUT6     |    3 |                 LUT |
+| RAMB36E1 |    2 |        Block Memory |
+| LUT4     |    2 |                 LUT |
+| BUFG     |    1 |               Clock |
+| BSCANE2  |    1 |              Others |
+
+As intended, the RAM is a simple-port:
+
+| Memory Name                                           | Array Size | RAM_STYLE | Memory Type | Port 1 Dimension / Map | Port 2 Dimension / Map |
+|-------------------------------------------------------|------------|-----------|-------------|------------------------|------------------------|
+| user_logic_i/visited_positions_i/visited_table        |      65536 |           | RAM_SP      | 65536x1                |                        |
+|  user_logic_i/visited_positions_i/visited_table_reg_0 |      32768 |      AUTO |             |  A:A:32768x1           |                        |
+|  user_logic_i/visited_positions_i/visited_table_reg_1 |      32768 |      AUTO |             |  A:A:32768x1           |                        |
+
+I was intrigued by the relative high usage of LUT2 primitives and decided to dig deeper into the design using the following snippet:
+
+```tcl
+puts  "| LUT2 Cell | I0 | I1 | O |"
+puts  "|---|---|---|---|"
+foreach lut2_cell [get_cells -hierarchical -filter {REF_NAME == LUT2}] {
+    set neighbors {}
+    foreach pin_name {I0 I1 O} {
+        set pin [get_pins $lut2_cell/$pin_name]
+        set net [get_nets -of_objects $pin]
+        set opposite_cell [get_property REF_NAME [lindex [get_cells -of_objects $net -filter "NAME != $lut2_cell"] 0]]
+        lappend neighbors "$opposite_cell: $net"
+    }
+    puts [format "| %s | %s | %s | %s |" \
+          [file tail $lut2_cell] [lindex $neighbors 0] [lindex $neighbors 1] [lindex $neighbors 2]]
+}
+```
+
+| LUT2 Cell | I0 | I1 | O |
+|---|---|---|---|
+| visited_houses[0]_i_1 | visited_positions: user_logic_i/lookup_valid | visited_positions: user_logic_i/lookup_already_visited | FDRE: user_logic_i/visited_houses[0] |
+| pos_x[3]_i_3 | CARRY4: user_logic_i/position_tracker_i/pos_x[2] | CARRY4: user_logic_i/position_tracker_i/pos_x[3] | CARRY4: user_logic_i/position_tracker_i/pos_x[3]_i_3_n_0 |
+| pos_x[3]_i_4 | CARRY4: user_logic_i/position_tracker_i/pos_x[1] | CARRY4: user_logic_i/position_tracker_i/pos_x[2] | CARRY4: user_logic_i/position_tracker_i/pos_x[3]_i_4_n_0 |
+| pos_x[3]_i_5 | CARRY4: user_logic_i/position_tracker_i/pos_x[1] | LUT5: user_logic_i/position_tracker_i/shift_direction[2] | CARRY4: user_logic_i/position_tracker_i/pos_x[3]_i_5_n_0 |
+| pos_x[7]_i_3 | LUT2: user_logic_i/position_tracker_i/pos_x[6] | FDRE: user_logic_i/position_tracker_i/pos_x[7] | CARRY4: user_logic_i/position_tracker_i/pos_x[7]_i_3_n_0 |
+| pos_x[7]_i_4 | CARRY4: user_logic_i/position_tracker_i/pos_x[5] | LUT2: user_logic_i/position_tracker_i/pos_x[6] | CARRY4: user_logic_i/position_tracker_i/pos_x[7]_i_4_n_0 |
+| pos_x[7]_i_5 | CARRY4: user_logic_i/position_tracker_i/pos_x[4] | CARRY4: user_logic_i/position_tracker_i/pos_x[5] | CARRY4: user_logic_i/position_tracker_i/pos_x[7]_i_5_n_0 |
+| pos_x[7]_i_6 | CARRY4: user_logic_i/position_tracker_i/pos_x[3] | CARRY4: user_logic_i/position_tracker_i/pos_x[4] | CARRY4: user_logic_i/position_tracker_i/pos_x[7]_i_6_n_0 |
+| pos_y[3]_i_3 | CARRY4: user_logic_i/position_tracker_i/pos_y[2] | CARRY4: user_logic_i/position_tracker_i/pos_y[3] | CARRY4: user_logic_i/position_tracker_i/pos_y[3]_i_3_n_0 |
+| pos_y[3]_i_4 | CARRY4: user_logic_i/position_tracker_i/pos_y[1] | CARRY4: user_logic_i/position_tracker_i/pos_y[2] | CARRY4: user_logic_i/position_tracker_i/pos_y[3]_i_4_n_0 |
+| pos_y[3]_i_5 | CARRY4: user_logic_i/position_tracker_i/pos_y[1] | LUT5: user_logic_i/position_tracker_i/shift_direction[3] | CARRY4: user_logic_i/position_tracker_i/pos_y[3]_i_5_n_0 |
+| pos_y[7]_i_3 | LUT2: user_logic_i/position_tracker_i/pos_y[6] | FDRE: user_logic_i/position_tracker_i/pos_y[7] | CARRY4: user_logic_i/position_tracker_i/pos_y[7]_i_3_n_0 |
+| pos_y[7]_i_4 | CARRY4: user_logic_i/position_tracker_i/pos_y[5] | LUT2: user_logic_i/position_tracker_i/pos_y[6] | CARRY4: user_logic_i/position_tracker_i/pos_y[7]_i_4_n_0 |
+| pos_y[7]_i_5 | CARRY4: user_logic_i/position_tracker_i/pos_y[4] | CARRY4: user_logic_i/position_tracker_i/pos_y[5] | CARRY4: user_logic_i/position_tracker_i/pos_y[7]_i_5_n_0 |
+| pos_y[7]_i_6 | CARRY4: user_logic_i/position_tracker_i/pos_y[3] | CARRY4: user_logic_i/position_tracker_i/pos_y[4] | CARRY4: user_logic_i/position_tracker_i/pos_y[7]_i_6_n_0 |
+| inbound_data[7]_i_1 | LUT4: user_logic_i/tap_decoder_i/test_logic_reset | LUT5: user_logic_i/tap_decoder_i/shift_dr | FDRE: user_logic_i/tap_decoder_i/reset_condition |
+| inbound_valid_i_10 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[23]_i_1_n_7 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[23]_i_1_n_6 | CARRY4: user_logic_i/tap_decoder_i/inbound_valid_i_10_n_0 |
+| inbound_valid_i_11 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[19]_i_1_n_5 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[19]_i_1_n_4 | CARRY4: user_logic_i/tap_decoder_i/inbound_valid_i_11_n_0 |
+| inbound_valid_i_12 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[19]_i_1_n_7 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[19]_i_1_n_6 | CARRY4: user_logic_i/tap_decoder_i/inbound_valid_i_12_n_0 |
+| inbound_valid_i_14 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[15]_i_1_n_5 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[15]_i_1_n_4 | CARRY4: user_logic_i/tap_decoder_i/inbound_valid_i_14_n_0 |
+| inbound_valid_i_15 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[15]_i_1_n_7 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[15]_i_1_n_6 | CARRY4: user_logic_i/tap_decoder_i/inbound_valid_i_15_n_0 |
+| inbound_valid_i_16 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[11]_i_1_n_5 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[11]_i_1_n_4 | CARRY4: user_logic_i/tap_decoder_i/inbound_valid_i_16_n_0 |
+| inbound_valid_i_17 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[11]_i_1_n_7 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[11]_i_1_n_6 | CARRY4: user_logic_i/tap_decoder_i/inbound_valid_i_17_n_0 |
+| inbound_valid_i_19 | LUT2: user_logic_i/tap_decoder_i/shift_count_reg[3]_i_1_n_7 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[3]_i_1_n_6 | CARRY4: user_logic_i/tap_decoder_i/inbound_valid_i_19_n_0 |
+| inbound_valid_i_20 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[7]_i_1_n_5 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[7]_i_1_n_4 | CARRY4: user_logic_i/tap_decoder_i/inbound_valid_i_20_n_0 |
+| inbound_valid_i_21 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[7]_i_1_n_7 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[7]_i_1_n_6 | CARRY4: user_logic_i/tap_decoder_i/inbound_valid_i_21_n_0 |
+| inbound_valid_i_22 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[3]_i_1_n_4 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[3]_i_1_n_5 | CARRY4: user_logic_i/tap_decoder_i/inbound_valid_i_22_n_0 |
+| inbound_valid_i_23 | LUT2: user_logic_i/tap_decoder_i/shift_count_reg[3]_i_1_n_7 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[3]_i_1_n_6 | CARRY4: user_logic_i/tap_decoder_i/inbound_valid_i_23_n_0 |
+| inbound_valid_i_4 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[31]_i_2_n_5 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[31]_i_2_n_4 | CARRY4: user_logic_i/tap_decoder_i/inbound_valid_i_4_n_0 |
+| inbound_valid_i_5 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[31]_i_2_n_7 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[31]_i_2_n_6 | CARRY4: user_logic_i/tap_decoder_i/inbound_valid_i_5_n_0 |
+| inbound_valid_i_6 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[27]_i_1_n_5 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[27]_i_1_n_4 | CARRY4: user_logic_i/tap_decoder_i/inbound_valid_i_6_n_0 |
+| inbound_valid_i_7 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[27]_i_1_n_7 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[27]_i_1_n_6 | CARRY4: user_logic_i/tap_decoder_i/inbound_valid_i_7_n_0 |
+| inbound_valid_i_9 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[23]_i_1_n_5 | FDRE: user_logic_i/tap_decoder_i/shift_count_reg[23]_i_1_n_4 | CARRY4: user_logic_i/tap_decoder_i/inbound_valid_i_9_n_0 |
+| shift_reg[15]_i_1 | LUT3: user_logic_i/tap_encoder_i/capture_dr | FDRE: user_logic_i/tap_encoder_i/data_r[15] | FDRE: user_logic_i/tap_encoder_i/shift_reg[15]_i_1_n_0 |
+| ram_rd_valid_i_1 | RAMB36E1: user_logic_i/visited_positions_i/pos_change | FDRE: user_logic_i/visited_positions_i/reset | FDRE: user_logic_i/visited_positions_i/ram_rd_valid_i_1_n_0 |
+
+According to these results, the vast majority of the LUT2 are used as propagate logic for the CARRY4 chains.
