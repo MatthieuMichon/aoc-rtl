@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Design Space Exploration for Advent of Code 15: Day 3
+Design Space Exploration for Advent of Code 15: Day 3 - Part 1
 """
 
 import enum

@@ -43,7 +43,7 @@ sim_iverilog: $(IVERILOG_BUILD_DIR)
 $(IVERILOG_BUILD_DIR): $(SV_SOURCES)
 	mkdir -p $@
 	iverilog -o $@/a.out $(IVERILOG_FLAGS) $(SV_SOURCES)
-	$@/a.out
+	$@/a.out +INPUT_FILE=$(INPUT_FILE)
 
 .PHONY: sim_xsim
 sim_xsim: $(XSIM_BUILD_DIR)
