@@ -31,6 +31,27 @@ proc load_blocks {file block_size {swap_bytes True}} {
     return $blocks
 }
 
+proc load_contents {file} {
+
+    # Copy File Contents
+
+        set fhandle [open $file rb]
+        set data [read $fhandle]
+        close $fhandle
+        set file_len [string length $data]
+        if {$file_len == 0} {
+            return -code error "File $file is empty."
+        }
+        binary scan $data H* hex_contents
+
+    # Reverse the byte order for Vivado
+
+        set byte_list [regexp -all -inline .. $hex_contents]
+        set reversed_hex [join [lreverse $byte_list] ""]
+
+    return $reversed_hex
+}
+
 proc ::parse_named_arguments {arg_list} {
     set arg_dict {}
     foreach arg_pair $arg_list {
@@ -162,17 +183,14 @@ proc ::load_inputs {arg_dict} {
 
     # Load Contents
 
-        set bytes_uploaded 0
-        set chunk_size 16
-        set chunk_dr_length [expr $chunk_size * 8 + 1]
-        set chunks [::load_blocks ../$input_file $chunk_size]
-        foreach chunk $chunks {
-            puts "Loading chunk $chunk"
-            scan_dr_hw_jtag $chunk_dr_length -tdi 0x$chunk
-            incr bytes_uploaded 16
-        }
+        set hex_stream [::load_contents ../$input_file]
+        set total_bytes [expr {[string length $hex_stream] / 2}]
+        set upstream_bypass_bits 1; # ARM DAP bypass
+        set total_dr_length [expr {($total_bytes * 8) + $upstream_bypass_bits}]
+        scan_dr_hw_jtag $total_dr_length -tdi $hex_stream
+        set bytes_uploaded $total_bytes
 
-    puts "done. ($bytes_uploaded bytes)"
+    puts "done. ($total_bytes bytes)"
 }
 
 proc ::read_result {} {
