@@ -104,6 +104,52 @@ This somewhat dirty trick worked and all methods provide the same results:
 |----------|-----------|------|------|
 | 40       | 40        | 40   | 40   |
 
+### Design Components
+
+| Module                                          | Description                      | Complexity          | Thoughts       | Remarks  |
+|-------------------------------------------------|----------------------------------|---------------------|----------------|----------|
+| [`user_logic_tb`](user_logic_tb.sv)             | Testbench                        | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+| [`user_logic`](user_logic.sv)                   | Logic top-level                  | :green_circle:      | :slightly_smiling_face: Wire harness and trivial logic | Had to change reset logic |
+| [`tap_decoder`](tap_decoder.sv)                 | JTAG TAP deserializer            | :green_circle:      | :slightly_smiling_face: Add proper handling of upstream bypass bits | |
+| [`line_decoder`](line_decoder.sv)               | Left-aligns the secret key       | :green_circle:      | :slightly_smiling_face: Straightforward | Initially forgot to handle trailling null chars |
+| [`ascii_counter`](ascii_counter.sv)             | ASCII encoded decimal counter    | :green_circle:     | :slightly_smiling_face: Trivial except for the carry logic in a generate loop | Started with a bin / bcd / ascii converter before thinking of this simpler solution |
+| [`tap_encoder`](tap_encoder.sv)                 | JTAG TAP serializer              | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+
+### Resource Usage
+
+The high LUT:FF ratio in the `message_concat` module is due to masking and barrel shifter operations..
+
+|       Instance       |     Module     | Total LUTs | Logic LUTs | LUTRAMs | SRLs | FFs | RAMB36 | RAMB18 | DSP Blocks |
+|----------------------|----------------|------------|------------|---------|------|-----|--------|--------|------------|
+| shell                |          (top) |       1037 |       1037 |       0 |    0 | 424 |      0 |      0 |          0 |
+|     ascii_counter_i  |  ascii_counter |         59 |         59 |       0 |    0 |  56 |      0 |      0 |          0 |
+|     line_decoder_i   |   line_decoder |        240 |        240 |       0 |    0 | 101 |      0 |      0 |          0 |
+|     message_concat_i | message_concat |        372 |        372 |       0 |    0 | 198 |      0 |      0 |          0 |
+
+This design implements only the first part of the front-end, which is already quite LUT6 heavy with deep combinatory paths.
+
+| Ref Name | Used | Functional Category |
+|----------|------|---------------------|
+| LUT6     |  418 |                 LUT |
+| FDRE     |  409 |        Flop & Latch |
+| LUT3     |  293 |                 LUT |
+| LUT5     |  235 |                 LUT |
+| LUT4     |  191 |                 LUT |
+| LUT2     |  150 |                 LUT |
+| CARRY4   |   28 |          CarryLogic |
+| FDSE     |   15 |        Flop & Latch |
+| LUT1     |   12 |                 LUT |
+| BUFG     |    1 |               Clock |
+| BSCANE2  |    1 |              Others |
+
+### Run Times
+
+| Run Times | Icarus Verilog | Verilator | Vivado Xsim | Vivado FPGA Build |
+|-----------|----------------|-----------|-------------|-------------------|
+| Real      | 0.051s         | 4.785s    | 9.919s      | 2m30.858s         |
+| User      | 0.035s         | 12.469s   | 10.124s     | 3m6.204s          |
+| Sys       | 0.017s         | 0.841s    | 0.697s      | 0m11.044s         |
+
 ## Second Iteration in Python
 
 I'm using the [MD5 algorithm from Rosetta Code](https://rosettacode.org/wiki/MD5#Python) as stepping stone to implement my proper version as an intermediate stage before implementing it in SystemVerilog.
@@ -136,4 +182,4 @@ def pad_message(msg: bytes) -> bytearray:
 
 For reference, `msg_buf` = 0x616263646566308000(0x00 repeated)3800000000000000, which decomposes in "abcdef0<0x80>(<0x00> repeated)<7 * 8>(<0x00> repeated)". For a `msg` longer then 15 bytes, say 17 bytes, the trailing length field would look like "<0x01><0x10>(<0x00> repeated)" due to little-endian shenanigans.
 
-FPGA implementation complexity: 2/10, most of the difficulty lies upstream for computing the suffix.
+Expected FPGA implementation complexity: 2/10, most of the difficulty lies upstream for computing the suffix.
