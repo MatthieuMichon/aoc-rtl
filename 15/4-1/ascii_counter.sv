@@ -36,8 +36,7 @@ generate
         always_ff @(posedge clk) begin
             if (reset) begin
                 ascii_digits[8*i+:8] <= (i != 0) ? ASCII_ZERO : ASCII_ONE;
-            end
-            else if (carry[i]) begin
+            end else if (carry[i]) begin
                 if (current_digit == ASCII_NINE)
                     ascii_digits[8*i+:8] <= ASCII_ZERO;
                 else

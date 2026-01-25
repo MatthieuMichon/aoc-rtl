@@ -113,7 +113,31 @@ This somewhat dirty trick worked and all methods provide the same results:
 | [`tap_decoder`](tap_decoder.sv)                 | JTAG TAP deserializer            | :green_circle:      | :slightly_smiling_face: Add proper handling of upstream bypass bits | |
 | [`line_decoder`](line_decoder.sv)               | Left-aligns the secret key       | :green_circle:      | :slightly_smiling_face: Straightforward | Initially forgot to handle trailling null chars |
 | [`ascii_counter`](ascii_counter.sv)             | ASCII encoded decimal counter    | :green_circle:     | :slightly_smiling_face: Trivial except for the carry logic in a generate loop | Started with a bin / bcd / ascii converter before thinking of this simpler solution |
+| [`message_concat`](message_concat.sv)           | Concatenates two variable length fields | :yellow_circle:     | :raised_eyebrow: First non-trivial module *so far* for the 2015 contest | Compare this to `input_str = f"{secret_key}{i}"` in Python :upside_down_face: |
 | [`tap_encoder`](tap_encoder.sv)                 | JTAG TAP serializer              | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+
+### Simplified Dataflow Diagram
+
+```mermaid
+flowchart
+tb["Testbench / BSCANE2"]
+if["User Logic Interface"]
+tap-dec["TAP Decoder"]
+dec["Line Decoder"]
+cnt["ASCII Counter"]
+concat["Message Concat"]
+tap-enc["TAP Encoder"]
+
+tb --JTAG-TAP--> if
+if --JTAG-TAP--> tap-dec
+tap-dec --ASCII Byte --> dec
+dec --Secret Key--> concat
+cnt --ASCII Decimal Number--> concat
+concat --Key+Number--> stub["Dummy Capture Logic"]
+stub --Dummy Result--> tap-enc
+tap-enc --JTAG-TAP--> if
+if --JTAG TDO--> tb
+```
 
 ### Resource Usage
 
@@ -141,6 +165,31 @@ This design implements only the first part of the front-end, which is already qu
 | LUT1     |   12 |                 LUT |
 | BUFG     |    1 |               Clock |
 | BSCANE2  |    1 |              Others |
+
+I was curious about the 15 FDSE instances and decided to locate them in the RTL code.
+
+```tcl
+# vivado -mode tcl project.dcp
+
+foreach c [get_cells -hierarchical -filter {REF_NAME == FDSE}] {
+    puts [get_property FILE_NAME $c]:[get_property LINE_NUMBER $c]
+}
+```
+
+Got all of them at: `ascii_counter.sv:30`:
+
+```diff
+    always_ff @(posedge clk) begin
++        if (reset) begin
++            ascii_digits[8*i+:8] <= (i != 0) ? ASCII_ZERO : ASCII_ONE;
+        end else if (carry[i]) begin
+            if (current_digit == ASCII_NINE)
+                ascii_digits[8*i+:8] <= ASCII_ZERO;
+            else
+                ascii_digits[8*i+:8] <= current_digit + 1;
+        end
+    end
+```
 
 ### Run Times
 
