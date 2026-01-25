@@ -2,28 +2,52 @@
 `default_nettype none
 
 module md5_step #(
-    parameter int WORD_BITS
+    parameter int ROUND, // from 0 to 63
+    parameter int WORD_BITS = 32,
+    parameter logic [WORD_BITS-1:0] T_CONST,
+    parameter int LROT_BITS
 ) (
     input wire clk,
     input wire reset,
     // Per-Step Inputs
-        input  logic [WORD_BITS-1:0] x_k,    // Message word
-        input  logic [WORD_BITS-1:0] t_i,    // Constant
-        input  logic [5-1:0] shift,      // Shift amount
-        input  logic [2-1:0] mode,   // 0=F, 1=G, 2=H, 3=I
+        input logic [WORD_BITS-1:0] message,
     // Upstream / Downstream Steps
         input wire i_valid,
         input wire [WORD_BITS-1:0] i_a, i_b, i_c, i_d,
         output logic o_valid,
         output logic [WORD_BITS-1:0] o_a, o_b, o_c, o_d
-
 );
 
-assign o_valid = i_valid;
-assign o_a = i_a;
-assign o_b = i_b;
-assign o_c = i_c;
-assign o_d = i_d;
+localparam logic [2-1:0] MODE = 2'(ROUND / 16);
+
+typedef logic [WORD_BITS-1:0] word_t;
+
+logic [1:0] round_msb;
+word_t f, a_sum, b_new;
+
+always_comb begin: update_b_word
+    unique case (MODE)
+        2'b00: f = (i_b & i_c) | (~i_b & i_d);
+        2'b01: f = (i_b & i_d) | (i_c & ~i_d);
+        2'b10: f = i_b ^ i_c ^ i_d;
+        2'b11: f = i_c ^ (i_b | ~i_d);
+        default: f = '0;
+    endcase
+    a_sum = (i_a + f + message + T_CONST);
+    b_new = i_b + {a_sum[WORD_BITS-LROT_BITS-1:0], a_sum[WORD_BITS-1:WORD_BITS-LROT_BITS]};
+end
+
+always_ff @(posedge clk) begin: output_register
+    if (reset) begin
+        o_valid <= 1'b0;
+    end else begin
+        o_valid <= i_valid;
+        o_a <= i_d;
+        o_b <= b_new;
+        o_c <= i_b;
+        o_d <= i_c;
+    end
+end
 
 endmodule
 `default_nettype wire

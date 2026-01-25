@@ -296,3 +296,72 @@ def pad_message(msg: bytes) -> bytearray:
 For reference, `msg_buf` = 0x616263646566308000(0x00 repeated)3800000000000000, which decomposes in "abcdef0<0x80>(<0x00> repeated)<7 * 8>(<0x00> repeated)". For a `msg` longer then 15 bytes, say 17 bytes, the trailing length field would look like "<0x01><0x10>(<0x00> repeated)" due to little-endian shenanigans.
 
 Expected FPGA implementation complexity: 2/10, most of the difficulty lies upstream for computing the suffix. Adding this feature required modifying the upstream module `message_concat` for handling the payload delimiter insertion.
+
+### Single Step MD5 Implementation
+
+The Rosetta Code website features a Python implementation. The code corresponding to a single step is as following:
+
+```py
+for i in range(64):
+    f = functions[i](b, c, d)
+    g = index_functions[i](i)
+    to_rotate = a + f + constants[i] + int.from_bytes(chunk[4*g:4*g+4], byteorder='little')
+    new_b = (b + left_rotate(to_rotate, rotate_amounts[i])) & 0xFFFFFFFF
+    a, b, c, d = d, new_b, b, c
+for i, val in enumerate([a, b, c, d]):
+    hash_pieces[i] += val
+    hash_pieces[i] &= 0xFFFFFFFF
+```
+
+The `function` variable being:
+
+```py
+functions = 16*[lambda b, c, d: (b & c) | (~b & d)] + \
+            16*[lambda b, c, d: (d & b) | (~d & c)] + \
+            16*[lambda b, c, d: b ^ c ^ d] + \
+            16*[lambda b, c, d: c ^ (b | ~d)]
+```
+
+I started by converting this last assignation in Systemverilog, with all input words prefixed with `i_` for simplifying the parent module instantiating 64 times this code:
+
+```verilog
+unique case (MODE)
+    2'b00: f = (i_b & i_c) | (~i_b & i_d);
+    2'b01: f = (i_b & i_d) | (i_c & ~i_d);
+    2'b10: f = i_b ^ i_c ^ i_d;
+    2'b11: f = i_c ^ (i_b | ~i_d);
+    default: f = '0;
+endcase
+```
+
+The overall code being suspiciously simple:
+
+```verilog
+always_comb begin: update_b_word
+    unique case (MODE)
+        2'b00: f = (i_b & i_c) | (~i_b & i_d);
+        2'b01: f = (i_b & i_d) | (i_c & ~i_d);
+        2'b10: f = i_b ^ i_c ^ i_d;
+        2'b11: f = i_c ^ (i_b | ~i_d);
+        default: f = '0;
+    endcase
+    a_sum = (i_a + f + message + T_CONST);
+    b_new = i_b + {a_sum[WORD_BITS-LROT_BITS-1:0], a_sum[WORD_BITS-1:WORD_BITS-LROT_BITS]};
+end
+
+always_ff @(posedge clk) begin: output_register
+    if (reset) begin
+        o_valid <= 1'b0;
+    end else begin
+        o_valid <= i_valid;
+        o_a <= i_d;
+        o_b <= b_new;
+        o_c <= i_b;
+        o_d <= i_c;
+    end
+end
+```
+
+Same remark with the FPGA implementation:
+
+![](md5_step_yosys.png)
