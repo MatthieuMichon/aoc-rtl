@@ -40,7 +40,7 @@ generate
                 if (current_digit == ASCII_NINE)
                     ascii_digits[8*i+:8] <= ASCII_ZERO;
                 else
-                    ascii_digits[8*i+:8] <= ascii_digits[8*i+:8] + 1'b1;
+                    ascii_digits[8*i+:4] <= ascii_digits[8*i+:4] + 1'b1;
             end
         end
     end

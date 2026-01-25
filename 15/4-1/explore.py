@@ -60,6 +60,7 @@ def user_logic_fpga(file: Path) -> int:
     print(f"|{'-' * 12}|{'-' * 9}|{'-' * 18}|{'-' * 36}|")
     while True:
         hash = fpga_md5(f"{secret_key}{i}".encode())
+        break
     return i
 
 
@@ -81,7 +82,7 @@ def pad_message(msg: bytes) -> bytearray:
     while len(msg_buf) != 56:
         msg_buf.append(0x00)
     msg_buf += msg_len_bits.to_bytes(8, byteorder="little")
-    print(msg_buf.hex())
+    # print(msg_buf.hex())
     return msg_buf
 
 
@@ -92,7 +93,7 @@ def main() -> int:
     :return: Shell exit code
     """
     os.chdir(Path(__file__).resolve().parent)
-    f = "./example.txt" if len(sys.argv) < 2 else sys.argv[1]
+    f = "./input.txt" if len(sys.argv) < 2 else sys.argv[1]
     print(f"{f=}")
     print(f"Result: {user_logic_fpga(file=Path(f))}")
 

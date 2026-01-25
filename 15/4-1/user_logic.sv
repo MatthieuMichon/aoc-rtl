@@ -22,7 +22,8 @@ localparam int UPSTREAM_BYPASS_BITS = 1; // ARM DAP controller in BYPASS mode
 localparam int INBOUND_DATA_WIDTH = $bits(byte);
 localparam int SECRET_KEY_WIDTH = 8 * 12; // 12 ASCII chars max
 localparam int HASH_SUFFIX_DIGITS = 7; // should be enough
-localparam int MAX_MSG_LENGTH = 56; // bytes
+localparam int MD5_BLOCK_LENGTH = 64; // bytes
+localparam int MAX_MSG_LENGTH = MD5_BLOCK_LENGTH-8; // bytes
 
 typedef logic [INBOUND_DATA_WIDTH-1:0] inbound_data_t;
 typedef logic [RESULT_WIDTH-1:0] result_t;
@@ -30,6 +31,7 @@ typedef logic [SECRET_KEY_WIDTH-1:0] secret_key_t;
 typedef logic [4-1:0] secret_key_chars_t;
 typedef logic [8*HASH_SUFFIX_DIGITS-1:0] suffix_ascii_t;
 typedef logic [$clog2(1+HASH_SUFFIX_DIGITS)-1:0] suffix_digits_t;
+typedef logic [8*MD5_BLOCK_LENGTH-1:0] md5_block_t;
 
 logic inbound_alignment_error;
 logic inbound_valid;
@@ -117,7 +119,27 @@ message_concat #(
         .msg_data(msg_data)
 );
 
-assign msg_ready = 1'b1;
+logic md5_block_ready, md5_block_valid;
+md5_block_t md5_block_data;
+
+message_length_inserter #(
+    .MAX_MSG_LENGTH(MAX_MSG_LENGTH), // bytes
+    .MD5_BLOCK_LENGTH(MD5_BLOCK_LENGTH) // bytes
+) message_length_inserter_i (
+    .clk(tck),
+    .reset(reset),
+    // Message Without Length
+        .msg_ready(msg_ready),
+        .msg_valid(msg_valid),
+        .msg_length(msg_length), // bytes
+        .msg_data(msg_data),
+    // MD5 Block With Length
+        .md5_block_ready(md5_block_ready),
+        .md5_block_valid(md5_block_valid),
+        .md5_block_data(md5_block_data)
+);
+
+assign md5_block_ready = 1'b1;
 
 logic outbound_valid;
 result_t outbound_data;
@@ -127,9 +149,9 @@ always_ff @(posedge tck) begin: capture_result
         outbound_valid <= 1'b0;
         outbound_data <= '0;
     end else begin
-        outbound_valid <= msg_valid;
+        outbound_valid <= md5_block_valid || msg_valid;
         if (!outbound_valid)
-            outbound_data <= RESULT_WIDTH'($countones(msg_length)) + RESULT_WIDTH'($countones(msg_data));
+            outbound_data <= 1'b1 + RESULT_WIDTH'($countones(msg_length)) + RESULT_WIDTH'($countones(md5_block_data));
     end
 end
 

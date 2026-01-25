@@ -70,6 +70,18 @@ Next step is merging both values into a single string+length pair which will be 
 
 The implementation of this logic is quite tedious since it involves dealing with a lot of bit masking and shifting and it took several back and forth until things did behave as I wanted.
 
+### AXI-style Backpressure
+
+I'm quite found of the AXI-style backpressure because while it's simple to implement it has perfect composability: assuming all blocks implement it correctly, these blocks can be simply dropped into the pipeline and everything will work flawlessly from a dataflow standpoint.
+
+Some basic rules must be followed though:
+
+- The `ready` signal must be asserted when the block is ready to accept new data.
+- The `valid` signal is asserted whenever the block has data to send, regardless if the downstream block is ready or not.
+- The `valid` signal can be deasserted only after transaction completed.
+
+For deep pipelines, timeing closure on the `ready` path may be challenging due to long combinatorial logic. However this is not a problem at this stage.
+
 ### Discrepancy Simulation vs FPGA
 
 I returned dummy contents in order to avoid having Vivado pruning all my logic. Looking into the return value, I noticed that on-board runs produced a different value.
@@ -176,7 +188,7 @@ foreach c [get_cells -hierarchical -filter {REF_NAME == FDSE}] {
 }
 ```
 
-Got all of them at: `ascii_counter.sv:30`:
+Got all of them at: `ascii_counter.sv:30`, which on closer inspection is expected due to some bits not being set zero during reset (digits in ASCII being between 0x30 and 0x39). Although thinking about it, these two bits being always set they could be hardwired to VCC.
 
 ```diff
     always_ff @(posedge clk) begin
@@ -190,6 +202,58 @@ Got all of them at: `ascii_counter.sv:30`:
         end
     end
 ```
+
+I changed the last assignation by incrementing only the last four bits per ASCII digit:
+
+```diff
+genvar i;
+generate
+    for (i = 0; i < DIGITS; i++) begin: per_digit
+
+        char_t current_digit;
+        assign current_digit = char_t'(ascii_digits[8*i+:8]);
+
+        if (i < DIGITS - 1) begin: all_but_last
+            assign carry[i+1] = (current_digit == ASCII_NINE) && carry[i];
+        end
+
+        always_ff @(posedge clk) begin
+            if (reset) begin
+                ascii_digits[8*i+:8] <= (i != 0) ? ASCII_ZERO : ASCII_ONE;
+            end else if (carry[i]) begin
+                if (current_digit == ASCII_NINE)
+                    ascii_digits[8*i+:8] <= ASCII_ZERO;
+                else
+-                    ascii_digits[8*i+:8] <= current_digit + 1;
++                    ascii_digits[8*i+:4] <= ascii_digits[8*i+:4] + 1'b1;
+            end
+        end
+    end
+endgenerate
+```
+
+This small change reduced by a quite significant amount resource usage, reminding me that notable improvements sometimes don't require changing large amounts of source code.
+
+|       Instance       |     Module     | Total LUTs | Logic LUTs | LUTRAMs | SRLs | FFs | RAMB36 | RAMB18 | DSP Blocks |
+|----------------------|----------------|------------|------------|---------|------|-----|--------|--------|------------|
+| shell                |          (top) |        933 |        933 |       0 |    0 | 372 |      0 |      0 |          0 |
+|     ascii_counter_i  |  ascii_counter |         34 |         34 |       0 |    0 |  28 |      0 |      0 |          0 |
+|     line_decoder_i   |   line_decoder |        240 |        240 |       0 |    0 | 101 |      0 |      0 |          0 |
+|     message_concat_i | message_concat |        307 |        307 |       0 |    0 | 174 |      0 |      0 |          0 |
+
+| Ref Name | Used | Functional Category |
+|----------|------|---------------------|
+| FDRE     |  371 |        Flop & Latch |
+| LUT6     |  314 |                 LUT |
+| LUT3     |  268 |                 LUT |
+| LUT5     |  199 |                 LUT |
+| LUT4     |  189 |                 LUT |
+| LUT2     |  182 |                 LUT |
+| CARRY4   |   28 |          CarryLogic |
+| LUT1     |   12 |                 LUT |
+| FDSE     |    1 |        Flop & Latch |
+| BUFG     |    1 |               Clock |
+| BSCANE2  |    1 |              Others |
 
 ### Run Times
 
@@ -231,4 +295,4 @@ def pad_message(msg: bytes) -> bytearray:
 
 For reference, `msg_buf` = 0x616263646566308000(0x00 repeated)3800000000000000, which decomposes in "abcdef0<0x80>(<0x00> repeated)<7 * 8>(<0x00> repeated)". For a `msg` longer then 15 bytes, say 17 bytes, the trailing length field would look like "<0x01><0x10>(<0x00> repeated)" due to little-endian shenanigans.
 
-Expected FPGA implementation complexity: 2/10, most of the difficulty lies upstream for computing the suffix.
+Expected FPGA implementation complexity: 2/10, most of the difficulty lies upstream for computing the suffix. Adding this feature required modifying the upstream module `message_concat` for handling the payload delimiter insertion.
