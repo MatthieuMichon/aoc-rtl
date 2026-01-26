@@ -4,6 +4,7 @@ Design Space Exploration for Advent of Code 15: Day 4 - Part 1
 """
 
 import hashlib
+import math
 import os
 import sys
 from pathlib import Path
@@ -71,13 +72,36 @@ def fpga_md5(msg: bytes):
     :param data: data to hash
     :return: hash value
     """
-    # Implement FPGA-based MD5 hash function here
-    pad_message(msg)
+
+    msg_buf: bytearray = pad_message(msg)
+    assert len(msg_buf) == 64
+    init_values = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476]
+    hash_pieces = init_values[:]
+    chunk = msg_buf
+    constants = [int(abs(math.sin(i + 1)) * 2**32) & 0xFFFFFFFF for i in range(64)]
+    a, b, c, d = hash_pieces
+    i = 0
+    f = lambda b, c, d: (b & c) | (~b & d)
+    g = lambda i: i
+    to_rotate = (
+        a
+        + f(b, c, d)
+        + constants[i]
+        + int.from_bytes(chunk[4 * g(i) : 4 * g(i) + 4], byteorder="little")
+    )
+    new_b = (b + left_rotate(to_rotate, 7)) & 0xFFFFFFFF
+    a, b, c, d = d, new_b, b, c
+    print(f"{a=:08x}, {b=:08x}, {c=:08x}, {d=:08x}")
+
+
+def left_rotate(x, amount):
+    x &= 0xFFFFFFFF
+    return ((x << amount) | (x >> (32 - amount))) & 0xFFFFFFFF
 
 
 def pad_message(msg: bytes) -> bytearray:
-    msg_buf = bytearray(msg)  # copy our input into a mutable buffer
-    msg_len_bits = 8 * len(msg)
+    msg_buf: bytearray = bytearray(msg)  # copy our input into a mutable buffer
+    msg_len_bits: int = 8 * len(msg)
     msg_buf.append(0x80)  # Single MSB bit
     while len(msg_buf) != 56:
         msg_buf.append(0x00)

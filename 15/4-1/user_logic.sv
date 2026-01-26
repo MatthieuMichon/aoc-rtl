@@ -24,6 +24,7 @@ localparam int SECRET_KEY_WIDTH = 8 * 12; // 12 ASCII chars max
 localparam int HASH_SUFFIX_DIGITS = 7; // should be enough
 localparam int MD5_BLOCK_LENGTH = 64; // bytes
 localparam int MAX_MSG_LENGTH = MD5_BLOCK_LENGTH-8; // bytes
+localparam int DIGEST_WIDTH = 128; // bits
 
 typedef logic [INBOUND_DATA_WIDTH-1:0] inbound_data_t;
 typedef logic [RESULT_WIDTH-1:0] result_t;
@@ -32,6 +33,7 @@ typedef logic [4-1:0] secret_key_chars_t;
 typedef logic [8*HASH_SUFFIX_DIGITS-1:0] suffix_ascii_t;
 typedef logic [$clog2(1+HASH_SUFFIX_DIGITS)-1:0] suffix_digits_t;
 typedef logic [8*MD5_BLOCK_LENGTH-1:0] md5_block_t;
+typedef logic [DIGEST_WIDTH-1:0] digest_t;
 
 logic inbound_alignment_error;
 logic inbound_valid;
@@ -139,7 +141,20 @@ message_length_inserter #(
         .md5_block_data(md5_block_data)
 );
 
-assign md5_block_ready = 1'b1;
+logic digest_valid;
+digest_t digest_data;
+
+md5_top md5_top_i (
+    .clk(tck),
+    .reset(reset),
+    // Block Input
+        .md5_block_ready(md5_block_ready),
+        .md5_block_valid(md5_block_valid),
+        .md5_block_data(md5_block_data),
+    // Digest Output
+        .digest_valid(digest_valid),
+        .digest_data(digest_data)
+);
 
 logic outbound_valid;
 result_t outbound_data;
@@ -149,9 +164,9 @@ always_ff @(posedge tck) begin: capture_result
         outbound_valid <= 1'b0;
         outbound_data <= '0;
     end else begin
-        outbound_valid <= md5_block_valid || msg_valid;
+        outbound_valid <= digest_valid;
         if (!outbound_valid)
-            outbound_data <= 1'b1 + RESULT_WIDTH'($countones(msg_length)) + RESULT_WIDTH'($countones(md5_block_data));
+            outbound_data <= 1'b1 + RESULT_WIDTH'($countones(digest_data));
     end
 end
 
