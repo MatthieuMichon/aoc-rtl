@@ -67,7 +67,7 @@ always_ff @(posedge clk) begin: flow_control
     end
 end
 
-always_ff @(posedge clk) begin
+always_ff @(posedge clk) begin: capture_md5_block_data
     md5_block_reg_valid <= md5_block_ready && md5_block_valid;
     if (md5_block_ready && md5_block_valid) begin
         md5_block_reg <= md5_block_data;
@@ -97,9 +97,10 @@ endfunction
 genvar i;
 generate for (i = 0; i < ROUNDS; i++) begin: per_step
 
-    word_t msg_word;
+    word_t msg_word, msg_word_le;
 
     assign msg_word = md5_block_reg[BLOCK_WIDTH-WORD_WIDTH*get_msg_word_index(i)-1-:WORD_WIDTH];
+    assign msg_word_le = {msg_word[8-1-:8], msg_word[16-1-:8], msg_word[24-1-:8], msg_word[32-1-:8]};
 
     md5_step #(
         .ROUND(i),
@@ -109,7 +110,7 @@ generate for (i = 0; i < ROUNDS; i++) begin: per_step
         .clk(clk),
         .reset(reset),
         // Per-Step Inputs
-            .message(msg_word),
+            .message(msg_word_le),
         // Upstream / Downstream Steps
             .i_valid(valid_vec[i]),
             .i_a(a_vec[i]), .i_b(b_vec[i]), .i_c(c_vec[i]), .i_d(d_vec[i]),

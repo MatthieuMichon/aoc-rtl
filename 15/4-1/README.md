@@ -365,3 +365,18 @@ end
 Same remark with the FPGA implementation:
 
 ![](md5_step_yosys.png)
+
+### First Round Output Discrepancy Python vs Simulation
+
+Comparing the outputs on the first step between the Python and RTL simulation shows a difference for the `B` value which involves the internal processing logic. Other three values are as expected showing that the constants are properly assigned.
+
+| Mode   | A          | B          | C          | D          |
+|--------|------------|------------|------------|------------|
+| Python | 0x10325476 | 0x565d23ad | 0xefcdab89 | 0x98badcfe |
+| FPGA   | 0x10325476 | 0x62511fb1 | 0xefcdab89 | 0x98badcfe |
+| Diff   | Ok         | Error      | Ok         | Ok         |
+
+- The `B` value computation first starts with using the initial `A` value which is `0x67452301` in both Python and the RTL.
+- The message word forwarded to the first round is `0x71627a79` in Python, while it is `0x797a6271` in the RTL meaning that a byte swap operation is missing.
+
+Adding the byte-swap operation fixes this discrepancy.
