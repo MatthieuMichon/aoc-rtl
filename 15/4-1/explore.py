@@ -7,6 +7,7 @@ import hashlib
 import math
 import os
 import sys
+from ast import Constant
 from pathlib import Path
 
 
@@ -73,25 +74,110 @@ def fpga_md5(msg: bytes):
     :return: hash value
     """
 
+    ROUNDS = 64
     msg_buf: bytearray = pad_message(msg)
     assert len(msg_buf) == 64
     init_values = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476]
     hash_pieces = init_values[:]
     chunk = msg_buf
     constants = [int(abs(math.sin(i + 1)) * 2**32) & 0xFFFFFFFF for i in range(64)]
-    a, b, c, d = hash_pieces
-    i = 0
-    f = lambda b, c, d: (b & c) | (~b & d)
-    g = lambda i: i
-    to_rotate = (
-        a
-        + f(b, c, d)
-        + constants[i]
-        + int.from_bytes(chunk[4 * g(i) : 4 * g(i) + 4], byteorder="little")
+
+    rotate_amounts = [
+        7,
+        12,
+        17,
+        22,
+        7,
+        12,
+        17,
+        22,
+        7,
+        12,
+        17,
+        22,
+        7,
+        12,
+        17,
+        22,
+        5,
+        9,
+        14,
+        20,
+        5,
+        9,
+        14,
+        20,
+        5,
+        9,
+        14,
+        20,
+        5,
+        9,
+        14,
+        20,
+        4,
+        11,
+        16,
+        23,
+        4,
+        11,
+        16,
+        23,
+        4,
+        11,
+        16,
+        23,
+        4,
+        11,
+        16,
+        23,
+        6,
+        10,
+        15,
+        21,
+        6,
+        10,
+        15,
+        21,
+        6,
+        10,
+        15,
+        21,
+        6,
+        10,
+        15,
+        21,
+    ]
+
+    functions = (
+        16 * [lambda b, c, d: (b & c) | (~b & d)]
+        + 16 * [lambda b, c, d: (d & b) | (~d & c)]
+        + 16 * [lambda b, c, d: b ^ c ^ d]
+        + 16 * [lambda b, c, d: c ^ (b | ~d)]
     )
-    new_b = (b + left_rotate(to_rotate, 7)) & 0xFFFFFFFF
-    a, b, c, d = d, new_b, b, c
-    print(f"{a=:08x}, {b=:08x}, {c=:08x}, {d=:08x}")
+    index_functions = (
+        16 * [lambda i: i]
+        + 16 * [lambda i: (5 * i + 1) % 16]
+        + 16 * [lambda i: (3 * i + 5) % 16]
+        + 16 * [lambda i: (7 * i) % 16]
+    )
+
+    a, b, c, d = hash_pieces
+    for i in range(ROUNDS):
+        f = functions[i](b, c, d)
+        g = index_functions[i](i)
+        to_rotate = (
+            a
+            + f
+            + constants[i]
+            + int.from_bytes(chunk[4 * g : 4 * g + 4], byteorder="little")
+        )
+        new_b = (b + left_rotate(to_rotate, rotate_amounts[i])) & 0xFFFFFFFF
+        a, b, c, d = d, new_b, b, c
+        print(
+            f"Round {i:02d} inputs: {f=:08x}, {constants[i]=:08x}, {int.from_bytes(chunk[4 * g : 4 * g + 4], byteorder="little")=:08x}"
+        )
+        print(f"Round {i:02d} outputs: {a=:08x}, {b=:08x}, {c=:08x}, {d=:08x}")
 
 
 def left_rotate(x, amount):
