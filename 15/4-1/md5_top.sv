@@ -58,6 +58,8 @@ word_t a_vec [0:ROUNDS];
 word_t b_vec [0:ROUNDS];
 word_t c_vec [0:ROUNDS];
 word_t d_vec [0:ROUNDS];
+logic valid_fold = 1'b0;
+word_t a_fold = '0, b_fold = '0, c_fold = '0, d_fold = '0;
 
 always_ff @(posedge clk) begin: flow_control
     if (digest_valid || !md5_block_valid) begin
@@ -94,6 +96,10 @@ function int get_msg_word_index(int step);
     end
 endfunction
 
+function word_t swap_bytes(word_t word);
+    return {word[8-1-:8], word[16-1-:8], word[24-1-:8], word[32-1-:8]};
+endfunction
+
 genvar i;
 generate for (i = 0; i < ROUNDS; i++) begin: per_step
 
@@ -120,19 +126,29 @@ generate for (i = 0; i < ROUNDS; i++) begin: per_step
 
 end endgenerate
 
-always_comb begin: dump_step_0_outputs
-    if (valid_vec[1]) begin
-        $display("Step 0 Outputs: @ cycle %0t: A: 0x%08h, B: 0x%08h, C: 0x%08h, D: 0x%08h", $realtime, a_vec[1], b_vec[1], c_vec[1], d_vec[1]);
+always_ff @(posedge clk) begin
+    valid_fold <= valid_vec[ROUNDS];
+    if (valid_vec[ROUNDS]) begin
+         a_fold <= a_vec[0] + a_vec[ROUNDS];
+         b_fold <= b_vec[0] + b_vec[ROUNDS];
+         c_fold <= c_vec[0] + c_vec[ROUNDS];
+         d_fold <= d_vec[0] + d_vec[ROUNDS];
     end
 end
 
 always_comb begin: vector_tail
-    digest_valid = valid_vec[ROUNDS];
-    digest_data = {d_vec[ROUNDS], c_vec[ROUNDS], b_vec[ROUNDS], a_vec[ROUNDS]};
+    digest_valid = valid_fold;
+    digest_data = {swap_bytes(a_fold), swap_bytes(b_fold), swap_bytes(c_fold), swap_bytes(d_fold)};
 end
 
 wire _unused_ok = 1'b0 && &{1'b0,
     1'b0};
+
+// always_comb begin: dump_step_0_outputs
+//     if (valid_vec[1]) begin
+//         $display("Step 0 Outputs: @ cycle %0t: A: 0x%08h, B: 0x%08h, C: 0x%08h, D: 0x%08h", $realtime, a_vec[1], b_vec[1], c_vec[1], d_vec[1]);
+//     end
+// end
 
 endmodule
 `default_nettype wire

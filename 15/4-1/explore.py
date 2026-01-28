@@ -31,11 +31,14 @@ def user_logic(file: Path) -> int:
     """
 
     secret_key = decode_inputs(file)
-    i = 0
+    i = 1
     print(f"| {'Secret Key':10} | {'Answer':7} | {'Input':16} | {'Hash':34} |")
     print(f"|{'-' * 12}|{'-' * 9}|{'-' * 18}|{'-' * 36}|")
     while True:
+        txt = f"{secret_key}{i}"
         hash = hashlib.md5(f"{secret_key}{i}".encode()).hexdigest()
+        print(f"{txt=}, {hash=}")
+        break
         if hash.startswith(5 * "0"):
             input_str = f"{secret_key}{i}"
             current_hash = hash
@@ -60,10 +63,12 @@ def user_logic_fpga(file: Path) -> int:
     # print(f"| {'Secret Key':10} | {'Answer':7} | {'Input':16} | {'Hash':34} |")
     # print(f"|{'-' * 12}|{'-' * 9}|{'-' * 18}|{'-' * 36}|")
     while True:
+        txt = f"{secret_key}{i}"
         hash_int: int = fpga_md5(f"{secret_key}{i}".encode())
         hash_bytes = hash_int.to_bytes(16, byteorder="little")
         hash = f"{int.from_bytes(hash_bytes, byteorder='big'):032x}"
-        # print(f"fpga: {hash}")
+        print(f"{txt=}, {hash=}")
+        break
         if hash.startswith(5 * "0"):
             input_str = f"{secret_key}{i}"
             current_hash = hash
@@ -186,7 +191,7 @@ def fpga_md5(msg: bytes) -> int:
     a, b, c, d = hash_pieces
     for i in range(ROUNDS):
         i_a, i_b, i_c, i_d = a, b, c, d
-        f = functions[i](b, c, d)
+        f = functions[i](b, c, d) & 0xFFFFFFFF
         g = index_functions[i](i)
         msg_word = int.from_bytes(msg_buf[4 * g : 4 * g + 4], byteorder="little")
         to_rotate = a + f + constants[i] + msg_word
@@ -197,13 +202,13 @@ def fpga_md5(msg: bytes) -> int:
             b,
             c,
         )
-        if i == 16:
-            print(
-                f"{msg=},{i=}: {i_a=:08x},{i_b=:08x},{i_c=:08x},{i_d=:08x},"
-                f"T_CONST={constants[i]:08x},{f=:08x},{msg_word=:08x},{g=:08x} -> "
-                f"{a=:08x},{b=:08x},{c=:08x},{d=:08x}"
-            )
-            sys.exit(1)
+        # if i == 63:
+        #     print(
+        #         f"{msg=},{i=}: {i_a=:08x},{i_b=:08x},{i_c=:08x},{i_d=:08x},"
+        #         f"T_CONST={constants[i]:08x},{f=:08x},{msg_word=:08x},{g=:08x} -> "
+        #         f"{a=:08x},{b=:08x},{c=:08x},{d=:08x}"
+        #     )
+        #     sys.exit(1)
 
         # print(
         #     f"Round {i:02d} inputs: {f=:08x}, {constants[i]=:08x}, {int.from_bytes(chunk[4 * g : 4 * g + 4], byteorder="little")=:08x}"
@@ -241,7 +246,7 @@ def main() -> int:
     os.chdir(Path(__file__).resolve().parent)
     f = "./input.txt" if len(sys.argv) < 2 else sys.argv[1]
     print(f"{f=}")
-    # print(f"Result: {user_log=Path(f))}")
+    print(f"Result: {user_logic(file=Path(f))}")
     print(f"Result: {user_logic_fpga(file=Path(f))}")
 
     return 0
