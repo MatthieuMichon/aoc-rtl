@@ -263,7 +263,7 @@ This small change reduced by a quite significant amount resource usage, remindin
 | User      | 0.035s         | 12.469s   | 10.124s     | 3m6.204s          |
 | Sys       | 0.017s         | 0.841s    | 0.697s      | 0m11.044s         |
 
-## Second Iteration in Python
+## Second Iteration: MD5 Hash Logic
 
 I'm using the [MD5 algorithm from Rosetta Code](https://rosettacode.org/wiki/MD5#Python) as stepping stone to implement my proper version as an intermediate stage before implementing it in SystemVerilog.
 
@@ -405,3 +405,50 @@ function int get_msg_word_index(int step);
     end
 endfunction
 ```
+
+### Resource Usage
+
+Each MD5 round uses 4x32 FFs plus one for the valid signal, meaning that a single MD5 engine will eat 8256 FFs.
+
+| Ref Name | Used | Functional Category |
+|----------|------|---------------------|
+| FDRE     | 9040 |        Flop & Latch |
+| LUT5     | 3055 |                 LUT |
+| LUT4     | 2360 |                 LUT |
+| LUT2     | 2259 |                 LUT |
+| LUT3     | 1449 |                 LUT |
+| LUT6     | 1222 |                 LUT |
+| CARRY4   | 1083 |          CarryLogic |
+| LUT1     |  164 |                 LUT |
+| FDSE     |    1 |        Flop & Latch |
+| BUFG     |    1 |               Clock |
+| BSCANE2  |    1 |              Others |
+
+These figures are inline with the reported resource usage during the synthesis stage:
+
+```
+Module md5_step 
+Detailed RTL Component Info : 
++---Adders : 
+	   4 Input   32 Bit       Adders := 1     
+	   2 Input   32 Bit       Adders := 1     
++---Registers : 
+	               32 Bit    Registers := 4     
+	                1 Bit    Registers := 1     
+```
+
+Looking at the floorplan I believe that fitting four instances of the MD5 pipeline will be tight, still have some work before crossing this bridge.
+
+![](md5_top_floorplan.png)
+
+Vivado complained quite a lot regarding not being able to push inverters:
+
+```
+INFO: [Opt 31-677] Could not push inverter user_logic_i/md5_top_i/per_step[0].md5_step_i/o_a[31]_i_1 to load user_logic_i/md5_top_i/per_step[0].md5_step_i/o_a_reg[0] because inversion is not supported on the pin CE
+```
+
+Looking at the schematic post-mapping I noticed an interesting implementation of the reset signal:
+
+![](md5_step_reset_inv_schematic.png)
+
+I'm aware of limitations regarding reset polarity in Xilinx's 7-series FPGA but this reset being active high I thought that I was in the clear. I used a relaxed implementation directive, so maybe I should try cranking things up and see where this leaves me.
