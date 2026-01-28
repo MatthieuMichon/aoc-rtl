@@ -7,11 +7,10 @@ import hashlib
 import math
 import os
 import sys
-from ast import Constant
 from pathlib import Path
 
 
-def decode_inputs(file: Path) -> str:
+def decode_inputs(file: Path):
     """
     Decode contents of the given file
 
@@ -57,16 +56,119 @@ def user_logic_fpga(file: Path) -> int:
     """
 
     secret_key = decode_inputs(file)
-    i = 0
-    print(f"| {'Secret Key':10} | {'Answer':7} | {'Input':16} | {'Hash':34} |")
-    print(f"|{'-' * 12}|{'-' * 9}|{'-' * 18}|{'-' * 36}|")
+    i = 1
+    # print(f"| {'Secret Key':10} | {'Answer':7} | {'Input':16} | {'Hash':34} |")
+    # print(f"|{'-' * 12}|{'-' * 9}|{'-' * 18}|{'-' * 36}|")
     while True:
-        hash = fpga_md5(f"{secret_key}{i}".encode())
-        break
+        hash_int: int = fpga_md5(f"{secret_key}{i}".encode())
+        hash_bytes = hash_int.to_bytes(16, byteorder="little")
+        hash = f"{int.from_bytes(hash_bytes, byteorder='big'):032x}"
+        # print(f"fpga: {hash}")
+        if hash.startswith(5 * "0"):
+            input_str = f"{secret_key}{i}"
+            current_hash = hash
+            print(
+                f"| `{secret_key:8}` | {i:7} | `{input_str:14}` | `{current_hash:32}` |"
+            )
+            break
+        if i > 282749:
+            print(f"Reached limit without finding a match")
+            break
+        i += 1
+        # print("fpga: {:032x}".format(int.from_bytes(raw, byteorder="big")))
+        # hash: str = hashlib.md5(f"{secret_key}{i}".encode()).hexdigest()
+        # print(f"lib: {hash}")
+        # break
+
     return i
 
 
-def fpga_md5(msg: bytes):
+rotate_amounts = [
+    7,
+    12,
+    17,
+    22,
+    7,
+    12,
+    17,
+    22,
+    7,
+    12,
+    17,
+    22,
+    7,
+    12,
+    17,
+    22,
+    5,
+    9,
+    14,
+    20,
+    5,
+    9,
+    14,
+    20,
+    5,
+    9,
+    14,
+    20,
+    5,
+    9,
+    14,
+    20,
+    4,
+    11,
+    16,
+    23,
+    4,
+    11,
+    16,
+    23,
+    4,
+    11,
+    16,
+    23,
+    4,
+    11,
+    16,
+    23,
+    6,
+    10,
+    15,
+    21,
+    6,
+    10,
+    15,
+    21,
+    6,
+    10,
+    15,
+    21,
+    6,
+    10,
+    15,
+    21,
+]
+
+functions = (
+    16 * [lambda b, c, d: (b & c) | (~b & d)]
+    + 16 * [lambda b, c, d: (d & b) | (~d & c)]
+    + 16 * [lambda b, c, d: b ^ c ^ d]
+    + 16 * [lambda b, c, d: c ^ (b | ~d)]
+)
+
+index_functions = (
+    16 * [lambda i: i]
+    + 16 * [lambda i: (5 * i + 1) % 16]
+    + 16 * [lambda i: (3 * i + 5) % 16]
+    + 16 * [lambda i: (7 * i) % 16]
+)
+
+constants = [int(abs(math.sin(i + 1)) * 2**32) & 0xFFFFFFFF for i in range(64)]
+init_values = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476]
+
+
+def fpga_md5(msg: bytes) -> int:
     """
     FPGA-based MD5 hash function
 
@@ -75,109 +177,43 @@ def fpga_md5(msg: bytes):
     """
 
     ROUNDS = 64
+
     msg_buf: bytearray = pad_message(msg)
-    assert len(msg_buf) == 64
-    init_values = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476]
+    # assert len(msg_buf) == 64
     hash_pieces = init_values[:]
-    chunk = msg_buf
-    constants = [int(abs(math.sin(i + 1)) * 2**32) & 0xFFFFFFFF for i in range(64)]
-
-    rotate_amounts = [
-        7,
-        12,
-        17,
-        22,
-        7,
-        12,
-        17,
-        22,
-        7,
-        12,
-        17,
-        22,
-        7,
-        12,
-        17,
-        22,
-        5,
-        9,
-        14,
-        20,
-        5,
-        9,
-        14,
-        20,
-        5,
-        9,
-        14,
-        20,
-        5,
-        9,
-        14,
-        20,
-        4,
-        11,
-        16,
-        23,
-        4,
-        11,
-        16,
-        23,
-        4,
-        11,
-        16,
-        23,
-        4,
-        11,
-        16,
-        23,
-        6,
-        10,
-        15,
-        21,
-        6,
-        10,
-        15,
-        21,
-        6,
-        10,
-        15,
-        21,
-        6,
-        10,
-        15,
-        21,
-    ]
-
-    functions = (
-        16 * [lambda b, c, d: (b & c) | (~b & d)]
-        + 16 * [lambda b, c, d: (d & b) | (~d & c)]
-        + 16 * [lambda b, c, d: b ^ c ^ d]
-        + 16 * [lambda b, c, d: c ^ (b | ~d)]
-    )
-    index_functions = (
-        16 * [lambda i: i]
-        + 16 * [lambda i: (5 * i + 1) % 16]
-        + 16 * [lambda i: (3 * i + 5) % 16]
-        + 16 * [lambda i: (7 * i) % 16]
-    )
+    # chunk = msg_buf
 
     a, b, c, d = hash_pieces
     for i in range(ROUNDS):
+        i_a, i_b, i_c, i_d = a, b, c, d
         f = functions[i](b, c, d)
         g = index_functions[i](i)
-        to_rotate = (
-            a
-            + f
-            + constants[i]
-            + int.from_bytes(chunk[4 * g : 4 * g + 4], byteorder="little")
+        msg_word = int.from_bytes(msg_buf[4 * g : 4 * g + 4], byteorder="little")
+        to_rotate = a + f + constants[i] + msg_word
+        # new_b = (b + left_rotate(to_rotate, rotate_amounts[i])) & 0xFFFFFFFF
+        a, b, c, d = (
+            d,
+            (b + left_rotate(to_rotate, rotate_amounts[i])) & 0xFFFFFFFF,
+            b,
+            c,
         )
-        new_b = (b + left_rotate(to_rotate, rotate_amounts[i])) & 0xFFFFFFFF
-        a, b, c, d = d, new_b, b, c
-        print(
-            f"Round {i:02d} inputs: {f=:08x}, {constants[i]=:08x}, {int.from_bytes(chunk[4 * g : 4 * g + 4], byteorder="little")=:08x}"
-        )
-        print(f"Round {i:02d} outputs: {a=:08x}, {b=:08x}, {c=:08x}, {d=:08x}")
+        if i == 16:
+            print(
+                f"{msg=},{i=}: {i_a=:08x},{i_b=:08x},{i_c=:08x},{i_d=:08x},"
+                f"T_CONST={constants[i]:08x},{f=:08x},{msg_word=:08x},{g=:08x} -> "
+                f"{a=:08x},{b=:08x},{c=:08x},{d=:08x}"
+            )
+            sys.exit(1)
+
+        # print(
+        #     f"Round {i:02d} inputs: {f=:08x}, {constants[i]=:08x}, {int.from_bytes(chunk[4 * g : 4 * g + 4], byteorder="little")=:08x}"
+        # )
+        # print(f"Round {i:02d} outputs: {a=:08x}, {b=:08x}, {c=:08x}, {d=:08x}")
+
+    for i, val in enumerate([a, b, c, d]):
+        hash_pieces[i] += val
+        hash_pieces[i] &= 0xFFFFFFFF
+    return sum(x << (32 * i) for i, x in enumerate(hash_pieces))
 
 
 def left_rotate(x, amount):
@@ -205,6 +241,7 @@ def main() -> int:
     os.chdir(Path(__file__).resolve().parent)
     f = "./input.txt" if len(sys.argv) < 2 else sys.argv[1]
     print(f"{f=}")
+    # print(f"Result: {user_log=Path(f))}")
     print(f"Result: {user_logic_fpga(file=Path(f))}")
 
     return 0

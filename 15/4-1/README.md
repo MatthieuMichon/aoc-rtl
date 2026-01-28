@@ -380,3 +380,28 @@ Comparing the outputs on the first step between the Python and RTL simulation sh
 - The message word forwarded to the first round is `0x71627a79` in Python, while it is `0x797a6271` in the RTL meaning that a byte swap operation is missing.
 
 Adding the byte-swap operation fixes this discrepancy.
+
+### 16th Round Message Input Discrepancy Python vs Simulation
+
+The MD5 hash has four different implementation of message slicing applied to the 64 rounds. I noticed that the message received by the 16th round was not the one expected: `0x6a6e6c6b` vs `0x00000000` for Python and RTL respectively. In all likelyhood, the RTL message slicing logic is incorrect.
+
+Turn out while taking care of replacing magic numbers, for instance `16` by `ROUNDS/4`, I left out the parentheses around `ROUNDS/4`. Due to operator precedence, the greedy `%` captures `ROUNDS` instead of `ROUNDS/4` causing the calculation to yield invalid results.
+
+```diff
+function int get_msg_word_index(int step);
+    if (step < ROUNDS*1/4) begin
+        get_msg_word_index = step;
+    end else if (step < ROUNDS*2/4) begin
+-        get_msg_word_index = (5*step+1) % ROUNDS/4;
++        get_msg_word_index = (5*step+1) % (ROUNDS/4);
+    end else if (step < ROUNDS*3/4) begin
+-        get_msg_word_index = (3*step+5) % ROUNDS/4;
++        get_msg_word_index = (3*step+5) % (ROUNDS/4);
+    end else if (step < ROUNDS*4/4) begin
+-        get_msg_word_index = (7*step) % ROUNDS/4;
++        get_msg_word_index = (7*step) % (ROUNDS/4);
+    end else begin
+        $fatal(1, "Invalid step index");
+    end
+endfunction
+```
