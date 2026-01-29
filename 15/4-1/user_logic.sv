@@ -16,7 +16,7 @@ module user_logic (
         input wire update_dr
 );
 
-localparam int RESULT_WIDTH = 16;
+localparam int RESULT_WIDTH = 128;
 
 localparam int UPSTREAM_BYPASS_BITS = 1; // ARM DAP controller in BYPASS mode
 localparam int INBOUND_DATA_WIDTH = $bits(byte);
@@ -164,9 +164,10 @@ always_ff @(posedge tck) begin: capture_result
         outbound_valid <= 1'b0;
         outbound_data <= '0;
     end else begin
-        outbound_valid <= digest_valid;
-        if (!outbound_valid)
-            outbound_data <= 1'b1 + RESULT_WIDTH'($countones(digest_data));
+        if (digest_valid && !outbound_valid) begin: digest_just_in
+            outbound_valid <= 1'b1;
+            outbound_data <= digest_data;
+        end
     end
 end
 

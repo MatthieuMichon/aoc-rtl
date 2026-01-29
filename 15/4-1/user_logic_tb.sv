@@ -3,7 +3,7 @@
 
 module user_logic_tb;
 
-localparam int RESULT_WIDTH = 16;
+localparam int RESULT_WIDTH = 128;
 
 localparam int SEEK_SET = 0;
 localparam int SEEK_END = 2;

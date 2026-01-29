@@ -93,11 +93,11 @@ proc ::build {arg_dict} {
 
         set directive RuntimeOptimized; # speed-run the build process
         synth_design -top [lindex [find_top] 0] \
-            -directive $directive \
+            -directive PerformanceOptimized \
             -flatten_hierarchy none \
             -debug_log -verbose
         opt_design \
-            -directive $directive \
+            -directive ExploreWithRemap \
             -debug_log -verbose
         place_design \
             -directive $directive \

@@ -36,17 +36,27 @@ always_comb begin: update_b_word
     b_new = i_b + {a_sum[WORD_BITS-LROT_BITS-1:0], a_sum[WORD_BITS-1:WORD_BITS-LROT_BITS]};
 end
 
-always_ff @(posedge clk) begin: output_register
-    if (reset) begin
-        o_valid <= 1'b0;
-    end else begin
-        o_valid <= i_valid;
-        o_a <= i_d;
-        o_b <= b_new;
-        o_c <= i_b;
-        o_d <= i_c;
+generate
+    if (ROUND % 4 == 3) begin : gen_reg_out
+        always_ff @(posedge clk) begin: output_register
+            if (reset) begin
+                o_valid <= 1'b0;
+            end else begin
+                o_valid <= i_valid;
+                o_a <= i_d;
+                o_b <= b_new;
+                o_c <= i_b;
+                o_d <= i_c;
+            end
+        end
+    end else begin : gen_comb_out
+        assign o_valid = i_valid;
+        assign o_a = i_d;
+        assign o_b = b_new;
+        assign o_c = i_b;
+        assign o_d = i_c;
     end
-end
+endgenerate
 
 endmodule
 `default_nettype wire
