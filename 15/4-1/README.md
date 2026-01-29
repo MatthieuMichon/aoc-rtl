@@ -406,6 +406,40 @@ function int get_msg_word_index(int step);
 endfunction
 ```
 
+### Simplified Dataflow Diagram
+
+```mermaid
+flowchart
+tb["Testbench / BSCANE2"]
+if["User Logic Interface"]
+tap-dec["TAP Decoder"]
+dec["Line Decoder"]
+cnt["ASCII Counter"]
+concat["Message Concat"]
+len["Message Length Inserter"]
+subgraph md5["MD5 Top"]
+    r0["MD5 Round #0"]
+    r1["MD5 Round #0"]
+    rdd["(...)"]
+    r63["MD5 Round #63"]
+end
+tap-enc["TAP Encoder"]
+
+tb --JTAG-TAP--> if
+if --JTAG-TAP--> tap-dec
+tap-dec --ASCII Byte --> dec
+dec --Secret Key--> concat
+cnt --ASCII Decimal Number--> concat
+concat --Key+Number--> len
+len --Message Block--> r0
+r0 --> r1
+r1 --> rdd
+rdd --> r63
+r63 --Dummy Result--> tap-enc
+tap-enc --JTAG-TAP--> if
+if --JTAG TDO--> tb
+```
+
 ### Resource Usage
 
 Each MD5 round uses 4x32 FFs plus one for the valid signal, meaning that a single MD5 engine will eat 8256 FFs.
@@ -452,3 +486,53 @@ Looking at the schematic post-mapping I noticed an interesting implementation of
 ![](md5_step_reset_inv_schematic.png)
 
 I'm aware of limitations regarding reset polarity in Xilinx's 7-series FPGA but this reset being active high I thought that I was in the clear. I used a relaxed implementation directive, so maybe I should try cranking things up and see where this leaves me.
+
+While reviewing the timing results, I noticed the setup time slack being quite large at over 5 ns. This pushed me to modify the MD5 rounds by removing the output register stage for every even stage. The results were good: the timings were still good while the number of registers was reduced by 40 %.
+
+| Ref Name | Used | Functional Category |
+|----------|------|---------------------|
+| FDRE     | 5328 |        Flop & Latch |
+| LUT5     | 2499 |                 LUT |
+| LUT4     | 2450 |                 LUT |
+| LUT2     | 2270 |                 LUT |
+| LUT3     | 1477 |                 LUT |
+| LUT6     | 1302 |                 LUT |
+| CARRY4   | 1089 |          CarryLogic |
+| LUT1     |  160 |                 LUT |
+| FDSE     |    1 |        Flop & Latch |
+| BUFG     |    1 |               Clock |
+| BSCANE2  |    1 |              Others |
+
+|            Instance           |           Module          | Total LUTs | Logic LUTs |  FFs |
+|-------------------------------|---------------------------|------------|------------|------|
+| shell                         |                     (top) |       8085 |       8085 | 5329 |
+|   (shell)                     |                     (top) |          0 |          0 |    0 |
+|   user_logic_i                |                user_logic |       8085 |       8085 | 5329 |
+|     (user_logic_i)            |                user_logic |          3 |          3 |  129 |
+|     ascii_counter_i           |             ascii_counter |         32 |         32 |   28 |
+|     line_decoder_i            |              line_decoder |        292 |        292 |  101 |
+|     md5_top_i                 |                   md5_top |       7357 |       7357 | 4414 |
+|       (md5_top_i)             |                   md5_top |         66 |         66 |  310 |
+
+## Third Iteration: Hash Filter
+
+The answer to this puzzle is the number used as a suffix which causes the hash to match the puzzle requirement of 5 leading zeroes. I could add a bus carrying the binary value from the `ascii_counter` module, but figured this was too much of an hassle. Instead, I'll add a small module for filtering the results.
+
+Although the later module is trivial, it provides an accurate measurement of the time required for iterating through all the hashes. For instance, I measured using my custom input `yzbqklnj` to take approximatively 11.2 seconds, which gives a hashing rate of 25250 hashes per second.
+
+There are solutions for increasing this result, the most obvious one being using the internal configuration clock instead of `tck` which toggled at a low frequency since it requires looping over a couple of TCL commands.
+
+### Design Components
+
+| Module                                          | Description                      | Complexity          | Thoughts       | Remarks  |
+|-------------------------------------------------|----------------------------------|---------------------|----------------|----------|
+| [`user_logic_tb`](user_logic_tb.sv)             | Testbench                        | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+| [`user_logic`](user_logic.sv)                   | Logic top-level                  | :green_circle:      | :slightly_smiling_face: Wire harness and trivial logic | Had to change reset logic |
+| [`tap_decoder`](tap_decoder.sv)                 | JTAG TAP deserializer            | :green_circle:      | :slightly_smiling_face: Add proper handling of upstream bypass bits | |
+| [`line_decoder`](line_decoder.sv)               | Left-aligns the secret key       | :green_circle:      | :slightly_smiling_face: Straightforward | Initially forgot to handle trailling null chars |
+| [`ascii_counter`](ascii_counter.sv)             | ASCII encoded decimal counter    | :green_circle:     | :slightly_smiling_face: Trivial except for the carry logic in a generate loop | Started with a bin / bcd / ascii converter before thinking of this simpler solution |
+| [`message_concat`](message_concat.sv)           | Concatenates two variable length fields | :yellow_circle:     | :raised_eyebrow: First non-trivial module *so far* for the 2015 contest | Compare this to `input_str = f"{secret_key}{i}"` in Python :upside_down_face: |
+| [`md5_core`](md5_core.sv)                       | Complete MD5 hash of a single block | :green_circle: | :kissing_smiling_eyes: Danting at first but wasn't such a big deal to implement | |
+| [`md5_step`](md5_step.sv)                       | Single MD5 hash round            | :green_circle:      | :slightly_smiling_face: Basically translated the Python code source | |
+| [`hash_filter`](hash_filter.sv)                 | Detects the valid hash           | :large_blue_circle: | :kissing_smiling_eyes: Trivial logic | |
+| [`tap_encoder`](tap_encoder.sv)                 | JTAG TAP serializer              | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |

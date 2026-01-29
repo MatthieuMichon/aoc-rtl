@@ -91,7 +91,6 @@ proc ::build {arg_dict} {
 
     # Synthesize Design
 
-        set directive RuntimeOptimized; # speed-run the build process
         synth_design -top [lindex [find_top] 0] \
             -directive PerformanceOptimized \
             -flatten_hierarchy none \
@@ -100,16 +99,18 @@ proc ::build {arg_dict} {
             -directive ExploreWithRemap \
             -debug_log -verbose
         place_design \
-            -directive $directive \
+            -directive ExtraTimingOpt \
             -timing_summary \
             -debug_log -verbose
         phys_opt_design \
+            -directive AggressiveExplore \
             -verbose
         route_design \
-            -directive $directive \
+            -directive AggressiveExplore \
             -tns_cleanup \
             -debug_log -verbose
         phys_opt_design \
+            -directive AggressiveExplore \
             -verbose
         write_checkpoint -force project.dcp
 
@@ -194,7 +195,7 @@ proc ::load_inputs {arg_dict} {
 }
 
 proc ::read_result {} {
-    set result_width 16
+    set result_width 128
     set result 0x0
     puts -nonewline "Waiting for non-zero result... "
     while {$result == 0} {

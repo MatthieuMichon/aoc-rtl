@@ -12,6 +12,9 @@ module ascii_counter #(
     output logic [$clog2(1+DIGITS)-1:0] enabled_digits
 );
 
+//localparam logic [8*6-1:0] ASCII_CNT_INIT = 48'h323832373430;
+localparam logic [8*6-1:0] ASCII_CNT_INIT = 48'h303030303031;
+
 typedef enum logic [8-1:0] {
     ASCII_ZERO = 8'h30,
     ASCII_ONE = 8'h31,
@@ -35,7 +38,7 @@ generate
 
         always_ff @(posedge clk) begin
             if (reset) begin
-                ascii_digits[8*i+:8] <= (i != 0) ? ASCII_ZERO : ASCII_ONE;
+                ascii_digits[8*i+:8] <= (i < 6) ? ASCII_CNT_INIT[8*i+:8] : 8'h30;
             end else if (carry[i]) begin
                 if (current_digit == ASCII_NINE)
                     ascii_digits[8*i+:8] <= ASCII_ZERO;

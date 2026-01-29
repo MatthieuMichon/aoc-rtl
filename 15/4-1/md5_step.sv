@@ -37,7 +37,7 @@ always_comb begin: update_b_word
 end
 
 generate
-    if (ROUND % 4 == 3) begin : gen_reg_out
+    if (ROUND % 2 == 1) begin : gen_reg_out
         always_ff @(posedge clk) begin: output_register
             if (reset) begin
                 o_valid <= 1'b0;

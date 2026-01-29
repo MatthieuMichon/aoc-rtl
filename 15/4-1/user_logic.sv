@@ -156,6 +156,20 @@ md5_top md5_top_i (
         .digest_data(digest_data)
 );
 
+logic filtered_valid;
+digest_t filtered_data;
+
+hash_filter hash_filter_i (
+    .clk(tck),
+    .reset(reset),
+    // Digest Input
+        .digest_valid(digest_valid),
+        .digest_data(digest_data),
+    // Filtered Output
+        .filtered_valid(filtered_valid),
+        .filtered_data(filtered_data)
+);
+
 logic outbound_valid;
 result_t outbound_data;
 
@@ -164,9 +178,9 @@ always_ff @(posedge tck) begin: capture_result
         outbound_valid <= 1'b0;
         outbound_data <= '0;
     end else begin
-        if (digest_valid && !outbound_valid) begin: digest_just_in
+        if (filtered_valid && !outbound_valid) begin: digest_just_in
             outbound_valid <= 1'b1;
-            outbound_data <= digest_data;
+            outbound_data <= filtered_data;
         end
     end
 end
