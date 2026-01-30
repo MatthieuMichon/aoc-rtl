@@ -67,6 +67,8 @@ proc ::build {arg_dict} {
     # Setup
 
         create_project -part [dict get $arg_dict PART] -in_memory
+        # Constructs yielding the following message have unexpected behavior
+        set_msg_config -id "Synth 8-87" -new_severity ERROR
         read_verilog -sv [lsearch -all -inline -not [glob ../*.sv] *_tb.sv]
         read_xdc [glob ../*.xdc]
 

@@ -154,7 +154,7 @@ Figured I shall start from the ground up.
 | [2.2](15/2-2/)   | :large_blue_circle: Math ops pipelining     | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Even easier part 2       |
 | [3.1](15/3-1/)   | :large_blue_circle: Quite simple            | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Completely overhauled the JTAG TAP serialization logic |
 | [3.2](15/3-2/)   | :green_circle: Got a reset corner-case      | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box        | Mismatch from reset handling |
-| [4.1](15/4-1/)   | :yellow_circle: MD5 seriously?! :monocle_face: | :yellow_circle: Initialy got a 78-level deep timing path :upside_down_face: | Issue with initial start offset | Had a lot of fun with this one :upside_down_face: |
+| [4.1](15/4-1/)   | :yellow_circle: MD5 seriously?! :monocle_face: | :yellow_circle: Initialy got a 78-level deep timing path :upside_down_face: | :yellow_circle: Beware of *Synth 8-87* | Had a lot of fun with this one :upside_down_face: |
 
 ## Symbology
 

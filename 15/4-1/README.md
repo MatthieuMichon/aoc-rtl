@@ -12,6 +12,12 @@ Status:
 
 Did a double take after reading MD5, although to be honest this one was not as bad as I first thought. Working with variable length fields at variable offsets is never easy and this puzzle didn't disappoint :upside_down_face: add to this that I somehow managed to end up with an initial implementation containing a 78-level deep :vomiting_face: timing path
 
+# Lessons Learnt
+
+- All Vivado synthesis generating a Synth 8-87 warning must be terminated with extreme prejudice
+- The design behavior must be checked with all three simulators
+- Slicing and dicing databus with variable length and offsets can easily result in monstrousities
+
 # Design Space Exploration
 
 My first intent is to start rolling a grass roots implementation of MD5 in Python. Knowing in advance the value of the expected answer is an absolute must thus, so `hashlib.md5` to the rescue.
@@ -810,3 +816,42 @@ Success! The firmware now returns the correct value:
 Waiting for non-zero result... done.
 Result readback: 282749 (0x0000000000000000000000000004507d)
 ```
+
+Being always ready for taking on new challenges, I was happy to find such strange (ie. interesting) behavior. My first action is to compare the logs and see what's standing out.
+
+```diff
+INFO: [Synth 8-6155] done synthesizing module 'shell' (0#1) [/home/mm/Documents/aoc-rtl/15/4-1/shell.sv:4]
+INFO: [Synth 8-7261] Parallel RTL Optimization Phase 1 criteria is not met
+WARNING: [Synth 8-3936] Found unconnected internal register 'header_aligned_reg' and it is trimmed from '128' to '124' bits. [/home/mm/Documents/aoc-rtl/15/4-1/suffix_extractor.sv:56]
+-WARNING: [Synth 8-87] always_comb on 'tag_digits.has_captured_digit_reg' did not result in combinational logic [/home/mm/Documents/aoc-rtl/15/4-1/suffix_extractor.sv:49]
+WARNING: [Synth 8-7129] Port clk in module md5_step__parameterized61 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port reset in module md5_step__parameterized61 is either unconnected or has no load
+```
+
+Now for the log from Icarus Verilog:
+
+```diff
+iverilog -o sim_iverilog__db639999/a.out -g2012 -Wall ascii_counter.sv hash_filter.sv line_decoder.sv md5_engine.sv md5_step.sv md5_top.sv message_concat.sv message_length_inserter.sv suffix_extractor.sv tap_decoder.sv tap_encoder.sv user_logic.sv user_logic_tb.sv
+-suffix_extractor.sv:43: warning: Static variable initialization requires explicit lifetime in this context.
+md5_step.sv:27: sorry: constant selects in always_* processes are not currently supported (all bits will be included).
+```
+
+Ok, interesting that Vivado and Icarus Verilog have similar interpretations. I'm definitively promoting this warning to error.
+
+```tcl
+# Constructs yielding this message have unexpected behavior
+set_msg_config -id "Synth 8-87" -new_severity ERROR
+```
+
+The Vivado synthesizer does indeed yield an error, but not before completing the synthesis of the whole design:
+
+```
+synth_design completed successfully
+synth_design: Time (s): cpu = 00:00:36 ; elapsed = 00:00:36 . Memory (MB): peak = 3182.797 ; gain = 1333.430 ; free physical = 223000 ; free virtual = 245949
+INFO: [Common 17-2834] synth_design peak Physical Memory [PSS] (MB): overall = 2225.104; main = 2052.359; forked = 286.073
+INFO: [Common 17-2834] synth_design peak Virtual Memory [VSS] (MB): overall = 4701.922; main = 3182.766; forked = 1645.840
+### Exception in aoc-rtl/15/4-1/vivado.tcl ###
+ERROR: [Common 17-39] 'synth_design' failed due to earlier errors.
+```
+
+Lol thanks Xilinx for informing me that *synth_design completed successfully* :roll_eyes: I'll handle it from here :hugs:
