@@ -773,4 +773,40 @@ The change is innocuous and I doubt it has something to do with this issue:
 ++localparam logic [8*DIGITS-1:0] ASCII_CNT_INIT = {{DIGITS-1{ASCII_ZERO}}, ASCII_ONE};
 ```
 
-To recap the firmware captured 8284740 instead of 282749, meaning that it skipped the intended value. First thing is I will retry using the TB offset. This starts the counter with a value much closer to the intended one producing the wanted hash in order to have a reasonable simulation runtime.
+To recap the firmware captured 8284740 instead of 282749, meaning that it skipped the intended value. First thing is I will retry using the testbench offset. This starts the counter with a value much closer to the intended one producing the wanted hash in order to have a reasonable simulation runtime.
+
+```bash
+# Icarus Verilog
+Loaded 9 bytes
+Result:                                28274900 (0x00000000000000000000000001af70d4)
+Finished after 661 cycles
+
+# Verilator
+Loaded 9 bytes
+Result:                                  282749 (0x0000000000000000000000000004507d)
+Finished after 661 cycles
+
+# Xsim
+Loaded 9 bytes
+Result:                                  282749 (0x0000000000000000000000000004507d)
+Finished after 661 cycles
+```
+
+Why is Icarus reporting a 100x figure: `28274900`? Obviously this means that the `suffix_extractor` logic behaved in an unexpected way. The time required by the on-board firmware was in-line with the previous implementation which although didn't return the suffix, returned the proper hash with the five leading zeros. All of this suggest that the issue is in the `suffix_extractor` module.
+
+Looking into the waveform, I noticed that `header_aligned` was not properly shifted. The issue was solved with a somewhat trivial change:
+
+```diff
++logic has_captured_digit;
+
+always_comb begin: tag_digits
+-    logic has_captured_digit = 1'b0;
++    has_captured_digit = 1'b0;
+```
+
+Success! The firmware now returns the correct value:
+
+```
+Waiting for non-zero result... done.
+Result readback: 282749 (0x0000000000000000000000000004507d)
+```

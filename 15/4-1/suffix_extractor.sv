@@ -37,8 +37,10 @@ function automatic logic is_digit(input char_t char_);
     is_digit = (char_ >= ASCII_ZERO && char_ <= ASCII_NINE);
 endfunction
 
+logic has_captured_digit;
+
 always_comb begin: tag_digits
-    logic has_captured_digit = 1'b0;
+    has_captured_digit = 1'b0;
     header_mask = '0;
     shift_digits = '0;
     for (int i = 0; i < DIGITS; i = i + 1) begin
