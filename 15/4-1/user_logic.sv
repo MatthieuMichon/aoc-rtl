@@ -141,10 +141,13 @@ message_length_inserter #(
         .md5_block_data(md5_block_data)
 );
 
-logic digest_valid;
-digest_t digest_data;
+logic outbound_valid;
+result_t outbound_data;
 
-md5_top md5_top_i (
+md5_engine #(
+    .BLOCK_WIDTH(8*MD5_BLOCK_LENGTH), // bits
+    .RESULT_WIDTH(RESULT_WIDTH)
+) md5_engine_i (
     .clk(tck),
     .reset(reset),
     // Block Input
@@ -152,38 +155,9 @@ md5_top md5_top_i (
         .md5_block_valid(md5_block_valid),
         .md5_block_data(md5_block_data),
     // Digest Output
-        .digest_valid(digest_valid),
-        .digest_data(digest_data)
+        .result_valid(outbound_valid),
+        .result_data(outbound_data)
 );
-
-logic filtered_valid;
-digest_t filtered_data;
-
-hash_filter hash_filter_i (
-    .clk(tck),
-    .reset(reset),
-    // Digest Input
-        .digest_valid(digest_valid),
-        .digest_data(digest_data),
-    // Filtered Output
-        .filtered_valid(filtered_valid),
-        .filtered_data(filtered_data)
-);
-
-logic outbound_valid;
-result_t outbound_data;
-
-always_ff @(posedge tck) begin: capture_result
-    if (reset) begin
-        outbound_valid <= 1'b0;
-        outbound_data <= '0;
-    end else begin
-        if (filtered_valid && !outbound_valid) begin: digest_just_in
-            outbound_valid <= 1'b1;
-            outbound_data <= filtered_data;
-        end
-    end
-end
 
 tap_encoder #(
     .OUTBOUND_DATA_WIDTH(RESULT_WIDTH)

@@ -58,5 +58,9 @@ generate
     end
 endgenerate
 
+wire _unused_ok = 1'b0 && &{1'b0,
+    clk, reset,
+    1'b0};
+
 endmodule
 `default_nettype wire

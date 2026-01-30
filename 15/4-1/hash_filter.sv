@@ -19,11 +19,11 @@ typedef logic [DIGEST_WIDTH-1:0] digest_t;
 localparam digest_t MASK = {
     {4*LEADING_ZEROES{1'b1}}, {DIGEST_WIDTH-4*LEADING_ZEROES{1'b0}}};
 
-always_ff @(posedge clk or posedge reset) begin
+always_ff @(posedge clk) begin
     if (reset) begin
         filtered_valid <= 1'b0;
     end else begin
-        if (digest_valid && !(digest_data & MASK)) begin
+        if (digest_valid && $countones(digest_data & MASK) == 0) begin
             filtered_valid <= 1'b1;
             filtered_data <= digest_data;
         end else begin

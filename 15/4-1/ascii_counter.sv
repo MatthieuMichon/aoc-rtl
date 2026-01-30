@@ -12,14 +12,14 @@ module ascii_counter #(
     output logic [$clog2(1+DIGITS)-1:0] enabled_digits
 );
 
-//localparam logic [8*6-1:0] ASCII_CNT_INIT = 48'h323832373430;
-localparam logic [8*6-1:0] ASCII_CNT_INIT = 48'h303030303031;
-
 typedef enum logic [8-1:0] {
     ASCII_ZERO = 8'h30,
     ASCII_ONE = 8'h31,
     ASCII_NINE = 8'h39
 } char_t;
+
+localparam logic [8*DIGITS-1:0] ASCII_CNT_INIT = 56'h30323832373430; // TB: init few counts before result
+//localparam logic [8*DIGITS-1:0] ASCII_CNT_INIT = {{DIGITS-1{ASCII_ZERO}}, ASCII_ONE};
 
 logic [DIGITS-1:0] carry;
 assign carry[0] = count_en;
@@ -28,9 +28,8 @@ assign ascii_valid = 1'b1;
 genvar i;
 generate
     for (i = 0; i < DIGITS; i++) begin: per_digit
-
         char_t current_digit;
-        assign current_digit = char_t'(ascii_digits[8*i+:8]);
+        assign current_digit = char_t'(ascii_digits[8*(i+1)-1-:8]);
 
         if (i < DIGITS - 1) begin: all_but_last
             assign carry[i+1] = (current_digit == ASCII_NINE) && carry[i];
@@ -38,12 +37,12 @@ generate
 
         always_ff @(posedge clk) begin
             if (reset) begin
-                ascii_digits[8*i+:8] <= (i < 6) ? ASCII_CNT_INIT[8*i+:8] : 8'h30;
+                ascii_digits[8*(i+1)-1-:8] <= (i < 6) ? ASCII_CNT_INIT[8*(i+1)-1-:8] : 8'h30;
             end else if (carry[i]) begin
                 if (current_digit == ASCII_NINE)
-                    ascii_digits[8*i+:8] <= ASCII_ZERO;
+                    ascii_digits[8*(i+1)-1-:8] <= ASCII_ZERO;
                 else
-                    ascii_digits[8*i+:4] <= ascii_digits[8*i+:4] + 1'b1;
+                    ascii_digits[8*(i+1)-5-:4] <= ascii_digits[8*(i+1)-5-:4] + 1'b1;
             end
         end
     end

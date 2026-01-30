@@ -1,6 +1,16 @@
 # Day 4: The Ideal Stocking Stuffer - Part 1
 
-This one is going to be interesting.
+Status:
+
+| Test                       | Status                |
+|----------------------------|-----------------------|
+| Simulation: Icarus Verilog | :white_check_mark: Ok |
+| Simulation: Verilator      | :white_check_mark: Ok |
+| Simulation: Vivado Xsim    | :white_check_mark: Ok |
+| Synthesis: Vivado Zynq7    | :white_check_mark: Ok |
+| On-board: Zynq7            | :white_check_mark: Ok |
+
+Did a double take after reading MD5, although to be honest this one was not as bad as I first thought. Working with variable length fields at variable offsets is never easy and this puzzle didn't disappoint :upside_down_face: add to this that I somehow managed to end up with an initial implementation containing a 78-level deep :vomiting_face: timing path
 
 # Design Space Exploration
 
@@ -535,4 +545,213 @@ There are solutions for increasing this result, the most obvious one being using
 | [`md5_core`](md5_core.sv)                       | Complete MD5 hash of a single block | :green_circle: | :kissing_smiling_eyes: Danting at first but wasn't such a big deal to implement | |
 | [`md5_step`](md5_step.sv)                       | Single MD5 hash round            | :green_circle:      | :slightly_smiling_face: Basically translated the Python code source | |
 | [`hash_filter`](hash_filter.sv)                 | Detects the valid hash           | :large_blue_circle: | :kissing_smiling_eyes: Trivial logic | |
+| [`tap_encoder`](tap_encoder.sv)                 | JTAG TAP serializer              | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+
+## Fourth Iteration: Filtered Hash / Counter Suffix Reconciliation
+
+As stated above, the answer to this puzzle is the number appended to the secret key to produce a valid hash. Since the MD5 hash engine is pipelined and generates backpressure on its input interface, the data containing the number suffix must be captured and held until the hash value is checked. In addition the suffix number must be extracted from the hash value and forwarded to the output interface via the TAP encoder.
+
+### Simplified Dataflow Diagram
+
+```mermaid
+flowchart
+tb["Testbench / BSCANE2"]
+if["User Logic Interface"]
+tap-dec["TAP Decoder"]
+dec["Line Decoder"]
+cnt["ASCII Counter"]
+concat["Message Concat"]
+len["Message Length Inserter"]
+subgraph eng["MD5 Engine"]
+    subgraph md5["MD5 Top"]
+        r0["MD5 Round #0"]
+        r1["MD5 Round #0"]
+        rdd["(...)"]
+        r63["MD5 Round #63"]
+    end
+    cap["Block Header Capture"]
+    filter["Hash Filter"]
+    extract["Suffix Extractor"]
+end
+tap-enc["TAP Encoder"]
+
+tb --JTAG-TAP--> if
+if --JTAG-TAP--> tap-dec
+tap-dec --ASCII Byte --> dec
+dec --Secret Key--> concat
+cnt --ASCII Decimal Number--> concat
+concat --Key+Number--> len
+len --Message Block--> r0
+r0 --> r1
+r1 --> rdd
+rdd --> r63
+r63 --> filter
+filter --Valid--> extract
+len --Message Block--> cap
+cap --Key+Number--> extract
+extract --Result--> tap-enc
+tap-enc --JTAG-TAP--> if
+if --JTAG TDO--> tb
+```
+
+### Resource Usage
+
+Initial (foreshadowing intended) build had the following resource usage:
+
+|             Instance            |           Module          | Total LUTs | Logic LUTs |  FFs |
+|---------------------------------|---------------------------|------------|------------|------|
+| shell                           |                     (top) |       8960 |       8960 | 4949 |
+|   (shell)                       |                     (top) |          0 |          0 |    0 |
+|   user_logic_i                  |                user_logic |       8960 |       8960 | 4949 |
+|     (user_logic_i)              |                user_logic |          1 |          1 |    0 |
+|     ascii_counter_i             |             ascii_counter |         29 |         29 |   28 |
+|     line_decoder_i              |              line_decoder |         97 |         97 |  101 |
+|     md5_engine_i                |                md5_engine |       8520 |       8520 | 4245 |
+|       (md5_engine_i)            |                md5_engine |          0 |          0 |  120 |
+|       hash_filter_i             |               hash_filter |          5 |          5 |    1 |
+|       md5_top_i                 |                   md5_top |       6585 |       6585 | 4039 |
+|         (md5_top_i)             |                   md5_top |          8 |          8 |  183 |
+|         per_step[0].md5_step_i  |                  md5_step |         52 |         52 |    0 |
+|         per_step[1].md5_step_i  |  md5_step__parameterized0 |         74 |         74 |   65 |
+|         per_step[2].md5_step_i  |  md5_step__parameterized1 |        119 |        119 |    0 |
+|         per_step[59].md5_step_i | md5_step__parameterized58 |        108 |        108 |  129 |
+|         per_step[60].md5_step_i | md5_step__parameterized59 |        109 |        109 |    0 |
+|         per_step[61].md5_step_i | md5_step__parameterized60 |          2 |          2 |   25 |
+|         per_step[63].md5_step_i | md5_step__parameterized62 |          2 |          2 |   25 |
+|       suffix_extractor_i        |          suffix_extractor |       1932 |       1932 |   85 |
+|     message_concat_i            |            message_concat |        228 |        228 |  161 |
+|     message_length_inserter_i   |   message_length_inserter |          2 |          2 |  161 |
+|     tap_decoder_i               |               tap_decoder |         20 |         20 |   41 |
+|     tap_encoder_i               |               tap_encoder |         65 |         65 |  212 |
+
+I'm surprised by the heavy LUT usage of the `suffix_extractor` module. This one quite simple leaving no doubts regarding the lines responsible:
+
+```verilog
+always_comb begin
+    result_cnt = '0;
+    for (int i = BLOCK_HEADER_WIDTH/8-1; i >= 0; i--) begin
+        char = block_header_data[i*8+:8];
+        if (is_digit(char)) begin: ascii_digit
+            result_cnt = 10*result_cnt + RESULT_WIDTH'(char - ASCII_ZERO);
+        end
+    end
+end
+```
+
+Looking in details to how the logic is implemented we can see a few hundred of carry primitives:
+
+```tcl
+report_utilization -cells [get_cells -hierarchical -regexp ".*suffix_extractor.*"]
+```
+
+| Ref Name | Used | Functional Category |
+|----------|------|---------------------|
+| LUT2     |  764 |                 LUT |
+| LUT5     |  740 |                 LUT |
+| LUT3     |  419 |                 LUT |
+| CARRY4   |  356 |          CarryLogic |
+| LUT6     |  176 |                 LUT |
+| LUT4     |  147 |                 LUT |
+| FDRE     |   85 |        Flop & Latch |
+| LUT1     |    4 |                 LUT |
+
+Thinking more about it, the nested multiply and accumulate operations over 16 iterations are indeed quite heavy, making me think that I should better check the timings. So, I pulled up the report and oh boy wtf :upside_down_face:
+
+```
+Slack (VIOLATED) :        -33.578ns  (required time - arrival time)
+  Source:                 user_logic_i/md5_engine_i/filtered_digest_header_reg[117]/C
+                            (rising edge-triggered cell FDRE clocked by TCK  {rise@0.000ns fall@10.000ns period=20.000ns})
+  Destination:            user_logic_i/md5_engine_i/suffix_extractor_i/result_data_reg[82]/D
+                            (rising edge-triggered cell FDRE clocked by TCK  {rise@0.000ns fall@10.000ns period=20.000ns})
+  Path Group:             TCK
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            20.000ns  (TCK rise@20.000ns - TCK rise@0.000ns)
+  Data Path Delay:        53.703ns  (logic 27.181ns (50.613%)  route 26.522ns (49.387%))
+  Logic Levels:           78  (CARRY4=44 LUT2=13 LUT3=1 LUT4=2 LUT5=13 LUT6=5)
+  Clock Path Skew:        0.079ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    5.042ns = ( 25.042 - 20.000 ) 
+    Source Clock Delay      (SCD):    5.448ns
+    Clock Pessimism Removal (CPR):    0.485ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+```
+
+To be honest this is not so for the 78-level deep timing path :sunglasses: Thankfully the data presented on the inputs of this module are held for dozen of clock cycles, resulting in firmware behaving as expected and delivering the correct value. I still prefer to tidy up such loose ends.
+
+I reworked the bit logic logic responsible for this whole mess:
+
+```verilog
+always_comb begin: tag_digits
+    logic has_captured_digit = 1'b0;
+    header_mask = '0;
+    shift_digits = '0;
+    for (int i = 0; i < DIGITS; i = i + 1) begin
+        char = block_header_data[i*8+:8];
+        header_mask[i*8+:8] = {8{is_digit(char)}};
+        if (!has_captured_digit && is_digit(char)) begin
+            has_captured_digit = 1'b1;
+            shift_digits = $bits(shift_digits)'(i);
+        end
+    end
+end
+
+always_ff @(posedge clk) header_aligned <= (block_header_data & header_mask) >> (8*shift_digits);
+
+genvar i; generate
+for (i = 0; i < DIGITS; i = i + 1) begin
+    localparam int MULT_FACTOR = 10**i;
+    always_ff @(posedge clk) begin: per_digit_mac
+        if (i == 0) begin: first_digit
+            sum_at_digit[i] <= (4*DIGITS)'(header_aligned[4-1:0]);
+        end else begin: higher_digit
+            sum_at_digit[i] <= (sum_at_digit[i-1]) + MULT_FACTOR * header_aligned[i*8+:4];
+        end
+    end
+end endgenerate
+
+assign final_sum = sum_at_digit[DIGITS-1];
+```
+
+And I am glad that the firmware now closes timing with a couple of ns to spare. This says a lot for timing-driven synthesis and PnR, since zero efforts are taken when the worst timing slack is positive.
+
+The updated module now uses only one third of the LUTs, conversely it is quite more register heavy with a LUT:FF ratio of about 6:5. Since some large multiplicands are involved I'm not surprised to see a bunch of DSPs being used.
+
+|             Instance   | Total LUTs | Logic LUTs | SRLs |  FFs | DSP Blocks |
+|------------------------|------------|------------|------|------|------------|
+| Old `suffix_extractor` |       1932 |       1932 |    0 |   85 |          0 |
+| New `suffix_extractor` |        612 |        611 |    1 |  506 |         14 |
+
+LUT usage from the `suffix_extractor` module are now more inline with what I would expect:
+
+| Ref Name | Used | Functional Category |
+|----------|------|---------------------|
+| FDRE     |  506 |        Flop & Latch |
+| LUT2     |  388 |                 LUT |
+| CARRY4   |  138 |          CarryLogic |
+| LUT6     |   87 |                 LUT |
+| LUT5     |   75 |                 LUT |
+| LUT3     |   60 |                 LUT |
+| LUT4     |   51 |                 LUT |
+| LUT1     |   23 |                 LUT |
+| DSP48E1  |   14 |    Block Arithmetic |
+| SRL16E   |    1 |  Distributed Memory |
+
+### Design Components
+
+| Module                                          | Description                      | Complexity          | Thoughts       | Remarks  |
+|-------------------------------------------------|----------------------------------|---------------------|----------------|----------|
+| [`user_logic_tb`](user_logic_tb.sv)             | Testbench                        | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+| [`user_logic`](user_logic.sv)                   | Logic top-level                  | :green_circle:      | :slightly_smiling_face: Wire harness and trivial logic | Had to change reset logic |
+| [`tap_decoder`](tap_decoder.sv)                 | JTAG TAP deserializer            | :green_circle:      | :slightly_smiling_face: Add proper handling of upstream bypass bits | |
+| [`line_decoder`](line_decoder.sv)               | Left-aligns the secret key       | :green_circle:      | :slightly_smiling_face: Straightforward | Initially forgot to handle trailling null chars |
+| [`ascii_counter`](ascii_counter.sv)             | ASCII encoded decimal counter    | :green_circle:     | :slightly_smiling_face: Trivial except for the carry logic in a generate loop | Started with a bin / bcd / ascii converter before thinking of this simpler solution |
+| [`message_concat`](message_concat.sv)           | Concatenates two variable length fields | :yellow_circle:     | :raised_eyebrow: First non-trivial module *so far* for the 2015 contest | Compare this to `input_str = f"{secret_key}{i}"` in Python :upside_down_face: |
+| [`md5_engine`](md5_engine.sv)                   | Simple hierarchical container     | :large_blue_circle: | :kissing_smiling_eyes: Wire harness and trivial logic | |
+| [`md5_core`](md5_core.sv)                       | Complete MD5 hash of a single block | :green_circle: | :kissing_smiling_eyes: Danting at first but wasn't such a big deal to implement | |
+| [`md5_step`](md5_step.sv)                       | Single MD5 hash round            | :green_circle:      | :slightly_smiling_face: Basically translated the Python code source | |
+| [`hash_filter`](hash_filter.sv)                 | Detects the valid hash           | :large_blue_circle: | :kissing_smiling_eyes: Trivial logic | |
+| [`suffix_extractor`](suffix_extractor.sv)       | Extracts numbers for variable length string | :yellow_circle: | :raised_eyebrow: Slicing and dicing data at variable indexes is not trivial | The first attempt had severe timing issues |
 | [`tap_encoder`](tap_encoder.sv)                 | JTAG TAP serializer              | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
