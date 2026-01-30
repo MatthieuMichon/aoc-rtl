@@ -755,3 +755,22 @@ LUT usage from the `suffix_extractor` module are now more inline with what I wou
 | [`hash_filter`](hash_filter.sv)                 | Detects the valid hash           | :large_blue_circle: | :kissing_smiling_eyes: Trivial logic | |
 | [`suffix_extractor`](suffix_extractor.sv)       | Extracts numbers for variable length string | :yellow_circle: | :raised_eyebrow: Slicing and dicing data at variable indexes is not trivial | The first attempt had severe timing issues |
 | [`tap_encoder`](tap_encoder.sv)                 | JTAG TAP serializer              | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+
+## Board Issue
+
+I got an incorrect value while re-running the test after fixing the start offset:
+
+```
+Result readback: 8284740 (0x000000000000000000000000007e6a44)
+```
+
+The change is innocuous and I doubt it has something to do with this issue:
+
+```diff
+--localparam logic [8*DIGITS-1:0] ASCII_CNT_INIT = 56'h30323832373430; // TB: init few counts before result
+++//localparam logic [8*DIGITS-1:0] ASCII_CNT_INIT = 56'h30323832373430; // TB: init few counts before result
+--//localparam logic [8*DIGITS-1:0] ASCII_CNT_INIT = {{DIGITS-1{ASCII_ZERO}}, ASCII_ONE};
+++localparam logic [8*DIGITS-1:0] ASCII_CNT_INIT = {{DIGITS-1{ASCII_ZERO}}, ASCII_ONE};
+```
+
+To recap the firmware captured 8284740 instead of 282749, meaning that it skipped the intended value. First thing is I will retry using the TB offset. This starts the counter with a value much closer to the intended one producing the wanted hash in order to have a reasonable simulation runtime.

@@ -67,7 +67,7 @@ end endgenerate
 
 assign final_sum = sum_at_digit[DIGITS-1];
 
-always_ff @(posedge clk) begin
+always_ff @(posedge clk) begin: output_sync
     if (reset) begin
         result_valid <= 1'b0;
     end else begin

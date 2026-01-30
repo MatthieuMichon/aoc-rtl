@@ -23,7 +23,7 @@ always_ff @(posedge clk) begin
     if (reset) begin
         filtered_valid <= 1'b0;
     end else begin
-        if (digest_valid && $countones(digest_data & MASK) == 0) begin
+        if (digest_valid && $countones(digest_data & MASK) == 0) begin: check_leading_zeroes
             filtered_valid <= 1'b1;
             filtered_data <= digest_data;
         end else begin

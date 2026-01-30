@@ -18,8 +18,8 @@ typedef enum logic [8-1:0] {
     ASCII_NINE = 8'h39
 } char_t;
 
-localparam logic [8*DIGITS-1:0] ASCII_CNT_INIT = 56'h30323832373430; // TB: init few counts before result
-//localparam logic [8*DIGITS-1:0] ASCII_CNT_INIT = {{DIGITS-1{ASCII_ZERO}}, ASCII_ONE};
+//localparam logic [8*DIGITS-1:0] ASCII_CNT_INIT = 56'h30323832373430; // TB: init few counts before result
+localparam logic [8*DIGITS-1:0] ASCII_CNT_INIT = {{DIGITS-1{ASCII_ZERO}}, ASCII_ONE};
 
 logic [DIGITS-1:0] carry;
 assign carry[0] = count_en;

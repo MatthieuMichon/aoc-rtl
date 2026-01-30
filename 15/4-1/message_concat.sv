@@ -56,7 +56,7 @@ end
 
 assign suffix_ready = secret_key_valid && (msg_ready || !msg_valid);
 
-always_ff @(posedge clk) begin
+always_ff @(posedge clk) begin: concat_fields
     if (reset) begin
         msg_valid  <= 1'b0;
         msg_length <= '0;

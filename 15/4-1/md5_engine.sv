@@ -36,7 +36,7 @@ md5_top md5_top_i (
 
 // IMPORTANT: Assumes the number suffix completely fits in the first 128 bits
 
-always_ff @(posedge clk) begin
+always_ff @(posedge clk) begin: capture_and_hold
     if (md5_block_ready) begin
         filtered_digest_header <= md5_block_data[BLOCK_WIDTH-1-:DIGEST_WIDTH];
     end
