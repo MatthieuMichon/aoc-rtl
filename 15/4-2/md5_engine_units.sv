@@ -1,0 +1,71 @@
+`timescale 1ns/1ps
+`default_nettype none
+
+module md5_engine_units #(
+    parameter int BLOCK_WIDTH = 512, // bits
+    parameter int RESULT_WIDTH
+) (
+    input wire clk,
+    input wire reset,
+    // Block Input
+        output logic md5_block_ready,
+        input wire md5_block_valid,
+        input wire [BLOCK_WIDTH-1:0] md5_block_data,
+    // Digest Output
+        output logic result_valid,
+        output logic [RESULT_WIDTH-1:0] result_data
+);
+
+localparam int MD5_TOP_UNITS = 7;
+
+typedef logic [BLOCK_WIDTH-1:0] md5_block_t;
+typedef logic [RESULT_WIDTH-1:0] result_t;
+typedef logic [MD5_TOP_UNITS-1:0] md5_units_t;
+
+logic handshake_occured;
+md5_units_t per_unit_sel = MD5_TOP_UNITS'(1);
+md5_units_t per_unit_block_ready, per_unit_result_valid;
+result_t per_unit_result_data [0:MD5_TOP_UNITS-1];
+
+assign md5_block_ready = ((per_unit_block_ready & per_unit_sel) != '0);
+assign handshake_occured = md5_block_ready && md5_block_valid;
+
+always_ff @(posedge clk) begin : dispatch_to_units
+    if (handshake_occured) begin
+        per_unit_sel <= {per_unit_sel[MD5_TOP_UNITS-2:0], per_unit_sel[MD5_TOP_UNITS-1]};
+    end
+end
+
+genvar i; generate for (i=0; i<MD5_TOP_UNITS; i++) begin: per_md5_top
+
+    md5_engine #(
+        .BLOCK_WIDTH(BLOCK_WIDTH), // bits
+        .RESULT_WIDTH(RESULT_WIDTH)
+    ) md5_engine_i (
+        .clk(clk),
+        .reset(reset),
+        // Block Input
+            .md5_block_ready(per_unit_block_ready[i]),
+            .md5_block_valid(per_unit_sel[i] & md5_block_valid),
+            .md5_block_data(md5_block_data),
+        // Digest Output
+            .result_valid(per_unit_result_valid[i]),
+            .result_data(per_unit_result_data[i])
+    );
+
+end endgenerate
+
+// Works because only one engine will match the correct result
+
+always_ff @(posedge clk) begin
+    result_valid <= 1'b0;
+    for (int j = 0; j < MD5_TOP_UNITS; j++) begin
+        if (per_unit_result_valid[j]) begin
+            result_valid <= 1'b1;
+            result_data <= per_unit_result_data[j];
+        end
+    end
+end
+
+endmodule
+`default_nettype wire
