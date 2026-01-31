@@ -93,3 +93,15 @@ I paid for these slices, I will want to use them.
 Floorplan didn't disappoint:
 
 ![](floorplan-7-md5-units.png)
+
+## Second Iteration: Logic Optimization
+
+Reviewing the module hierarchy, I noticed the `suffix_extractor` module was instantiated in each MD5 engine. Since only one of all the engines will yield a result passing through the `hash_filter` module, I decided that I could factorize this module. Doing so I also found a nasty latent bug just hidden thanks to just the right sequence of events.
+
+In all this optimization allowed me to spare some resource usage but sadly not enough to shoe-horn an extra MD5 engine instance. Meaning I'm still stuck with seven of these.
+
+## Third Iteration: Internal Configuration Clock
+
+Two device configuration related primitives provide an internal clock signal: STARTUPE2 and USR_ACCESSE2. Instead of being gated from the host like the JTAG `tck` clock, these two former clocks are free running and should be able to provide continuous clock cycle at about 65 MHz.
+
+Of course dealing with more than one clock means caring about *clock domain crossing*. Thankfully the whole design exposes some boundaries at which the information remains quite stable, specially in this puzzle with such short input contents.

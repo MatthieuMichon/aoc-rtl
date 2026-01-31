@@ -68,7 +68,6 @@ word_t a_fold = '0, b_fold = '0, c_fold = '0, d_fold = '0;
 always_ff @(posedge clk) begin: flow_control
     if (reset) begin
         md5_block_ready <= 1'b1;
-    //if (digest_valid || !md5_block_valid) begin
     end else if (digest_valid) begin
         md5_block_ready <= 1'b1;
     end else if (md5_block_valid) begin

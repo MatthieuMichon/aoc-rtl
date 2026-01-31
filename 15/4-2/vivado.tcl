@@ -98,7 +98,7 @@ proc ::build {arg_dict} {
             -flatten_hierarchy none \
             -debug_log -verbose
         opt_design \
-            -directive ExploreWithRemap \
+            -directive ExploreArea \
             -debug_log -verbose
         place_design \
             -directive ExtraTimingOpt \

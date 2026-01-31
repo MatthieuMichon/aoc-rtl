@@ -29,7 +29,7 @@ genvar i;
 generate
     for (i = 0; i < DIGITS; i++) begin: per_digit
         char_t current_digit;
-        assign current_digit = char_t'(ascii_digits[8*(i+1)-1-:8]);
+        assign current_digit = char_t'(ascii_digits[8*i+:8]);
 
         if (i < DIGITS - 1) begin: all_but_last
             assign carry[i+1] = (current_digit == ASCII_NINE) && carry[i];
@@ -37,19 +37,19 @@ generate
 
         always_ff @(posedge clk) begin
             if (reset) begin
-                ascii_digits <= ASCII_CNT_INIT;
+                ascii_digits[8*i+:8] <= ASCII_CNT_INIT[8*i+:8];
             end else if (carry[i]) begin
                 if (current_digit == ASCII_NINE)
-                    ascii_digits[8*(i+1)-1-:8] <= ASCII_ZERO;
+                    ascii_digits[8*i+:8] <= ASCII_ZERO;
                 else
-                    ascii_digits[8*(i+1)-5-:4] <= ascii_digits[8*(i+1)-5-:4] + 1'b1;
+                    ascii_digits[8*i+:4] <= ascii_digits[8*i+:4] + 1'b1;
             end
         end
     end
 endgenerate
 
 always_comb begin: check_enabled_digits
-    enabled_digits = 1'b1;
+    enabled_digits = $bits(enabled_digits)'(1);
     for (int j=0; j<DIGITS; j++) begin
         if (ascii_digits[8*j+:8] != ASCII_ZERO) begin
             enabled_digits = $bits(enabled_digits)'(j+1);

@@ -56,19 +56,8 @@ hash_filter hash_filter_i (
         .filtered_data(filtered_data)
 );
 
-suffix_extractor #(
-    .BLOCK_HEADER_WIDTH(RESULT_WIDTH),
-    .RESULT_WIDTH(RESULT_WIDTH)
-)suffix_extractor_i (
-    .clk(clk),
-    .reset(reset),
-    // Filtered Input
-        .block_header_valid(filtered_valid),
-        .block_header_data(filtered_digest_header),
-    // Suffix Output
-        .result_valid(result_valid),
-        .result_data(result_data)
-);
+assign result_valid = filtered_valid;
+assign result_data = filtered_digest_header;
 
 wire _unused_ok = 1'b0 && &{1'b0,
     filtered_data,

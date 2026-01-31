@@ -27,11 +27,14 @@ md5_units_t per_unit_sel = MD5_TOP_UNITS'(1);
 md5_units_t per_unit_block_ready, per_unit_result_valid;
 result_t per_unit_result_data [0:MD5_TOP_UNITS-1];
 
-assign md5_block_ready = ((per_unit_block_ready & per_unit_sel) != '0);
+logic block_header_valid;
+logic [RESULT_WIDTH-1:0] block_header_data = '0;
+
+assign md5_block_ready = |(per_unit_block_ready & per_unit_sel);
 assign handshake_occured = md5_block_ready && md5_block_valid;
 
 always_ff @(posedge clk) begin : dispatch_to_units
-    if (handshake_occured) begin
+    if (handshake_occured) begin: select_next_unit
         per_unit_sel <= {per_unit_sel[MD5_TOP_UNITS-2:0], per_unit_sel[MD5_TOP_UNITS-1]};
     end
 end
@@ -58,14 +61,28 @@ end endgenerate
 // Works because only one engine will match the correct result
 
 always_ff @(posedge clk) begin
-    result_valid <= 1'b0;
+    block_header_valid <= 1'b0;
     for (int j = 0; j < MD5_TOP_UNITS; j++) begin
         if (per_unit_result_valid[j]) begin
-            result_valid <= 1'b1;
-            result_data <= per_unit_result_data[j];
+            block_header_valid <= 1'b1;
+            block_header_data <= per_unit_result_data[j];
         end
     end
 end
+
+suffix_extractor #(
+    .BLOCK_HEADER_WIDTH(RESULT_WIDTH),
+    .RESULT_WIDTH(RESULT_WIDTH)
+)suffix_extractor_i (
+    .clk(clk),
+    .reset(reset),
+    // Filtered Input
+        .block_header_valid(block_header_valid),
+        .block_header_data(block_header_data),
+    // Suffix Output
+        .result_valid(result_valid),
+        .result_data(result_data)
+);
 
 endmodule
 `default_nettype wire

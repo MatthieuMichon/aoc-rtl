@@ -39,14 +39,13 @@ end
 generate
     if (ROUND % 2 == 1) begin : gen_reg_out
         always_ff @(posedge clk) begin: output_register
+            o_valid <= i_valid;
+            o_a <= i_d;
+            o_b <= b_new;
+            o_c <= i_b;
+            o_d <= i_c;
             if (reset) begin
                 o_valid <= 1'b0;
-            end else begin
-                o_valid <= i_valid;
-                o_a <= i_d;
-                o_b <= b_new;
-                o_c <= i_b;
-                o_d <= i_c;
             end
         end
     end else begin : gen_comb_out
