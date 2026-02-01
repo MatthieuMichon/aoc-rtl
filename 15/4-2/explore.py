@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Design Space Exploration for Advent of Code 15: Day 4 - Part 1
+Design Space Exploration for Advent of Code 15: Day 4 - Part 2
 """
 
 import hashlib
