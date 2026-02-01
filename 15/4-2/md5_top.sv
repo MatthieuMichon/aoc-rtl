@@ -147,9 +147,6 @@ always_comb begin: vector_tail
     digest_data = {swap_bytes(a_fold), swap_bytes(b_fold), swap_bytes(c_fold), swap_bytes(d_fold)};
 end
 
-wire _unused_ok = 1'b0 && &{1'b0,
-    1'b0};
-
 // always_comb begin: dump_step_0_outputs
 //     if (valid_vec[1]) begin
 //         $display("Step 0 Outputs: @ cycle %0t: A: 0x%08h, B: 0x%08h, C: 0x%08h, D: 0x%08h", $realtime, a_vec[1], b_vec[1], c_vec[1], d_vec[1]);

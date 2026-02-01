@@ -18,10 +18,16 @@ localparam ir_t IR_USER4 = {ARM_DAP_IR, 6'b100011};
 
 logic tck, tms  = 1'b1, tdi = 1'b1, tdo;
 logic test_logic_reset = 1'b0, run_test_idle = 1'b0, ir_is_user = 1'b0, capture_dr = 1'b0, shift_dr = 1'b0, update_dr = 1'b0;
+logic conf_clk;
 
 initial begin: tck_clock_gen
     tck = 0;
-    forever #1 tck = ~tck;
+    forever #2 tck = ~tck;
+end
+
+initial begin: conf_clk_gen
+    conf_clk = 0;
+    forever #1 conf_clk = ~conf_clk;
 end
 
 int cycle_count = 0;
@@ -204,7 +210,9 @@ user_logic user_logic_i (
         .run_test_idle(run_test_idle),
         .capture_dr(capture_dr),
         .shift_dr(shift_dr),
-        .update_dr(update_dr));
+        .update_dr(update_dr),
+    // 'fast' clock
+        .conf_clk(conf_clk));
 
 wire _unused_ok = 1'b0 && &{1'b0,
     tdo,

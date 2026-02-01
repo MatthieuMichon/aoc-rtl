@@ -94,7 +94,7 @@ proc ::build {arg_dict} {
     # Synthesize Design
 
         synth_design -top [lindex [find_top] 0] \
-            -directive AreaOptimized_high \
+            -directive AreaMultThresholdDSP \
             -flatten_hierarchy none \
             -debug_log -verbose
         opt_design \

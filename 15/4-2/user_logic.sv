@@ -13,13 +13,16 @@ module user_logic (
         input wire run_test_idle,
         input wire capture_dr,
         input wire shift_dr,
-        input wire update_dr
+        input wire update_dr,
+    // 'fast' clock
+        input wire conf_clk
 );
 
 localparam int RESULT_WIDTH = 128;
 
 localparam int UPSTREAM_BYPASS_BITS = 1; // ARM DAP controller in BYPASS mode
 localparam int INBOUND_DATA_WIDTH = $bits(byte);
+localparam int CDC_SYNC_STAGES = 3;
 localparam int SECRET_KEY_WIDTH = 8 * 12; // 12 ASCII chars max
 localparam int HASH_SUFFIX_DIGITS = 7; // should be enough
 localparam int MD5_BLOCK_LENGTH = 64; // bytes
@@ -79,6 +82,23 @@ line_decoder #(
         .secret_key_value(secret_key_value)
 );
 
+logic [CDC_SYNC_STAGES-1:0] reset_cclk_shift_reg = '0;
+logic [CDC_SYNC_STAGES-1:0] secret_key_valid_cclk_shift_reg = '0;
+logic [CDC_SYNC_STAGES-1:0] outbound_valid_tck_shift_reg = '0;
+logic reset_cclk;
+logic secret_key_valid_cclk;
+logic outbound_valid_tck;
+
+always_ff @(posedge conf_clk) begin
+    reset_cclk_shift_reg <= CDC_SYNC_STAGES'({reset_cclk_shift_reg, reset});
+end
+assign reset_cclk = reset_cclk_shift_reg[CDC_SYNC_STAGES-1];
+
+always_ff @(posedge conf_clk) begin
+    secret_key_valid_cclk_shift_reg <= CDC_SYNC_STAGES'({secret_key_valid_cclk_shift_reg, secret_key_valid});
+end
+assign secret_key_valid_cclk = secret_key_valid_cclk_shift_reg[CDC_SYNC_STAGES-1];
+
 logic suffix_ready, suffix_valid;
 suffix_ascii_t suffix_number;
 suffix_digits_t suffix_digits;
@@ -86,8 +106,8 @@ suffix_digits_t suffix_digits;
 ascii_counter #(
     .DIGITS(HASH_SUFFIX_DIGITS)
 ) ascii_counter_i (
-    .clk(tck),
-    .reset(reset),
+    .clk(conf_clk),
+    .reset(reset_cclk),
     .count_en(suffix_ready),
     .ascii_valid(suffix_valid),
     .ascii_digits(suffix_number),
@@ -103,10 +123,10 @@ message_concat #(
     .MAX_SUFFIX_LENGTH(HASH_SUFFIX_DIGITS), // bytes
     .MAX_MSG_LENGTH(MAX_MSG_LENGTH) // bytes
 ) message_concat_i (
-    .clk(tck),
-    .reset(reset),
+    .clk(conf_clk),
+    .reset(reset_cclk),
     // Decoded Secret Key Data
-        .secret_key_valid(secret_key_valid), // held high
+        .secret_key_valid(secret_key_valid_cclk), // held high
         .secret_key_chars(secret_key_chars),
         .secret_key_value(secret_key_value),
     // ASCII Counter Suffix
@@ -128,8 +148,8 @@ message_length_inserter #(
     .MAX_MSG_LENGTH(MAX_MSG_LENGTH), // bytes
     .MD5_BLOCK_LENGTH(MD5_BLOCK_LENGTH) // bytes
 ) message_length_inserter_i (
-    .clk(tck),
-    .reset(reset),
+    .clk(conf_clk),
+    .reset(reset_cclk),
     // Message Without Length
         .msg_ready(msg_ready),
         .msg_valid(msg_valid),
@@ -141,15 +161,15 @@ message_length_inserter #(
         .md5_block_data(md5_block_data)
 );
 
-logic outbound_valid;
+logic outbound_valid, outbound_valid_held = 1'b0;
 result_t outbound_data;
 
 md5_engine_units #(
     .BLOCK_WIDTH(8*MD5_BLOCK_LENGTH), // bits
     .RESULT_WIDTH(RESULT_WIDTH)
 ) md5_engine_units_i (
-    .clk(tck),
-    .reset(reset),
+    .clk(conf_clk),
+    .reset(reset_cclk),
     // Block Input
         .md5_block_ready(md5_block_ready),
         .md5_block_valid(md5_block_valid),
@@ -159,11 +179,19 @@ md5_engine_units #(
         .result_data(outbound_data)
 );
 
+always_ff @(posedge conf_clk) outbound_valid_held <= outbound_valid_held || outbound_valid;
+
+always_ff @(posedge tck) begin
+    outbound_valid_tck_shift_reg <= CDC_SYNC_STAGES'({outbound_valid_tck_shift_reg, outbound_valid_held});
+end
+assign outbound_valid_tck = outbound_valid_tck_shift_reg[CDC_SYNC_STAGES-1];
+
+
 tap_encoder #(
     .OUTBOUND_DATA_WIDTH(RESULT_WIDTH)
 ) tap_encoder_i (
     // Deserialized Signals
-        .outbound_valid(outbound_valid),
+        .outbound_valid(outbound_valid_tck),
         .outbound_data(outbound_data),
     // JTAG TAP Controller Signals
         .tck(tck),

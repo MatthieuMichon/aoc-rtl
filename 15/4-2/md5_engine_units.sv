@@ -60,7 +60,7 @@ end endgenerate
 
 // Works because only one engine will match the correct result
 
-always_ff @(posedge clk) begin
+always_ff @(posedge clk) begin: collector
     block_header_valid <= 1'b0;
     for (int j = 0; j < MD5_TOP_UNITS; j++) begin
         if (per_unit_result_valid[j]) begin
