@@ -18,6 +18,7 @@ def decode_inputs(file: Path) -> Iterator[str]:
 def user_logic(file: Path) -> int:
     strings = list(decode_inputs(file))
     i = len([str for str in strings if string_is_nice(str)[0]])
+    print(f"Repeat req.: {len([str for str in strings if string_is_nice(str)[2]])}")
     return i
 
 
@@ -40,11 +41,38 @@ def string_is_nice(string: str) -> list[bool]:
     return [pair and repeat, pair, repeat]
 
 
+def fpga_user_logic(file: Path) -> int:
+    result = 0
+    string = ""
+    repeat = False
+    for byte in fpga_tap_decoder(file):
+        if byte != "\n":
+            string = string + byte
+            if len(string) >= 3:
+                repeat = repeat or (string[-1] == string[-3])
+        else:
+            if repeat:
+                result += 1
+            string = ""
+            repeat = False
+    return result
+
+
+def fpga_tap_decoder(file: Path) -> Iterator[str]:
+    with open(file) as fh:
+        for line in fh:
+            for c in line.strip().split()[0]:
+                yield c
+            yield "\n"
+        yield "\0"
+
+
 def main() -> int:
     os.chdir(Path(__file__).resolve().parent)
     file = "./input.txt" if len(sys.argv) < 2 else sys.argv[1]
     print(f"Contents {file=}")
     print(f"Result: {user_logic(file=Path(file))}")
+    print(f"FPGA repeat req.: {fpga_user_logic(file=Path(file))}")
 
     return 0
 

@@ -52,3 +52,26 @@ For reference, using my custom input contents I obtain the following results:
 | pair and repeat | pair | repeat |
 |-----------------|------|--------|
 | 69              | 129  | 431    |
+
+## Repeating Character Tracking
+
+I decided to implement the simplest requirement first, which consists in finding matching characters with an arbitrary one in the middle. Since this condition can happen anywhere in the string, once it occurs it must flip a variable remaining in this new state until the end of line is reached. Each string presenting this condition results in the `result` variable being incremented.
+
+```py
+    for byte in fpga_tap_decoder(file):
+        if byte != "\n":
+            string = string + byte
+            if len(string) >= 3:
+                repeat = repeat or (string[-1] == string[-3])
+        else:
+            if repeat:
+                result += 1
+            string = ""
+            repeat = False
+```
+
+a -> nothing
+ab -> nothing
+abc -> nothing
+abcd -> (ab) =? (cd)
+abcde -> (ab) =? (de) (bc) =? (de)
