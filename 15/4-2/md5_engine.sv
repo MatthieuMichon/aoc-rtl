@@ -17,6 +17,8 @@ module md5_engine #(
 );
 
 localparam int DIGEST_WIDTH = 128; // bits
+localparam int LEADING_ZEROES = 6;
+
 typedef logic [DIGEST_WIDTH-1:0] digest_t;
 
 logic digest_valid;
@@ -45,7 +47,9 @@ end
 logic filtered_valid;
 digest_t filtered_data;
 
-hash_filter hash_filter_i (
+hash_filter #(
+    .LEADING_ZEROES(LEADING_ZEROES)
+) hash_filter_i (
     .clk(clk),
     .reset(reset),
     // Digest Input
