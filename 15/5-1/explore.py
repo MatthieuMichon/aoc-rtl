@@ -16,6 +16,12 @@ def decode_inputs(file: Path) -> Iterator[str]:
 
 
 def user_logic(file: Path) -> int:
+    explore_design_space = True
+    if explore_design_space:
+        strings = list(decode_inputs(file))
+        print(f"Min string length: {min(len(s) for s in strings)} chars")
+        print(f"Max string length: {max(len(s) for s in strings)} chars")
+
     strings = decode_inputs(file)
     i = len([str for str in strings if string_is_nice(str)])
     return i
