@@ -13,3 +13,5 @@
 - Deep pipelining fills FPGAs real fast and require optimized simulation testbenchs
 - Each tool has limitations with regards to SystemVerilog constructs, all of them must be frequently invoked for avoiding lengthy code rewrites
 - Be careful using the signals from BSCANE2 instances, **always** check that the `SEL` output is asserted. Check this repository for more details: [https://github.com/MatthieuMichon/bscan-waves](https://github.com/MatthieuMichon/bscan-waves)
+- All Vivado synthesis generating a Synth 8-87 warning must be terminated with extreme prejudice
+- The design behavior must be checked with all three simulators

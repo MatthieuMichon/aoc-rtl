@@ -14,7 +14,7 @@ Status:
 
 # Lessons Learnt
 
-- Sometimes a problem simply stated just is that simple
+- Sometimes a problem simply stated is just that simple
 
 # Puzzle Statement
 
