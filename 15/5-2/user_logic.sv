@@ -71,6 +71,21 @@ repeating_char_tracker #(
         .string_data(string_data)
 );
 
+logic string_is_nice;
+
+non_overlapping_pairs_tracker #(
+    .STRING_DATA_WIDTH(STRING_DATA_WIDTH)
+) non_overlapping_pairs_i (
+    .clk(tck),
+    .reset(reset),
+    // Full String Data
+        .has_repeating_char(has_repeating_char),
+        .string_valid(string_valid),
+        .string_data(string_data),
+    // String Evaluation Result
+        .string_is_nice(string_is_nice) // single cycle pulse
+);
+
 logic outbound_valid;
 result_t outbound_data = '0;
 
@@ -79,7 +94,7 @@ always_ff @(posedge tck) begin
         outbound_valid <= 1'b0;
     end else begin
         outbound_valid <= end_of_file;
-        if (string_valid && has_repeating_char) begin
+        if (string_is_nice) begin
             outbound_data <= outbound_data + 1'b1;
         end
     end

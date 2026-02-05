@@ -182,6 +182,7 @@ initial begin: main_seq
 
         set_ir(IR_USER4); // emulate setting IR to USER4 (user logic should do nothing)
         serialize(file_size);
+        $display("Transferred %0d bytes", file_size);
         deserialize_non_zero(result);
         $display("Result: %0d (0x%h)", result, result);
 

@@ -220,3 +220,20 @@ Of course this design is nowhere near the danger zone:
 | Average Fanout for modules > 100k cells                   | 4         | 2.62   | OK     |
 | Max Average Fanout for modules > 100k cells               | 4         | 0      | OK     |
 | Non-FD high fanout nets > 10k loads                       | 0         | 0      | OK     |
+
+## Second Iteration: Non-overlapping Pairs
+
+I opted for the dual cross-correlation approach which I feel is more interesting due to involving some parallelism. A drawback of the alternate approach is that it requires implementing a memory scrubbing mechanism which due to the number of accesses required, will not be able to complete before new inbound data is received. This situation could be handled by simply adding a FIFO, but dropping FIFOs in the hot path seems a little too easy.
+
+My first implementation was returning incorrect values:
+
+```
+Overriding input filename: input.txt
+file_size: 17000 bytes
+Loaded 17000 bytes
+Transferred 17000 bytes
+Result: 59 (0x003b)
+Finished after 136095 cycles
+```
+
+The expected value is 69 instead of 59, meaning that I made a mistake somewhere.

@@ -30,7 +30,7 @@ typedef enum inbound_data_t {
     Z_CHAR = 8'h7A // lower-case 'z'
 } char_t;
 
-inbound_data_t [0:1] char_history;
+inbound_data_t [1:0] char_history;
 
 function automatic logic is_char_letter(inbound_data_t char);
     return (char >= A_CHAR && char <= Z_CHAR);
@@ -41,7 +41,7 @@ always_ff @(posedge clk) begin: track_char
         char_history <= {NULL_CHAR, NULL_CHAR};
     end else begin
         if (inbound_valid) begin
-            char_history <= {inbound_data, char_history[0]};
+            char_history <= {char_history[0], inbound_data};
         end
     end
 end
