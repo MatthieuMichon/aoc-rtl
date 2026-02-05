@@ -143,3 +143,80 @@ def has_repeated_chars(string: str) -> bool:
         return is_last_char_repeated
     return False
 ```
+
+# FPGA Implementation
+
+The implementation work can be nicely be split into two parts corresponding to the two requirements detailed in the previous section.
+
+## First Iteration: Repeating Characters Tracking
+
+This requirement operates on a per-byte basis resulting in minimal changes from the user logic module.
+
+The logic implemented in Python maps very nicely to RTL, the core logic being quite simple:
+
+```verilog
+always_ff @(posedge clk) begin: check_repeating_chars
+    if (reset) begin
+        has_repeating_char <= 1'b0;
+    end else begin
+        if (string_valid) begin
+            has_repeating_char <= 1'b0;
+        end
+        if (inbound_valid) begin
+            if (is_char_letter(inbound_data) &&
+                    is_char_letter(char_history[0]) &&
+                    is_char_letter(char_history[1])) begin
+                if (inbound_data == char_history[1]) begin
+                    has_repeating_char <= 1'b1;
+                end
+            end
+        end
+    end
+end
+```
+
+### Logic Resource Usage
+
+The amount of resources used is inline with the design complexity which is rather low for this first iteration.
+
+| Ref Name | Used | Functional Category |
+|----------|------|---------------------|
+| FDRE     |   81 |        Flop & Latch |
+| LUT3     |   19 |                 LUT |
+| LUT6     |   10 |                 LUT |
+| LUT4     |    8 |                 LUT |
+| LUT5     |    7 |                 LUT |
+| LUT2     |    5 |                 LUT |
+| CARRY4   |    4 |          CarryLogic |
+| LUT1     |    1 |                 LUT |
+| BUFG     |    1 |               Clock |
+| BSCANE2  |    1 |              Others |
+
+|           Instance           |         Module         | Total LUTs | FFs |
+|------------------------------|------------------------|------------|-----|
+| shell                        |                  (top) |         37 |  81 |
+|   (shell)                    |                  (top) |          0 |   0 |
+|   user_logic_i               |             user_logic |         37 |  81 |
+|     (user_logic_i)           |             user_logic |          3 |  17 |
+|     repeating_char_tracker_i | repeating_char_tracker |         18 |  19 |
+|     tap_decoder_i            |            tap_decoder |          7 |  13 |
+|     tap_encoder_i            |            tap_encoder |          9 |  32 |
+
+Of course this design is nowhere near the danger zone:
+
+| Criteria                                                  | Guideline | Actual | Status |
+|-----------------------------------------------------------|-----------|--------|--------|
+| LUT                                                       | 70%       | 0.07%  | OK     |
+| FD                                                        | 50%       | 0.08%  | OK     |
+| LUTRAM+SRL                                                | 25%       | 0.00%  | OK     |
+| MUXF7                                                     | 15%       | 0.00%  | OK     |
+| DSP                                                       | 80%       | 0.00%  | OK     |
+| RAMB/FIFO                                                 | 80%       | 0.00%  | OK     |
+| DSP+RAMB+URAM (Avg)                                       | 70%       | 0.00%  | OK     |
+| BUFGCE* + BUFGCTRL                                        | 24        | 1      | OK     |
+| DONT_TOUCH (cells/nets)                                   | 0         | 0      | OK     |
+| MARK_DEBUG (nets)                                         | 0         | 0      | OK     |
+| Control Sets                                              | 998       | 6      | OK     |
+| Average Fanout for modules > 100k cells                   | 4         | 2.62   | OK     |
+| Max Average Fanout for modules > 100k cells               | 4         | 0      | OK     |
+| Non-FD high fanout nets > 10k loads                       | 0         | 0      | OK     |
