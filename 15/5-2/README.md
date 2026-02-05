@@ -6,15 +6,16 @@ Status:
 | Test                       | Status                |
 |----------------------------|-----------------------|
 | Reference: Python script   | :white_check_mark: Ok |
-| Simulation: Icarus Verilog | TBD |
-| Simulation: Verilator      | TBD |
-| Simulation: Vivado Xsim    | TBD |
-| Synthesis: Vivado Zynq7    | TBD |
+| Simulation: Icarus Verilog | :white_check_mark: Ok |
+| Simulation: Verilator      | :white_check_mark: Ok |
+| Simulation: Vivado Xsim    | :white_check_mark: Ok |
+| Synthesis: Vivado Zynq7    | :white_check_mark: Ok |
 | On-board: Zynq7            | TBD |
 
 # Lessons Learnt
 
-- TBD.
+- Off by one errors are not limited to software.
+- Decomposing processing in several stages with signals greatly helps identifying unexpected behavior.
 
 # Design Space Exploration
 
@@ -236,4 +237,58 @@ Result: 59 (0x003b)
 Finished after 136095 cycles
 ```
 
-The expected value is 69 instead of 59, meaning that I made a mistake somewhere.
+The expected value is 69 instead of 59, meaning that I made a mistake somewhere. Bisecting the input contents and comparing the results between the Python and RTL implementations revealed the first discrepancy with the string `nscghlafavnsycjh`. Looking at the waveforms, I noticed the repeating character with a distance of three `afa` is correctly identified.
+
+The question now is why did the RTL implementation failed to match with an offset of ten characters:
+
+```
+nscghlafavnsycjh----------
+----------nscghlafavnsycjh
+          ^^
+```
+
+![](non_overlapping_pairs_tracker_bug_wave.png)
+
+It is apparent that cross-corelation with an offset of ten characters (`correlated_string`) behaves as expected. Oppositely, the second stage with `string_neighbor_bits` does not, meaning the issue lays with the followig assignation:
+
+```verilog
+(CORRELATED_BITS/BITS_PER_CHAR-1)'({correlated_string, 1'b0} & {1'b0, correlated_string})
+```
+
+In hindsight the problem is obvious, I added a superfluous bit at LSB, this shifted the whole calculation with one bit off resulting in missing strings with the first pair of chars matching other pairs. The fix is shamelessly simple:
+
+```diff
+-        always_ff @(posedge clk) string_neighbor_bits <= (CORRELATED_BITS/BITS_PER_CHAR-1)'({correlated_string, 1'b0} & {1'b0, correlated_string});
++        always_ff @(posedge clk) string_neighbor_bits <= (CORRELATED_BITS/BITS_PER_CHAR-1)'(correlated_string & (correlated_string >> 1));
+```
+
+### Final Logic Resource Usage
+
+The mapping into device primitives exhibits a relative high usage of LUT6 and LUT5, which is not really surprising since the design makes heavy use of bitwise comparisons with operands with a length sweeping from ten up to 70.
+
+| Ref Name | Used | Functional Category |
+|----------|------|---------------------|
+| FDRE     |  396 |        Flop & Latch |
+| LUT6     |  162 |                 LUT |
+| LUT5     |  140 |                 LUT |
+| LUT2     |  107 |                 LUT |
+| LUT3     |   57 |                 LUT |
+| LUT4     |   19 |                 LUT |
+| CARRY4   |   15 |          CarryLogic |
+| MUXF7    |    2 |               MuxFx |
+| LUT1     |    2 |                 LUT |
+| BUFG     |    1 |               Clock |
+| BSCANE2  |    1 |              Others |
+
+Hierarchical usage is totally as expected.
+
+|           Instance           |             Module            | Total LUTs | Logic LUTs | FFs |
+|------------------------------|-------------------------------|------------|------------|-----|
+| shell                        |                         (top) |        402 |        402 | 396 |
+|   (shell)                    |                         (top) |          0 |          0 |   0 |
+|   user_logic_i               |                    user_logic |        402 |        402 | 396 |
+|     (user_logic_i)           |                    user_logic |          3 |          3 |  17 |
+|     non_overlapping_pairs_i  | non_overlapping_pairs_tracker |        362 |        362 | 235 |
+|     repeating_char_tracker_i |        repeating_char_tracker |         21 |         21 |  99 |
+|     tap_decoder_i            |                   tap_decoder |          7 |          7 |  13 |
+|     tap_encoder_i            |                   tap_encoder |          9 |          9 |  32 |

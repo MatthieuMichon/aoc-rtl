@@ -167,7 +167,6 @@ initial begin: main_seq
             $fatal(FINISH_WITH_STATS, "Failed to read file %s", input_file);
         end
         file_size = $ftell(fd);
-        $display("file_size: %0d bytes", file_size);
         if ($fseek(fd, 0, SEEK_SET) != 0) begin
             $fatal(FINISH_WITH_STATS, "Failed to read file %s", input_file);
         end
@@ -176,13 +175,15 @@ initial begin: main_seq
         if (read_count != file_size) begin
             $fatal(FINISH_WITH_STATS, "Failed to read file %s", input_file);
         end
-        $display("Loaded %0d bytes", file_size);
+        $display("Loaded %0d bytes.", file_size);
 
     // Upload file contents through JTAG and readback results
 
+        $write("Sending contents to the user logic... ");
+        $fflush();
         set_ir(IR_USER4); // emulate setting IR to USER4 (user logic should do nothing)
         serialize(file_size);
-        $display("Transferred %0d bytes", file_size);
+        $display("done, sent %0d bytes", file_size);
         deserialize_non_zero(result);
         $display("Result: %0d (0x%h)", result, result);
 

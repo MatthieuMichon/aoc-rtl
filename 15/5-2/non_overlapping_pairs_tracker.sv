@@ -47,7 +47,7 @@ generate
                         shifted_string[j*BITS_PER_CHAR+:BITS_PER_CHAR]);
             end
         end
-        always_ff @(posedge clk) string_neighbor_bits <= (CORRELATED_BITS/BITS_PER_CHAR-1)'({correlated_string, 1'b0} & {1'b0, correlated_string});
+        always_ff @(posedge clk) string_neighbor_bits <= (CORRELATED_BITS/BITS_PER_CHAR-1)'(correlated_string & (correlated_string >> 1));
         always_ff @(posedge clk) string_is_nice_array[i] <= valid_shift_reg[FF_STAGES-1] && ($countones(string_neighbor_bits) > 0);
     end
 endgenerate
