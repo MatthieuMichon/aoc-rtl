@@ -262,6 +262,17 @@ In hindsight the problem is obvious, I added a superfluous bit at LSB, this shif
 +        always_ff @(posedge clk) string_neighbor_bits <= (CORRELATED_BITS/BITS_PER_CHAR-1)'(correlated_string & (correlated_string >> 1));
 ```
 
+### Design Components
+
+| Module                                          | Description                      | Complexity          | Thoughts       | Remarks  |
+|-------------------------------------------------|----------------------------------|---------------------|----------------|----------|
+| [`user_logic_tb`](user_logic_tb.sv)             | Testbench                        | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+| [`user_logic`](user_logic.sv)                   | Logic top-level                  | :large_blue_circle: | :kissing_smiling_eyes: Wire harness and trivial logic | Had to change reset logic |
+| [`tap_decoder`](tap_decoder.sv)                 | JTAG TAP deserializer            | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+| [`repeating_char_tracker`](repeating_char_tracker.sv) | Checks first requirement   | :large_blue_circle: | :kissing_smiling_eyes: Straightforward |  |
+| [`non_overlapping_pairs_tracker`](non_overlapping_pairs_tracker.sv) | Checks second requirement | :yellow_circle: | :expressionless: Let an error sneak in | Be careful with ranges when doing cross-correlation |
+| [`tap_encoder`](tap_encoder.sv)                 | JTAG TAP serializer              | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+
 ### Final Logic Resource Usage
 
 The mapping into device primitives exhibits a relative high usage of LUT6 and LUT5, which is not really surprising since the design makes heavy use of bitwise comparisons with operands with a length sweeping from ten up to 70.
