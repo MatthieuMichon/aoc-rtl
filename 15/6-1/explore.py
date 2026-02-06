@@ -99,10 +99,13 @@ def dump_lit_lights(lit_lights: dict) -> None:
     updates_img = Image.new("RGB", LIGHT_GRID_SIZE, 0x000000)
     pixels = pixels_img.load()
     updates = updates_img.load()
+    total_instructions = len(lit_lights)
     for (x, y), (is_on, depth) in lit_lights.items():
         pixels[x, y] = 1 if is_on else 0
         updates[x, y] = (
-            int(depth * 255 / 300) << 16 if is_on else int(depth * 255 / 300)
+            int(depth * 255 / total_instructions) << 16
+            if is_on
+            else int(depth * 255 / total_instructions)
         )
     pixels_img.save("lit_lights.png")
     updates_img.save("light_updates.png")
@@ -116,7 +119,7 @@ COLS = LIGHT_GRID_SIZE[0] // WORD_WIDTH + 1
 
 
 def fpga_user_logic(file: Path) -> int:
-    lit_lights = [[0x00000000] * COLS] * LIGHT_GRID_SIZE[1]
+    lit_lights = [[0x00000000] * COLS for _ in range(LIGHT_GRID_SIZE[1])]
     instructions = list(decode_inputs(file))
     for i, instr in enumerate(instructions):
         for row in range(instr["y0"], instr["y1"] + 1):
@@ -126,10 +129,20 @@ def fpga_user_logic(file: Path) -> int:
                 if (i < start_col) or (i > end_col):
                     continue
                 if i != COLS - 1:
-                    lit_lights[row][i] = 0xFFFFFFFF
+                    if instr["action"] == "on":
+                        lit_lights[row][i] = 0xFFFFFFFF
+                    elif instr["action"] == "off":
+                        lit_lights[row][i] = 0x00000000
+                    elif instr["action"] == "toggle":
+                        lit_lights[row][i] ^= 0xFFFFFFFF
                 else:
                     # only single MSB in the last column
-                    lit_lights[row][i] = 0xFF000000
+                    if instr["action"] == "on":
+                        lit_lights[row][i] = 0xFF000000
+                    elif instr["action"] == "off":
+                        lit_lights[row][i] = 0x00000000
+                    elif instr["action"] == "toggle":
+                        lit_lights[row][i] ^= 0xFF000000
     lit_light_sum = 0
     for row in lit_lights:
         for cell in row:
@@ -139,10 +152,10 @@ def fpga_user_logic(file: Path) -> int:
 
 def main() -> int:
     os.chdir(Path(__file__).resolve().parent)
-    file = "./input.txt" if len(sys.argv) < 2 else sys.argv[1]
+    file = "./test.txt" if len(sys.argv) < 2 else sys.argv[1]
     print(f"Contents {file=}")
     print(f"Result: {user_logic(file=Path(file))}")
-    # print(f"FPGA-style impl result: {fpga_user_logic(file=Path(file))}")
+    print(f"FPGA-style impl result: {fpga_user_logic(file=Path(file))}")
 
     return 0
 

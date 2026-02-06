@@ -118,3 +118,22 @@ BRAM on Xilinx's 7-series support different port configurations, from 32K single
 | 512 x 72  | 1984                     |
 
 The most efficient configurations are the two with the largest data width, however the 72-bit wide data requires quite more muxing logic for implementing bit-masking operations. This leaves me with the 1K x 32 configuration. Reflecting this choice in the Python script requires using a two-dimensional array containing cells of 32 bits, the last cell having its LSB bits unused.
+
+I hit a snag with the logic updating the lit lights array. It turns out that I was bit by a shallow copy mistake:
+
+```py
+# shallow copy
+lit_lights = [[0x00000000] * COLS] * LIGHT_GRID_SIZE[1]
+
+# deep copy
+lit_lights = [[0x00000000] * COLS for _ in range(LIGHT_GRID_SIZE[1])]
+```
+
+Instead of trying to make sense of this situation, simply checking the `id` of two rows at difference index would have indicated my obvious mistake:
+
+```py
+id(lit_lights[0])
+139884236147648
+id(lit_lights[1])
+139884236147648
+```
