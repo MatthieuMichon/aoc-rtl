@@ -10,7 +10,7 @@ Status:
 | Simulation: Verilator      | :white_check_mark: Ok |
 | Simulation: Vivado Xsim    | :white_check_mark: Ok |
 | Synthesis: Vivado Zynq7    | :white_check_mark: Ok |
-| On-board: Zynq7            | TBD |
+| On-board: Zynq7            | :white_check_mark: Ok |
 
 # Lessons Learnt
 

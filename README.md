@@ -157,6 +157,7 @@ Figured I shall start from the ground up.
 | [4.1](15/4-1/)   | :yellow_circle: MD5 seriously?! :monocle_face: | :yellow_circle: Initialy got a 78-level deep timing path :upside_down_face: | :yellow_circle: Beware of *Synth 8-87* | Had a lot of fun with this one :upside_down_face: |
 | [4.2](15/4-2/)   | :green_circle: Superscalar version of the above | :green_circle: FPGA is fully packed | :large_blue_circle: Forgot changing to six leading zeroes | Used a free-running clock `cfgclk` for faster processing  |
 | [5.1](15/5-1/)   | :large_blue_circle: A breeze compared to the previous puzzles | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box | Straightforward |
+| [5.2](15/5-2/)   | :green_circle: Although non-trivial, was easy to implement | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box | An *off by one* error initially slept in the RTL design |
 
 ## Symbology
 
