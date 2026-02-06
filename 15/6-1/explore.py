@@ -111,9 +111,30 @@ def dump_lit_lights(lit_lights: dict) -> None:
 # FPGA Friendly Implementation -------------------------------------------------
 
 
-def fpga_user_logic(file: Path) -> int:
+WORD_WIDTH = 32
+COLS = LIGHT_GRID_SIZE[0] // WORD_WIDTH + 1
 
-    return 0
+
+def fpga_user_logic(file: Path) -> int:
+    lit_lights = [[0x00000000] * COLS] * LIGHT_GRID_SIZE[1]
+    instructions = list(decode_inputs(file))
+    for i, instr in enumerate(instructions):
+        for row in range(instr["y0"], instr["y1"] + 1):
+            start_col = instr["x0"] // WORD_WIDTH
+            end_col = instr["x1"] // WORD_WIDTH
+            for i, ram_word in enumerate(lit_lights[row]):
+                if (i < start_col) or (i > end_col):
+                    continue
+                if i != COLS - 1:
+                    lit_lights[row][i] = 0xFFFFFFFF
+                else:
+                    # only single MSB in the last column
+                    lit_lights[row][i] = 0xFF000000
+    lit_light_sum = 0
+    for row in lit_lights:
+        for cell in row:
+            lit_light_sum += cell.bit_count()
+    return lit_light_sum
 
 
 def main() -> int:
@@ -121,7 +142,7 @@ def main() -> int:
     file = "./input.txt" if len(sys.argv) < 2 else sys.argv[1]
     print(f"Contents {file=}")
     print(f"Result: {user_logic(file=Path(file))}")
-    print(f"FPGA-style impl result: {fpga_user_logic(file=Path(file))}")
+    # print(f"FPGA-style impl result: {fpga_user_logic(file=Path(file))}")
 
     return 0
 
