@@ -8,6 +8,7 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
+from pickletools import stackslice
 from typing import Any, Iterator
 
 from PIL import Image
@@ -48,7 +49,7 @@ def user_logic(file: Path) -> int:
                     lit_lights[(x, y)] = (False, i)
                 elif "toggle" == instr["action"]:
                     lit_lights[(x, y)] = (not lit_lights.get((x, y), [False])[0], i)
-    dump_lit_lights(lit_lights)
+    dump_lit_lights(lit_lights, len(instructions))
     return sum(v[0] for v in lit_lights.values())
 
 
@@ -94,18 +95,17 @@ def explore(instructions: list) -> None:
         print(f" - {action} average area: {avg:.0f}")
 
 
-def dump_lit_lights(lit_lights: dict) -> None:
+def dump_lit_lights(lit_lights: dict, instruction_length: int) -> None:
     pixels_img = Image.new("1", LIGHT_GRID_SIZE, 0)
     updates_img = Image.new("RGB", LIGHT_GRID_SIZE, 0x000000)
     pixels = pixels_img.load()
     updates = updates_img.load()
-    total_instructions = len(lit_lights)
     for (x, y), (is_on, depth) in lit_lights.items():
         pixels[x, y] = 1 if is_on else 0
         updates[x, y] = (
-            int(depth * 255 / total_instructions) << 16
+            int(depth * 255 / instruction_length) << 16
             if is_on
-            else int(depth * 255 / total_instructions)
+            else int(depth * 255 / instruction_length)
         )
     pixels_img.save("lit_lights.png")
     updates_img.save("light_updates.png")
@@ -121,28 +121,32 @@ COLS = LIGHT_GRID_SIZE[0] // WORD_WIDTH + 1
 def fpga_user_logic(file: Path) -> int:
     lit_lights = [[0x00000000] * COLS for _ in range(LIGHT_GRID_SIZE[1])]
     instructions = list(decode_inputs(file))
-    for i, instr in enumerate(instructions):
+    for instr in instructions:
         for row in range(instr["y0"], instr["y1"] + 1):
             start_col = instr["x0"] // WORD_WIDTH
             end_col = instr["x1"] // WORD_WIDTH
             for i, ram_word in enumerate(lit_lights[row]):
+                # Loop over all BRAM instances
                 if (i < start_col) or (i > end_col):
                     continue
-                if i != COLS - 1:
-                    if instr["action"] == "on":
-                        lit_lights[row][i] = 0xFFFFFFFF
-                    elif instr["action"] == "off":
-                        lit_lights[row][i] = 0x00000000
-                    elif instr["action"] == "toggle":
-                        lit_lights[row][i] ^= 0xFFFFFFFF
+                if i == start_col:
+                    start_bit = WORD_WIDTH - 1 - (instr["x0"] % WORD_WIDTH)
                 else:
-                    # only single MSB in the last column
-                    if instr["action"] == "on":
-                        lit_lights[row][i] = 0xFF000000
-                    elif instr["action"] == "off":
-                        lit_lights[row][i] = 0x00000000
-                    elif instr["action"] == "toggle":
-                        lit_lights[row][i] ^= 0xFF000000
+                    start_bit = WORD_WIDTH - 1
+                if i < end_col:
+                    end_bit = 0
+                else:
+                    end_bit = WORD_WIDTH - 1 - (instr["x1"] % WORD_WIDTH)
+                # bit mask calculation, a true minefield of "off by one" errors
+                bit_count = start_bit - end_bit + 1
+                bit_mask = ((1 << bit_count) - 1) << end_bit
+
+                if instr["action"] == "on":
+                    lit_lights[row][i] |= bit_mask
+                elif instr["action"] == "off":
+                    lit_lights[row][i] &= ~bit_mask
+                elif instr["action"] == "toggle":
+                    lit_lights[row][i] ^= bit_mask
     lit_light_sum = 0
     for row in lit_lights:
         for cell in row:
@@ -152,7 +156,7 @@ def fpga_user_logic(file: Path) -> int:
 
 def main() -> int:
     os.chdir(Path(__file__).resolve().parent)
-    file = "./test.txt" if len(sys.argv) < 2 else sys.argv[1]
+    file = "./input.txt" if len(sys.argv) < 2 else sys.argv[1]
     print(f"Contents {file=}")
     print(f"Result: {user_logic(file=Path(file))}")
     print(f"FPGA-style impl result: {fpga_user_logic(file=Path(file))}")

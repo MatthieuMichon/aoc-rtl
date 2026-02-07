@@ -5,7 +5,7 @@ Status:
 | Test                       | Status                |
 |----------------------------|-----------------------|
 | Reference: Python script   | :white_check_mark: Ok |
-| RTL Concept: Python script | TBD |
+| RTL Concept: Python script | :white_check_mark: Ok |
 | Simulation: Icarus Verilog | TBD |
 | Simulation: Verilator      | TBD |
 | Simulation: Vivado Xsim    | TBD |
@@ -105,21 +105,77 @@ For all these reasons, I believe that the approach beginning from the start is t
 
 ## RTL Design Implementation
 
-BRAM on Xilinx's 7-series support different port configurations, from 32K single bit to 512 words of 72 bits.
+BRAM on Xilinx's 7-series supports a number of different port configurations, ranging from 32K single bit to 512 words of 72 bits.
 
-| BRAM Mode | Max Simultaneous Updates |
-|-----------|--------------------------|
-| 32K x 1   | 31                       |
-| 16K x 2   | 62                       |
-| 8K x 4    | 124                      |
-| 4K x 8    | 248                      |
-| 2K x 16   | 496                      |
-| 1K x 32   | 992                      |
-| 512 x 72  | 1984                     |
+| BRAM Mode | Min Instances | Total Size |
+|-----------|---------------|------------|
+| 32K x 1   | 1000          | 32 Mb      |
+| 16K x 2   | 500           | 16 Mb      |
+| 8K x 4    | 250           | 8 Mb       |
+| 4K x 8    | 125           | 4 Mb       |
+| 2K x 16   | 63            | 2 Mb       |
+| 1K x 32   | 32            | 1 Mb       |
+| 512 x 72  | 28            | ~1 Mb      |
 
-The most efficient configurations are the two with the largest data width, however the 72-bit wide data requires quite more muxing logic for implementing bit-masking operations. This leaves me with the 1K x 32 configuration. Reflecting this choice in the Python script requires using a two-dimensional array containing cells of 32 bits, the last cell having its LSB bits unused.
+The usecase corresponding to this puzzle is updating all 1000 bits in a single clock cycle for design complexity reasons while avoiding wasting unused bits.
 
-I hit a snag with the logic updating the lit lights array. It turns out that I was bit by a shallow copy mistake:
+Taking the extremes, the single-bit 32K deep requires 1000 instances resulting in a total of 32Mbit which worse then being extremely wasteful doesn't even fit in the Zynq-7020. Conversely, the 72-bit wide 512 deep requires a 72 bit masking operations.
+
+I believe the sweet spot is the 1K x 32 configuration, which offers no wasted capacity and much simpler address decoding logic than the 72-bit wide configuration. The Python implementation of the FPGA logic is fairly simple. It uses a three level deep iterations:
+
+- Iteration per-instruction
+- Iteration per row
+- Iteration per memory instance
+
+```py
+    for instr in instructions:
+        for row in range(instr["y0"], instr["y1"] + 1):
+            start_col = instr["x0"] // WORD_WIDTH
+            end_col = instr["x1"] // WORD_WIDTH
+            for i, ram_word in enumerate(lit_lights[row]):
+                # Loop over all BRAM instances
+```
+
+The inner execution flow depdends if the current BRAM is affected or not by the instruction and in this case if so is it in an edge case or not:
+
+```py
+                if (i < start_col) or (i > end_col):
+                    continue
+                if i == start_col:
+                    start_bit = WORD_WIDTH - 1 - (instr["x0"] % WORD_WIDTH)
+                else:
+                    start_bit = WORD_WIDTH - 1
+                if i < end_col:
+                    end_bit = 0
+                else:
+                    end_bit = WORD_WIDTH - 1 - (instr["x1"] % WORD_WIDTH)
+```
+
+The remainder of the inner loop is the execution of the instruction on the affected data word, which is some simple boolean logic:
+
+```py
+                # bit mask calculation, a true minefield of "off by one" errors
+                bit_count = start_bit - end_bit + 1
+                bit_mask = ((1 << bit_count) - 1) << end_bit
+                if instr["action"] == "on":
+                    lit_lights[row][i] |= bit_mask
+                elif instr["action"] == "off":
+                    lit_lights[row][i] &= ~bit_mask
+                elif instr["action"] == "toggle":
+                    lit_lights[row][i] ^= bit_mask
+```
+
+The final operation on the FPGA algorithm is the calculation of all the lit lights:
+
+```py
+    lit_light_sum = 0
+    for row in lit_lights:
+        for cell in row:
+            lit_light_sum += cell.bit_count()
+    return lit_light_sum
+```
+
+For reference, I hit a snag with the logic updating the lit lights array. It turns out that I was bit by a shallow copy mistake:
 
 ```py
 # shallow copy
@@ -136,4 +192,11 @@ id(lit_lights[0])
 139884236147648
 id(lit_lights[1])
 139884236147648
+```
+
+Having fixed this issue, I obtain perfect results:
+
+```
+Result: 569999
+FPGA-style impl result: 569999
 ```

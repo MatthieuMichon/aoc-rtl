@@ -1,2 +1,1 @@
-turn on 0,0 through 63,63
-turn off 0,0 through 31,31
+turn on 24,0 through 40,0
