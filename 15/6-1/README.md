@@ -200,3 +200,60 @@ Having fixed this issue, I obtain perfect results:
 Result: 569999
 FPGA-style impl result: 569999
 ```
+
+# RTL Implementation
+
+## First Iteration: Input Normalization
+
+This step was overglossed in the Python implementation but is essential non the less.
+
+Instructions impacting a very large number of elements (several dozens of thousands or more) cannot be handled before the following instruction lands. The only way around this is to store all the instructions in a buffer while instructions are processed.
+
+Sizing the memory is the obvious first step. Each instruction contains the following fields:
+
+- `action`: The requested operation
+  - One out of three choices (`turn on`, `turn off`, or `toggle`)
+- `start_row`: The starting row of the instruction
+  - A decimal number in ASCII from one to three digits long
+- `start_col`: The starting column of the instruction
+  - A decimal number in ASCII from one to three digits long
+- `end_row`: The ending row of the instruction
+  - A decimal number in ASCII from one to three digits long
+- `end_col`: The ending column of the instruction
+  - A decimal number in ASCII from one to three digits long
+
+The exact formatting of the input is as follows:
+
+```
+<action> <start_row>,<start_col> thorugh <end_row>,<end_col>
+```
+
+The decoding of the action is simple since it requires matching a sequence of two characters:
+
+- turn **on** yields `0b11`
+- turn **of**f yields `0b00`
+- **to**ggle yields `0b10`
+
+| Action   | Binary |
+|----------|--------|
+| turn on  | `0b11` |
+| turn off | `0b00` |
+| toggle   | `0b10` |
+
+For the next step, there is nothing imposing the order between rows and columns. I decided to go with the row as major order since the implementation iterates over rows first.
+
+The ASCII number to binary conversion reuses the work done in past puzzles so nothing new here. The main difference is that four binary values must be presented on the output interface.
+
+| Output Value | Bits |
+|--------------|------|
+| Last         |  1   |
+| Valid        |  1   |
+| Action       |  2   |
+| Start Row    | 10   |
+| Start Col    | 10   |
+| End Row      | 10   |
+| End Col      | 10   |
+
+I'm also provisionning two extra bits for storing a delayed signal signifiying the entry is valid and an other informing signifying the last entry. The delayed signal greatly simplifies the implementation of a dual clock design which I believe is likely to be required.
+
+The puzzle asks for the number of lit lights out of a 1000x1000 grid. The worst case answer being greater then 2^16 but smaller then 2^24, thus the result width is set to 24.
