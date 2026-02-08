@@ -254,6 +254,70 @@ The ASCII number to binary conversion reuses the work done in past puzzles so no
 | End Row      | 10   |
 | End Col      | 10   |
 
+The schematic of the line decoder is quite busy:
+
+![Line Decoder Schematic](line_decoder_yosys.png)
+
+Vivado provides the following break-down. Although there are quite a lot going on, nothing stands out:
+
+```
+Module line_decoder 
+Detailed RTL Component Info : 
++---Adders : 
+	   3 Input   10 Bit       Adders := 1     
+	   2 Input   10 Bit       Adders := 1     
++---Registers : 
+	               10 Bit    Registers := 5     
+	                8 Bit    Registers := 1     
+	                2 Bit    Registers := 1     
+	                1 Bit    Registers := 2     
++---Multipliers : 
+	               4x10  Multipliers := 1     
++---Muxes : 
+	   2 Input   10 Bit        Muxes := 1     
+	   2 Input    2 Bit        Muxes := 4     
+	   4 Input    2 Bit        Muxes := 2     
+	   2 Input    1 Bit        Muxes := 5     
+	   3 Input    1 Bit        Muxes := 2     
+	   4 Input    1 Bit        Muxes := 4     
+```
+
 I'm also provisionning two extra bits for storing a delayed signal signifiying the entry is valid and an other informing signifying the last entry. The delayed signal greatly simplifies the implementation of a dual clock design which I believe is likely to be required.
 
 The puzzle asks for the number of lit lights out of a 1000x1000 grid. The worst case answer being greater then 2^16 but smaller then 2^24, thus the result width is set to 24.
+
+### Design Components
+
+| Module                                          | Description                      | Complexity          | Thoughts       | Remarks  |
+|-------------------------------------------------|----------------------------------|---------------------|----------------|----------|
+| [`user_logic_tb`](user_logic_tb.sv)             | Testbench                        | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+| [`user_logic`](user_logic.sv)                   | Logic top-level                  | :large_blue_circle: | :kissing_smiling_eyes: Wire harness and trivial logic | Had to change reset logic |
+| [`tap_decoder`](tap_decoder.sv)                 | JTAG TAP deserializer            | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+| [`line_decoder`](line_decoder.sv)               | Converts into instruction array  | :green_circle:      | :slightly_smiling_face: Several moving parts | Multiple fields to decode and keep track of |
+| [`tap_encoder`](tap_encoder.sv)                 | JTAG TAP serializer              | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+
+### Resource Usage
+
+The user logic module contains a `$countones` applied to the instruction array data to avoid it being pruned during optimization. This is refleted in the by module breakdown.
+
+|      Instance      |    Module    | Total LUTs | Logic LUTs | LUTRAMs | SRLs | FFs | RAMB36 | RAMB18 | DSP Blocks |
+|--------------------|--------------|------------|------------|---------|------|-----|--------|--------|------------|
+| shell              |        (top) |        130 |        130 |       0 |    0 | 150 |      0 |      0 |          0 |
+|   (shell)          |        (top) |          0 |          0 |       0 |    0 |   0 |      0 |      0 |          0 |
+|   user_logic_i     |   user_logic |        130 |        130 |       0 |    0 | 150 |      0 |      0 |          0 |
+|     (user_logic_i) |   user_logic |         65 |         65 |       0 |    0 |  25 |      0 |      0 |          0 |
+|     line_decoder_i | line_decoder |         45 |         45 |       0 |    0 |  64 |      0 |      0 |          0 |
+|     tap_decoder_i  |  tap_decoder |          7 |          7 |       0 |    0 |  13 |      0 |      0 |          0 |
+|     tap_encoder_i  |  tap_encoder |         13 |         13 |       0 |    0 |  48 |      0 |      0 |          0 |
+
+| Ref Name | Used | Functional Category |
+|----------|------|---------------------|
+| FDRE     |  150 |        Flop & Latch |
+| LUT3     |   67 |                 LUT |
+| LUT6     |   40 |                 LUT |
+| CARRY4   |   30 |          CarryLogic |
+| LUT2     |   23 |                 LUT |
+| LUT5     |   19 |                 LUT |
+| LUT4     |   18 |                 LUT |
+| BUFG     |    1 |               Clock |
+| BSCANE2  |    1 |              Others |

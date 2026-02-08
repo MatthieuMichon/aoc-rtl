@@ -22,7 +22,6 @@ localparam int RESULT_WIDTH = 24;
 localparam int UPSTREAM_BYPASS_BITS = 1; // ARM DAP controller in BYPASS mode
 localparam int INBOUND_DATA_WIDTH = $bits(byte);
 localparam int INSTRUCTION_WIDTH = 2 + 4 * 10 + 2;
-localparam int CDC_SYNC_STAGES = 3;
 
 typedef logic [INBOUND_DATA_WIDTH-1:0] inbound_data_t;
 typedef logic [INSTRUCTION_WIDTH-1:0] instr_t;
@@ -50,8 +49,11 @@ tap_decoder #(
         .inbound_data(inbound_data)
 );
 
+logic reset;
 logic end_of_file, normalized_instr_valid;
 instr_t normalized_instr_data;
+
+assign reset = test_logic_reset || !ir_is_user;
 
 line_decoder #(
     .INBOUND_DATA_WIDTH(INBOUND_DATA_WIDTH),
@@ -60,7 +62,6 @@ line_decoder #(
     .clk(tck),
     .reset(reset),
     // Deserialized Data
-        .inbound_alignment_error(inbound_alignment_error),
         .inbound_valid(inbound_valid),
         .inbound_data(inbound_data),
     // Normalized Data
@@ -73,9 +74,9 @@ logic outbound_valid_tck;
 result_t outbound_data = '0;
 
 always_ff @(posedge tck) begin
-    end_of_file <= normalized_instr_valid;
+    outbound_valid_tck <= end_of_file;
     if (normalized_instr_valid) begin
-        outbound_data <= outbound_data + 1'b1;
+        outbound_data <= outbound_data + $countones(normalized_instr_data);
     end
 end
 
@@ -96,7 +97,9 @@ tap_encoder #(
 
 wire _unused_ok = 1'b0 && &{1'b0,
     run_test_idle,
+    conf_clk,
     inbound_alignment_error,
+    normalized_instr_data,
     1'b0};
 
 endmodule
