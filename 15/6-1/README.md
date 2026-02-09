@@ -249,10 +249,13 @@ The ASCII number to binary conversion reuses the work done in past puzzles so no
 | Last         |  1   |
 | Valid        |  1   |
 | Action       |  2   |
-| Start Row    | 10   |
-| Start Col    | 10   |
-| End Row      | 10   |
-| End Col      | 10   |
+| Start Row    | 12   |
+| Start Col    | 12   |
+| End Row      | 12   |
+| End Col      | 12   |
+
+> [!NOTE]
+> Although position values could fit using 10 bits, I increased their width to 12 bits for improved QoL, as using multiples of four makes inspection of the generated values much easier. The following step with regards to memory usage is located at 72 bits, thus there are no real downsides using a couple more bits.
 
 The schematic of the line decoder is quite busy:
 
@@ -264,17 +267,17 @@ Vivado provides the following break-down. Although there are quite a lot going o
 Module line_decoder 
 Detailed RTL Component Info : 
 +---Adders : 
-	   3 Input   10 Bit       Adders := 1     
-	   2 Input   10 Bit       Adders := 1     
+	   3 Input   12 Bit       Adders := 1     
+	   2 Input   12 Bit       Adders := 1     
 +---Registers : 
-	               10 Bit    Registers := 5     
+	               12 Bit    Registers := 5     
 	                8 Bit    Registers := 1     
 	                2 Bit    Registers := 1     
 	                1 Bit    Registers := 2     
 +---Multipliers : 
-	               4x10  Multipliers := 1     
+	               4x12  Multipliers := 1     
 +---Muxes : 
-	   2 Input   10 Bit        Muxes := 1     
+	   2 Input   12 Bit        Muxes := 1     
 	   2 Input    2 Bit        Muxes := 4     
 	   4 Input    2 Bit        Muxes := 2     
 	   2 Input    1 Bit        Muxes := 5     
@@ -302,22 +305,26 @@ The user logic module contains a `$countones` applied to the instruction array d
 
 |      Instance      |    Module    | Total LUTs | Logic LUTs | LUTRAMs | SRLs | FFs | RAMB36 | RAMB18 | DSP Blocks |
 |--------------------|--------------|------------|------------|---------|------|-----|--------|--------|------------|
-| shell              |        (top) |        130 |        130 |       0 |    0 | 150 |      0 |      0 |          0 |
+| shell              |        (top) |        147 |        147 |       0 |    0 | 160 |      0 |      0 |          0 |
 |   (shell)          |        (top) |          0 |          0 |       0 |    0 |   0 |      0 |      0 |          0 |
-|   user_logic_i     |   user_logic |        130 |        130 |       0 |    0 | 150 |      0 |      0 |          0 |
-|     (user_logic_i) |   user_logic |         65 |         65 |       0 |    0 |  25 |      0 |      0 |          0 |
-|     line_decoder_i | line_decoder |         45 |         45 |       0 |    0 |  64 |      0 |      0 |          0 |
+|   user_logic_i     |   user_logic |        147 |        147 |       0 |    0 | 160 |      0 |      0 |          0 |
+|     (user_logic_i) |   user_logic |         74 |         74 |       0 |    0 |  25 |      0 |      0 |          0 |
+|     line_decoder_i | line_decoder |         53 |         53 |       0 |    0 |  74 |      0 |      0 |          0 |
 |     tap_decoder_i  |  tap_decoder |          7 |          7 |       0 |    0 |  13 |      0 |      0 |          0 |
 |     tap_encoder_i  |  tap_encoder |         13 |         13 |       0 |    0 |  48 |      0 |      0 |          0 |
 
 | Ref Name | Used | Functional Category |
 |----------|------|---------------------|
-| FDRE     |  150 |        Flop & Latch |
-| LUT3     |   67 |                 LUT |
-| LUT6     |   40 |                 LUT |
+| FDRE     |  160 |        Flop & Latch |
+| LUT3     |   77 |                 LUT |
+| LUT6     |   41 |                 LUT |
+| LUT2     |   31 |                 LUT |
+| LUT5     |   30 |                 LUT |
 | CARRY4   |   30 |          CarryLogic |
-| LUT2     |   23 |                 LUT |
-| LUT5     |   19 |                 LUT |
-| LUT4     |   18 |                 LUT |
+| LUT4     |   16 |                 LUT |
 | BUFG     |    1 |               Clock |
 | BSCANE2  |    1 |              Others |
+
+## Second Iteration: Instruction Buffer
+
+Instructions are received every 184 to 272 TCK clock cycles, depending on their length. The rate at which the downstream logic is able to process these instructions depends on the number of rows affected by each instruction and the request operation and can vary across three orders of magnitude, exceeding 1000 clock cycles. Thus, even using a faster clock the downstream is not guaranteed to keep up with the inbound instruction rate. An instruction buffer is therefore mandatory.

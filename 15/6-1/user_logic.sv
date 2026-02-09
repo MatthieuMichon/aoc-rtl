@@ -21,7 +21,7 @@ module user_logic (
 localparam int RESULT_WIDTH = 24;
 localparam int UPSTREAM_BYPASS_BITS = 1; // ARM DAP controller in BYPASS mode
 localparam int INBOUND_DATA_WIDTH = $bits(byte);
-localparam int INSTRUCTION_WIDTH = 2 + 4 * 10 + 2;
+localparam int INSTRUCTION_WIDTH = 2 + 4 * 12 + 2;
 
 typedef logic [INBOUND_DATA_WIDTH-1:0] inbound_data_t;
 typedef logic [INSTRUCTION_WIDTH-1:0] instr_t;

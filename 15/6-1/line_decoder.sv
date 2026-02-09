@@ -17,7 +17,7 @@ module line_decoder #(
 );
 
 localparam int OPERATION_WIDTH = 2;
-localparam int POSITION_WIDTH = 10;
+localparam int POSITION_WIDTH = 12;
 
 typedef logic [INBOUND_DATA_WIDTH-1:0] inbound_data_t;
 typedef logic [OPERATION_WIDTH-1:0] operation_t;
@@ -123,7 +123,9 @@ always_comb begin: state_logic
 end
 
 always_ff @(posedge clk) begin: decimal_accumulator
-    if (inbound_valid) begin
+    if (reset) begin
+        position <= '0;
+    end else if (inbound_valid) begin
         if (!is_digit(prev_char) && is_digit(inbound_data)) begin: first_digit
             position <= POSITION_WIDTH'(inbound_data - ZERO_CHAR);
         end else if (is_digit(prev_char) && is_digit(inbound_data)) begin: next_digit
