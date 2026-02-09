@@ -174,7 +174,7 @@ always_ff @(posedge clk) begin: output_ctrl
     end
 end
 
-assign last = end_of_file;
+assign last = (inbound_data == NULL_CHAR);
 assign normalized_instr_data = {last, 1'b1, operation, start_row, start_col, end_row, end_col};
 
 endmodule

@@ -21,6 +21,7 @@ module user_logic (
 localparam int RESULT_WIDTH = 24;
 localparam int UPSTREAM_BYPASS_BITS = 1; // ARM DAP controller in BYPASS mode
 localparam int INBOUND_DATA_WIDTH = $bits(byte);
+localparam int CDC_SYNC_STAGES = 3;
 localparam int INSTRUCTION_WIDTH = 2 + 4 * 12 + 2;
 
 typedef logic [INBOUND_DATA_WIDTH-1:0] inbound_data_t;
@@ -70,22 +71,64 @@ line_decoder #(
         .normalized_instr_data(normalized_instr_data)
 );
 
+logic [CDC_SYNC_STAGES-1:0] reset_cclk_shift_reg = '0;
+logic reset_cclk;
+logic rd_last_cclk, rd_ready_cclk, rd_valid_cclk;
+instr_t instr_data_cclk;
+
+always_ff @(posedge conf_clk) begin
+    reset_cclk_shift_reg <= CDC_SYNC_STAGES'({reset_cclk_shift_reg, reset});
+end
+assign reset_cclk = reset_cclk_shift_reg[CDC_SYNC_STAGES-1];
+
+instruction_buffer #(
+    .INSTRUCTION_WIDTH(INSTRUCTION_WIDTH)
+) instruction_buffer_i (
+    // Port A: Write Port
+        .wr_clk(tck),
+        .wr_valid(normalized_instr_valid),
+        .wr_data(normalized_instr_data),
+    // Port B: Read Port
+        .rd_clk(conf_clk),
+        .rd_last(rd_last_cclk),
+        .rd_ready(rd_ready_cclk),
+        .rd_valid(rd_valid_cclk),
+        .rd_data(instr_data_cclk)
+);
+
+logic count_done_cclk;
+result_t count_value_cclk;
+
+light_display #(
+    .INSTRUCTION_WIDTH(INSTRUCTION_WIDTH),
+    .RESULT_WIDTH(RESULT_WIDTH)
+) light_display_i (
+    .clk(conf_clk),
+    .reset(reset_cclk),
+    // Instruction Data
+        .instr_last(rd_last_cclk),
+        .instr_ready(rd_ready_cclk),
+        .instr_valid(rd_valid_cclk),
+        .instr_data(instr_data_cclk),
+    // Final Lit Lights
+        .count_done(count_done_cclk),
+        .count_value(count_value_cclk)
+);
+
+logic [CDC_SYNC_STAGES-1:0] outbound_valid_tck_shift_reg = '0;
 logic outbound_valid_tck;
-result_t outbound_data = '0;
 
 always_ff @(posedge tck) begin
-    outbound_valid_tck <= end_of_file;
-    if (normalized_instr_valid) begin
-        outbound_data <= outbound_data + $countones(normalized_instr_data);
-    end
+    outbound_valid_tck_shift_reg <= CDC_SYNC_STAGES'({outbound_valid_tck_shift_reg, count_done_cclk});
 end
+assign outbound_valid_tck = outbound_valid_tck_shift_reg[CDC_SYNC_STAGES-1];
 
 tap_encoder #(
     .OUTBOUND_DATA_WIDTH(RESULT_WIDTH)
 ) tap_encoder_i (
     // Deserialized Signals
         .outbound_valid(outbound_valid_tck),
-        .outbound_data(outbound_data),
+        .outbound_data(count_value_cclk), // valid signal delayed
     // JTAG TAP Controller Signals
         .tck(tck),
         .test_logic_reset(test_logic_reset),
@@ -99,7 +142,8 @@ wire _unused_ok = 1'b0 && &{1'b0,
     run_test_idle,
     conf_clk,
     inbound_alignment_error,
-    normalized_instr_data,
+    end_of_file,
+    instr_data_cclk,
     1'b0};
 
 endmodule

@@ -328,3 +328,16 @@ The user logic module contains a `$countones` applied to the instruction array d
 ## Second Iteration: Instruction Buffer
 
 Instructions are received every 184 to 272 TCK clock cycles, depending on their length. The rate at which the downstream logic is able to process these instructions depends on the number of rows affected by each instruction and the request operation and can vary across three orders of magnitude, exceeding 1000 clock cycles. Thus, even using a faster clock the downstream is not guaranteed to keep up with the inbound instruction rate. An instruction buffer is therefore mandatory.
+
+I'm glad that Vivado hadn't any trouble picking up the buffer.
+
+| Memory Name                                     | Primitive | Port 1 Dimension / Map | Port 2 Dimension / Map | Port A Type | Port A Requirement (ns) | Port B Type | Port B Requirement (ns) |
+|-------------------------------------------------|-----------|------------------------|------------------------|-------------|-------------------------|-------------|-------------------------|
+| user_logic_i/instruction_buffer_i/dc_dpram      |           | 512x52                 | 512x52                 |             |                         |             |                         |
+|  user_logic_i/instruction_buffer_i/dc_dpram_reg | RAMB36E1  |  B:B:512x51            |  A:A:512x51            |        Read |                    15.0 |       Write |                    20.0 |
+
+## Third Iteration: Low-effort CDC and Flow Control Check
+
+I expect a significant computational effort for this puzzle, and would rather do the required clock and reset plumbing for supporting dual clock operations right from the start.
+
+Just like with the puzzle of day 4 part 2, I use a crude CDC approach by simply delaying the strobe signal by a couple of clock cycles. The data having time to settle long before being captured is sufficient for my needs. On the ingress side the CDC barrier is implemented by the dual clock DPRAM and also a single cycle delay ensuring the `valid` bit wasn't caught in advance with the rest of the bits arriving at the following clock cycle.
