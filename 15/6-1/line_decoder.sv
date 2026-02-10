@@ -112,7 +112,7 @@ always_comb begin: state_logic
             end
         end
         CAPTURE_END_COL: begin
-            if (inbound_valid && inbound_data == LF_CHAR) begin
+            if (normalized_instr_valid) begin
                 next_state = CAPTURE_START_ROW;
             end else begin
                 next_state = CAPTURE_END_COL;
@@ -141,7 +141,7 @@ always_ff @(posedge clk) begin: position_fan_out
         end_row <= '0;
         end_col <= '0;
     end else if (inbound_valid) begin
-        unique case (next_state)
+        unique case (current_state)
             CAPTURE_START_ROW: begin
                 start_row <= position;
             end

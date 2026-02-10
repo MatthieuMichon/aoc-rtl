@@ -24,8 +24,9 @@ typedef logic [INSTRUCTION_WIDTH-1:0] data_t;
 typedef logic [ADDR_WIDTH-1:0] addr_t;
 
 data_t dc_dpram [2**ADDR_WIDTH-1:0];
-addr_t wr_ptr = '0, rd_ptr = '0;
+addr_t wr_ptr = '0, rd_ptr = '0, rd_ptr_reg = '0;
 data_t rd_data_reg;
+logic rd_data_valid, rd_data_waiting = 1'b0;
 
 always_ff @(posedge wr_clk) begin: wr_ptr_self_incr
     if (wr_valid) begin
@@ -50,16 +51,37 @@ always_ff @(posedge rd_clk) begin: port_b_rd_clk
     rd_data <= dc_dpram[rd_ptr];
 end
 
-always_ff @(posedge rd_clk) begin: read_flow_ctrl
-    if (rd_ready && !rd_valid && rd_data_reg[INSTRUCTION_VALID_BIT] && rd_data[INSTRUCTION_VALID_BIT]) begin
-        rd_ptr <= rd_ptr + 1'b1;
-        rd_valid <= 1'b1;
+assign rd_data_valid = rd_data_reg[INSTRUCTION_VALID_BIT];
+
+always_ff @(posedge rd_clk) begin: read_data_reg
+    if ((rd_data_reg == rd_data) && rd_data_valid) begin: rd_data_stable
+        if (!(rd_ready && rd_valid)) begin
+            rd_data_waiting <= (rd_ptr_reg == rd_ptr);
+        end else begin: transaction_completed
+            rd_data_waiting <= 1'b0;
+        end
     end else begin
-        rd_valid <= 1'b0;
+        rd_data_waiting <= 1'b0;
     end
     rd_data_reg <= rd_data;
 end
 
-assign rd_last = rd_data[INSTRUCTION_WIDTH-1];
+always_ff @(posedge rd_clk) begin: read_flow_ctrl
+    if (rd_ready && rd_valid) begin
+        rd_ptr <= rd_ptr + 1'b1;
+        rd_valid <= 1'b0;
+    end else if (rd_data_waiting) begin
+        rd_valid <= 1'b1;
+    end else begin
+        rd_valid <= 1'b0;
+    end
+    rd_ptr_reg <= rd_ptr;
+end
+
+assign rd_last = rd_data_reg[INSTRUCTION_WIDTH-1];
+
+wire _unused_ok = 1'b0 && &{1'b0,
+    rd_data_reg,
+    1'b0};
 
 endmodule
