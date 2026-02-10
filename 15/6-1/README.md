@@ -329,6 +329,8 @@ The user logic module contains a `$countones` applied to the instruction array d
 
 Instructions are received every 184 to 272 TCK clock cycles, depending on their length. The rate at which the downstream logic is able to process these instructions depends on the number of rows affected by each instruction and the request operation and can vary across three orders of magnitude, exceeding 1000 clock cycles. Thus, even using a faster clock the downstream is not guaranteed to keep up with the inbound instruction rate. An instruction buffer is therefore mandatory.
 
+![Instruction Buffer](instruction_buffer_yosys.png)
+
 I'm glad that Vivado hadn't any trouble picking up the buffer.
 
 | Memory Name                                     | Primitive | Port 1 Dimension / Map | Port 2 Dimension / Map | Port A Type | Port A Requirement (ns) | Port B Type | Port B Requirement (ns) |
@@ -341,3 +343,75 @@ I'm glad that Vivado hadn't any trouble picking up the buffer.
 I expect a significant computational effort for this puzzle, and would rather do the required clock and reset plumbing for supporting dual clock operations right from the start.
 
 Just like with the puzzle of day 4 part 2, I use a crude CDC approach by simply delaying the strobe signal by a couple of clock cycles. The data having time to settle long before being captured is sufficient for my needs. On the ingress side the CDC barrier is implemented by the dual clock DPRAM and also a single cycle delay ensuring the `valid` bit wasn't caught in advance with the rest of the bits arriving at the following clock cycle.
+
+When implementing backpressure, I tend to favor the AXI-style with zero-cycle latency. Doing so requires quite a lot more effort, however this allows seamless integration into any AXI-compliant design and being stateless (no dependencies on the prior clock cycles) and easy to verify. This requires the following implementation guidelines to be met:
+
+- A transfer only occurs when both `TVALID` and `TREADY` are asserted. Either or both can be asserted first in the same clock cycle.
+- A Transmitter is not permitted to wait until `TREADY` is asserted before asserting `TVALID`.
+- Once `TVALID` is asserted, it must remain asserted until the handshake occurs.
+- A Receiver is permitted to wait for `TVALID` to be asserted before asserting `TREADY`.
+- It is permitted that aReceiver asserts and deasserts `TREADY` without `TVALID` being asserted.
+
+My initial implementation had the transmitter waiting for the `ready` signal to be asserted before asserting `valid` which is not an compliant design since it fails the second requirement above. I reworked it ensuring it is now fully compliant, although it still has limitations not being able to operate at full line-rate (not that this matters here).
+
+Checking the resource usage, I noticed that two SRLs are used in the user logic module.
+
+|         Instance         |       Module       | Total LUTs | Logic LUTs | LUTRAMs | SRLs | FFs | RAMB36 | RAMB18 | DSP Blocks |
+|--------------------------|--------------------|------------|------------|---------|------|-----|--------|--------|------------|
+| shell                    |              (top) |        146 |        144 |       0 |    2 | 266 |      1 |      0 |          0 |
+|   (shell)                |              (top) |          0 |          0 |       0 |    0 |   0 |      0 |      0 |          0 |
+|   user_logic_i           |         user_logic |        146 |        144 |       0 |    2 | 266 |      1 |      0 |          0 |
+|     (user_logic_i)       |         user_logic |          3 |          1 |       0 |    2 |   2 |      0 |      0 |          0 |
+
+As usual the log spells it out:
+
+|Module Name | RTL Name                            | Length | Width | Reset Signal | Pull out first Reg | Pull out last Reg | SRL16E | SRLC32E | 
+|------------|-------------------------------------|--------|-------|--------------|--------------------|-------------------|--------|---------|
+|user_logic  | outbound_valid_tck_shift_reg_reg[2] | 3      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|user_logic  | reset_cclk_shift_reg_reg[2]         | 3      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+
+It turns out they were used for CDC-related shift registers. This is not considered a good practice as SRLs have poorer timing characteristics compared to FFs thus resulting in weaker MTBF rather regardless the number of stages.
+
+```diff
+-logic [CDC_SYNC_STAGES-1:0] reset_cclk_shift_reg = '0;
++(* ASYNC_REG = "TRUE" *) logic [CDC_SYNC_STAGES-1:0] reset_cclk_shift_reg = '0;
+(...)
+-logic [CDC_SYNC_STAGES-1:0] outbound_valid_tck_shift_reg = '0;
++(* ASYNC_REG = "TRUE" *) logic [CDC_SYNC_STAGES-1:0] outbound_valid_tck_shift_reg = '0;
+```
+
+Thanks to this extra attribute the SRL16 are gone.
+
+### Resource Usage
+
+Nothing worth noting.
+
+|         Instance         |       Module       | Total LUTs | Logic LUTs | LUTRAMs | SRLs | FFs | RAMB36 | RAMB18 | DSP Blocks |
+|--------------------------|--------------------|------------|------------|---------|------|-----|--------|--------|------------|
+| shell                    |              (top) |        144 |        144 |       0 |    0 | 270 |      1 |      0 |          0 |
+|   (shell)                |              (top) |          0 |          0 |       0 |    0 |   0 |      0 |      0 |          0 |
+|   user_logic_i           |         user_logic |        144 |        144 |       0 |    0 | 270 |      1 |      0 |          0 |
+|     (user_logic_i)       |         user_logic |          1 |          1 |       0 |    0 |   6 |      0 |      0 |          0 |
+|     instruction_buffer_i | instruction_buffer |         42 |         42 |       0 |    0 |  90 |      1 |      0 |          0 |
+|     light_display_i      |      light_display |         30 |         30 |       0 |    0 |  38 |      0 |      0 |          0 |
+|     line_decoder_i       |       line_decoder |         51 |         51 |       0 |    0 |  75 |      0 |      0 |          0 |
+|     tap_decoder_i        |        tap_decoder |          7 |          7 |       0 |    0 |  13 |      0 |      0 |          0 |
+|     tap_encoder_i        |        tap_encoder |         13 |         13 |       0 |    0 |  48 |      0 |      0 |          0 |
+
+Same thing here, everything is as expected.
+
+|   Ref Name   | Used | Functional Category |
+|--------------|------|---------------------|
+| FDRE         |  269 |        Flop & Latch |
+| LUT6         |   47 |                 LUT |
+| LUT2         |   42 |                 LUT |
+| LUT3         |   37 |                 LUT |
+| LUT5         |   26 |                 LUT |
+| LUT4         |   21 |                 LUT |
+| CARRY4       |   21 |          CarryLogic |
+| LUT1         |    3 |                 LUT |
+| BUFG         |    2 |               Clock |
+| USR_ACCESSE2 |    1 |              Others |
+| RAMB36E1     |    1 |        Block Memory |
+| FDSE         |    1 |        Flop & Latch |
+| BSCANE2      |    1 |              Others |

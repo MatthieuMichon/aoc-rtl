@@ -71,7 +71,7 @@ line_decoder #(
         .normalized_instr_data(normalized_instr_data)
 );
 
-logic [CDC_SYNC_STAGES-1:0] reset_cclk_shift_reg = '0;
+(* ASYNC_REG = "TRUE" *) logic [CDC_SYNC_STAGES-1:0] reset_cclk_shift_reg = '0;
 logic reset_cclk;
 logic rd_last_cclk, rd_ready_cclk, rd_valid_cclk;
 instr_t instr_data_cclk;
@@ -115,7 +115,7 @@ light_display #(
         .count_value(count_value_cclk)
 );
 
-logic [CDC_SYNC_STAGES-1:0] outbound_valid_tck_shift_reg = '0;
+(* ASYNC_REG = "TRUE" *) logic [CDC_SYNC_STAGES-1:0] outbound_valid_tck_shift_reg = '0;
 logic outbound_valid_tck;
 
 always_ff @(posedge tck) begin
