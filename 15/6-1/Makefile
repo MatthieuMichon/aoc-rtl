@@ -11,10 +11,10 @@ CPP_SOURCES := $(wildcard *.cpp)
 SV_SOURCES := $(filter-out shell.sv, $(wildcard *.sv))
 
 IVERILOG_BUILD_DIR := sim_iverilog__$(GIT_COMMIT_SHORT)
-IVERILOG_FLAGS := -g2012 -Wall
+IVERILOG_FLAGS := -g2012 -Wall -gsupported-assertions
 
 VERILATOR_BUILD_DIR := sim_verilator__$(GIT_COMMIT_SHORT)
-VERILATOR_FLAGS := --binary --trace -j 0 -Wall --Mdir $(VERILATOR_BUILD_DIR)
+VERILATOR_FLAGS := --binary --trace --assert -j 0 -Wall --Mdir $(VERILATOR_BUILD_DIR)
 
 XSIM_BUILD_DIR := sim_xsim__$(GIT_COMMIT_SHORT)
 XSIM_FLAGS := -sv
