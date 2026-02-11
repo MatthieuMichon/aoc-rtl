@@ -415,3 +415,43 @@ Same thing here, everything is as expected.
 | RAMB36E1     |    1 |        Block Memory |
 | FDSE         |    1 |        Flop & Latch |
 | BSCANE2      |    1 |              Others |
+
+### Fourth Iteration: Lit Lights RAM array
+
+I decided that the next big step would be instantiating the RAM array containing the status for all grid of lights. Being of a size of 1000x1000, it must be somehow broken into smaller units, for not knowing better I used units matching single BRAMs. At this stage the source code contains the bare minimum for instantiating the RAM array and some remaining scaffolding which generates incorrect results for avoiding having Vivado pruning all the logic resources.
+
+The RAM usage matches expectations:
+
+| Memory Type              | Total Used | Available | Util% | Inferred% |
+|--------------------------|------------|-----------|-------|-----------|
+| BlockRAM                 |         33 |       140 | 23.57 |    100.00 |
+|  RAMB36E1                |         33 |           |       |    100.00 |
+| LUTMs as Distributed RAM |          0 |     17400 |  0.00 |      0.00 |
+
+At the same time Vivado complains:
+
+```
+SYNTH-6#1 Warning
+Timing of a RAM block might be sub-optimal  
+The timing for the instance user_logic_i/instruction_buffer_i/dc_dpram_reg, implemented as a RAM block, might be sub-optimal as no output register was merged into the block.
+Related violations: <none>
+```
+
+Since the clock frequency is quite low, at this stage I am not concerned by this warning.
+
+### Resource Usage
+
+Nothing crazy here neither.
+
+|                Instance               |         Module        | Total LUTs | Logic LUTs |  FFs | RAMB36 |
+|---------------------------------------|-----------------------|------------|------------|------|--------|
+| shell                                 |                 (top) |       1948 |       1948 | 1489 |     33 |
+|   (shell)                             |                 (top) |          0 |          0 |    0 |      0 |
+|   user_logic_i                        |            user_logic |       1948 |       1948 | 1489 |     33 |
+|     (user_logic_i)                    |            user_logic |          1 |          1 |    6 |      0 |
+|     instruction_buffer_i              |    instruction_buffer |         42 |         42 |   90 |      1 |
+|     light_display_i                   |         light_display |       1842 |       1842 | 1283 |     32 |
+|       (light_display_i)               |         light_display |       1842 |       1842 | 1283 |      0 |
+|     line_decoder_i                    |          line_decoder |         50 |         50 |   75 |      0 |
+|     tap_decoder_i                     |           tap_decoder |          6 |          6 |   13 |      0 |
+|     tap_encoder_i                     |           tap_encoder |          7 |          7 |   22 |      0 |
