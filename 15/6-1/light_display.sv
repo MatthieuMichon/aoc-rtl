@@ -181,23 +181,26 @@ always_comb begin: count_lit_lights
     end
 end
 
-always_ff @(posedge clk) begin
+always_ff @(posedge clk) begin: lit_lights_count_addr_gen
     if (reset) begin
         ram_addrb_lit_count <= '0;
+        lit_count_done <= 1'b0;
     end else if (finished_last_op) begin
-        ram_addrb_lit_count <= ram_addrb_lit_count + 1'b1;
+        if (!(&ram_addrb_lit_count)) begin
+            ram_addrb_lit_count <= ram_addrb_lit_count + 1'b1;
+        end else begin
+            lit_count_done <= 1'b1;
+        end
     end
 end
 
 always_ff @(posedge clk) begin
     if (reset) begin
         lit_count <= '0;
-        lit_count_done <= 1'b0;
     end else begin
         if (lit_count_read_delay[LIT_COUNT_READ_LATENCY-1]) begin
             lit_count <= lit_count + comb_lit_count;
         end
-        lit_count_done <= finished_last_op & !lit_count_read_delay[LIT_COUNT_READ_LATENCY-1];
         lit_count_read_delay <= {lit_count_read_delay[LIT_COUNT_READ_LATENCY-2:0], lit_count_read_enable};
     end
 end

@@ -607,4 +607,10 @@ Result readback: 1027109 (0x0fac25)
 |---------|-------------|
 | 1027109 | 569999      |
 
-Even much worse, the returned value is not consistent across multiple runs.
+Even much worse, the returned value is not consistent across multiple runs. In such situations I usually tend to suspect a clocking issue or stale external memory. The latter is not relevant here since the design uses only internal memories, leaving the clocking issues as a possibility.
+
+The timing reports points to decent timing margins which although I am using an internal clock input with a quite wide frequency range, I my timing constraints are conservative enough that I would rate this cause as highly unlikely. On the other hand my design uses a somewhat low-effort CDC scheme for the output value.
+
+Looking at the simulation waveforms, I noticed that the output value strobe was erroneously asserted much too early while the results were not calculated yet. Since the results values are initialized to zero, the script will continuously pull until a non-zero value is returned. The transition from zero to final value was happening while the script was reading the value which is likely to generate artifacts.
+
+The fix was simple: I simply fixed the logic computing the `lit_count_done` flag. Following this change the FPGA now yields the expected results.
