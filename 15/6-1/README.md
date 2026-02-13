@@ -6,11 +6,11 @@ Status:
 |----------------------------|-----------------------|
 | Reference: Python script   | :white_check_mark: Ok |
 | RTL Concept: Python script | :white_check_mark: Ok |
-| Simulation: Icarus Verilog | TBD |
-| Simulation: Verilator      | TBD |
-| Simulation: Vivado Xsim    | TBD |
-| Synthesis: Vivado Zynq7    | TBD |
-| On-board: Zynq7            | TBD |
+| Simulation: Icarus Verilog | :white_check_mark: Ok |
+| Simulation: Verilator      | :white_check_mark: Ok |
+| Simulation: Vivado Xsim    | :white_check_mark: Ok |
+| Synthesis: Vivado Zynq7    | :white_check_mark: Ok |
+| On-board: Zynq7            | :white_check_mark: Ok |
 
 # Lessons Learnt
 
@@ -549,7 +549,7 @@ A non-zero value was written which should not have happened since the lit lights
 The light display module is quite LUT heavy, which is not surprising given that each of the 1000 elements of the column must be masked individually.
 
 |                Instance               |         Module        | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
-+---------------------------------------+-----------------------+------------+------------+---------+------+------+--------+--------+------------+
+|---------------------------------------|-----------------------|------------|------------|---------|------|------|--------|--------|------------|
 | shell                                 |                 (top) |       4668 |       4668 |       0 |    0 | 1631 |     33 |      0 |          0 |
 |   (shell)                             |                 (top) |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
 |   user_logic_i                        |            user_logic |       4668 |       4668 |       0 |    0 | 1631 |     33 |      0 |          0 |
