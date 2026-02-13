@@ -1,1 +1,2 @@
-turn on 24,0 through 40,0
+turn on 931,331 through 939,812
+turn off 756,53 through 923,339

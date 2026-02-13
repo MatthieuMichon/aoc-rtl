@@ -66,10 +66,6 @@ always_ff @(posedge rd_clk) begin: read_data_reg
     rd_data_reg <= rd_data;
 end
 
-initial begin
-    rd_valid = 1'b0;
-end
-
 always_ff @(posedge rd_clk) begin: read_flow_ctrl
     if (rd_ready && rd_valid) begin
         rd_ptr <= rd_ptr + 1'b1;
@@ -83,10 +79,6 @@ always_ff @(posedge rd_clk) begin: read_flow_ctrl
 end
 
 assign rd_last = rd_data_reg[INSTRUCTION_WIDTH-1];
-
-wire _unused_ok = 1'b0 && &{1'b0,
-    rd_data_reg,
-    1'b0};
 
 endmodule
 `default_nettype wire

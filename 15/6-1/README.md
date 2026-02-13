@@ -455,3 +455,156 @@ Nothing crazy here neither.
 |     line_decoder_i                    |          line_decoder |         50 |         50 |   75 |      0 |
 |     tap_decoder_i                     |           tap_decoder |          6 |          6 |   13 |      0 |
 |     tap_encoder_i                     |           tap_encoder |          7 |          7 |   22 |      0 |
+
+## Fifth Iteration: State Changes
+
+With all the main infrastructure laid out, the only remaining piece was supporting the state change of the lights.
+
+I figured it would simplify the processing by latching (meaning doing a sample/hold) the instruction data. Doing so insures that the processing logic is not affected by any changes to the instruction data from the upstream module. It being transferred through an AXI-style bus, once the transaction is complete the transmitter is under no obligation to maintain the data until the following transaction event.
+
+I did ending up doing a rather large rework of the RAM integration. Since all the operations require a read-modify-write cycle, either due to the operation itself for `toogle` instructions or simply when not all the bits are enabled in the bitmask. Both of these operations turning out to be easier to implement than I expected.
+
+```verilog
+always_comb begin: compute_mask
+    data_mask = '0;
+    for (integer j = LSB_INDEX; j <= MSB_INDEX; j = j + 1) begin
+        data_mask[j - LSB_INDEX] = (j >= start_col) && (j <= end_col);
+    end
+end
+
+always_ff @(posedge clk) begin: execute_operation
+    if (reset) begin
+        ram_wea <= '0;
+        ram_dia <= '0;
+    end else begin
+        ram_wea <= readback_pending & (|data_mask);
+        unique case (operation)
+            TURN_OFF: ram_dia <= ram_dob & ~data_mask;
+            TOGGLE: ram_dia <= ram_dob ^ data_mask;
+            TURN_ON: ram_dia <= ram_dob | data_mask;
+            default: ram_dia <= ram_dob;
+        endcase
+    end
+end
+```
+
+The dual-port nature of the RAM allows back-to-back operations in a pipelined fashion: first the word is read from port B from `ram_dob`, then the logic change is applied before writing it back through the port A with `ram_dia`.
+
+### Unexpected Simulation Behavior
+
+Small scale testing showed the implementation behaving as expected, however running my custom puzzle input file I got a result which was slightly off.
+
+| Python Reference | Python RTL-friendly | Icarus | Verilator | Xsim   |
+|------------------|---------------------|--------|-----------|--------|
+| 569999           | 569999              | 569955 | 569955    | 569955 |
+
+The minute difference suggests a mishandling of a corner case, which is interesting since I did check for literal corner cases (first and last row/column) and noticed no issues. As usual I will narrow the issue by performing runs with bissecting the input contents.
+
+| Instructions | Python Reference | Python RTL-friendly | Icarus | Verilator | Xsim   | Status             |
+|--------------|------------------|---------------------|--------|-----------|--------|--------------------|
+| 100          | 507581           | 507581              | 507635 | 507635    | 507635 | :x:                |
+| 50           | 391269           | 391269              | 392013 | 392013    | 392013 | :x:                |
+| 20           | 448325           | 448325              | 448262 | 448262    | 448262 | :x:                |
+| 10           | 202518           | 202518              | 202557 | 202557    | 202557 | :x:                |
+| 5 (0:4)      | 247770           | 247770              | 247770 | 247770    | 247770 | :white_check_mark: |
+| 5 (5:9)      | 5934             | 5934                | 5946   | 5946      | 5946   | :x:                |
+| 3 (5:7)      | 4338             | 4338                | 4350   | 4350      | 4350   | :x:                |
+| 2 (5:6)      | 4338             | 4338                | 4350   | 4350      | 4350   | :x:                |
+| 1 (5)        | 4338             | 4338                | 4338   | 4338      | 4338   | :white_check_mark: |
+
+The last two entries are interesting, the corresponding instructions are:
+
+```
+turn on 931,331 through 939,812
+turn off 756,53 through 923,339
+```
+
+The second instruction does not overlap with the first, and since the light grid starts with all lights off, the second instruction has no effect as observed with the Python implementation. What is most interesting is swapping the order of the instructions changes the result computed by the RTL implementation which now matches the values from the Python implementation. Again since both areas do not overlap this should have no effect.
+
+I opened the VCD waveform and took a close look on the second instruction:
+
+- [x] flow control of the inbound instruction data behaves as expected
+- [x] the instruction fields are set to the expected values
+- [x] no pending operations on the RAM
+- [x] RAM mask value calculation
+
+| RAM Generate Index | MSB | LSB | Mask       | Status             | Remarks |
+|--------------------|-----|-----|------------|--------------------|---------|
+| 0                  | 31  |   0 | 0x00000000 | :white_check_mark: |         |
+| 1                  | 63  |  32 | 0xffe00000 | :white_check_mark: | Bits 53+ are set as expected |
+| 2                  | 95  |  64 | 0xffffffff | :white_check_mark: |         |
+| 9                  | 319 | 288 | 0xffffffff | :white_check_mark: |         |
+| 10                 | 351 | 320 | 0x000fffff | :white_check_mark: | Bits 339- are set as expected |
+
+- [ ] RAM value contents: UNEXPECTED BEHAVIOR
+
+Looking at the data bus written to an active RAM instance, the issue became clear:
+
+![](light_display_wave_delay_issue.png)
+
+A non-zero value was written which should not have happened since the lit lights area do not overlap. An interesting observation is that the mask is properly applied but the data value readback simply arrives a single clock cycle too late. The fix was trivial and simply consisted in delaying by a single clock cycle the write address and enable.
+
+### Resource Usage
+
+The light display module is quite LUT heavy, which is not surprising given that each of the 1000 elements of the column must be masked individually.
+
+|                Instance               |         Module        | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++---------------------------------------+-----------------------+------------+------------+---------+------+------+--------+--------+------------+
+| shell                                 |                 (top) |       4668 |       4668 |       0 |    0 | 1631 |     33 |      0 |          0 |
+|   (shell)                             |                 (top) |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|   user_logic_i                        |            user_logic |       4668 |       4668 |       0 |    0 | 1631 |     33 |      0 |          0 |
+|     (user_logic_i)                    |            user_logic |          1 |          1 |       0 |    0 |    6 |      0 |      0 |          0 |
+|     instruction_buffer_i              |    instruction_buffer |         42 |         42 |       0 |    0 |   90 |      1 |      0 |          0 |
+|     light_display_i                   |         light_display |       4557 |       4557 |       0 |    0 | 1407 |     32 |      0 |          0 |
+|       (light_display_i)               |         light_display |       4557 |       4557 |       0 |    0 | 1407 |      0 |      0 |          0 |
+|       genblk1[0].light_display_ram_i  |  light_display_ram__1 |          0 |          0 |       0 |    0 |    0 |      1 |      0 |          0 |
+|       genblk1[1].light_display_ram_i  |  light_display_ram__2 |          0 |          0 |       0 |    0 |    0 |      1 |      0 |          0 |
+|       genblk1[2].light_display_ram_i  |  light_display_ram__3 |          0 |          0 |       0 |    0 |    0 |      1 |      0 |          0 |
+|       genblk1[31].light_display_ram_i |     light_display_ram |          0 |          0 |       0 |    0 |    0 |      1 |      0 |          0 |
+|     line_decoder_i                    |          line_decoder |         50 |         50 |       0 |    0 |   75 |      0 |      0 |          0 |
+|     tap_decoder_i                     |           tap_decoder |          7 |          7 |       0 |    0 |   13 |      0 |      0 |          0 |
+|     tap_encoder_i                     |           tap_encoder |         11 |         11 |       0 |    0 |   40 |      0 |      0 |          0 |
+
+The high number of LUT6 is certainly from the mask calculation logic:
+
+```verilog
+always_comb begin: compute_mask
+    data_mask = '0;
+    for (integer j = LSB_INDEX; j <= MSB_INDEX; j = j + 1) begin
+        data_mask[j - LSB_INDEX] = (j >= start_col) && (j <= end_col);
+    end
+    end
+```
+
+|   Ref Name   | Used | Functional Category |
+|--------------|------|---------------------|
+| LUT6         | 2054 |                 LUT |
+| LUT4         | 1646 |                 LUT |
+| FDRE         | 1630 |        Flop & Latch |
+| LUT5         |  790 |                 LUT |
+| LUT3         |  750 |                 LUT |
+| LUT2         |  135 |                 LUT |
+| CARRY4       |   64 |          CarryLogic |
+| RAMB36E1     |   33 |        Block Memory |
+| LUT1         |    3 |                 LUT |
+| BUFG         |    2 |               Clock |
+| USR_ACCESSE2 |    1 |              Others |
+| FDSE         |    1 |        Flop & Latch |
+| BSCANE2      |    1 |              Others |
+
+To be honest I was expecting an even higher resource usage.
+
+### Simulation / On-board mismatch
+
+Running on the FPGA yields a non-matching value:
+
+```
+Waiting for non-zero result... done in 634 microseconds.
+Result readback: 1027109 (0x0fac25)
+```
+
+| FPGA    | Simulations |
+|---------|-------------|
+| 1027109 | 569999      |
+
+Even much worse, the returned value is not consistent across multiple runs.

@@ -26,7 +26,9 @@ localparam int RAM_DATA_WIDTH = 32;
 localparam int RAM_INSTANCES = (COLS + RAM_DATA_WIDTH - 1) / RAM_DATA_WIDTH; // 1000 -> 32 x 32
 localparam int LIT_COUNT_PER_RAM_WIDTH = $clog2(RAM_DATA_WIDTH+1);
 localparam int LIT_COUNT = $clog2(ROWS*COLS);
+localparam int LIT_COUNT_READ_LATENCY = 2; // DPRAM + $countones
 
+typedef logic [INSTRUCTION_WIDTH-1:0] instruction_t;
 typedef logic [OPERATION_WIDTH-1:0] operation_t;
 typedef logic [POSITION_WIDTH-1:0] position_t;
 typedef enum operation_t {
@@ -40,66 +42,113 @@ typedef logic [RAM_INSTANCES-1:0] per_ram_t;
 typedef logic [LIT_COUNT_PER_RAM_WIDTH-1:0] lit_count_per_ram_t;
 typedef logic [LIT_COUNT-1:0] lit_count_t;
 
+logic start_process;
 logic last, valid;
 operation_t operation;
 position_t start_row, start_col, end_row, end_col;
-position_t row_count;
+logic readback_pending, update_ram_data;
+logic current_op_is_last, finished_last_op;
+logic lit_count_read_enable;
+logic lit_count_done;
+lit_count_t comb_lit_count;
+logic [LIT_COUNT_READ_LATENCY-1:0] lit_count_read_delay;
+lit_count_per_ram_t [RAM_INSTANCES-1:0] array_lit_count;
+lit_count_t lit_count;
+ram_addr_t ram_addra, ram_addrb, ram_addrb_readback, ram_addrb_readback_reg, ram_addrb_lit_count;
 
-assign {last, valid, operation, start_row, start_col, end_row, end_col} = instr_data;
-
-always @(posedge clk) begin: row_check
-    assert (!(instr_ready && instr_valid && (start_row > end_row)))
-        else $error("Unexpected start_row vs end_row");
-end
-
-always_ff @(posedge clk) begin: dummy_flow_control
+always_ff @(posedge clk) begin: manage_flow_control
     if (reset) begin
         instr_ready <= 1'b0;
-        row_count <= '0;
+        start_process <= 1'b0;
+        operation <= TURN_OFF;
+        start_row <= '0;
+        start_col <= '0;
+        end_row <= '0;
+        end_col <= '0;
     end else begin
-        if (instr_ready && instr_valid) begin
+        start_process <= 1'b0;
+        if (instr_ready && instr_valid) begin: valid_transaction
             instr_ready <= 1'b0;
-            row_count <= end_row - start_row;
-        end else if (row_count > 0) begin
-            row_count <= row_count - 1;
-        end else begin
+            start_process <= 1'b1;
+            {last, valid, operation, start_row, start_col, end_row, end_col} <= instr_data;
+        end else if (!readback_pending && !start_process) begin: downstream_ready
             instr_ready <= 1'b1;
         end
     end
 end
 
-per_ram_t array_we;
-logic [RAM_INSTANCES*RAM_DATA_WIDTH-1:0] array_wdata, array_rdata;
-lit_count_per_ram_t [RAM_INSTANCES-1:0] array_lit_count;
-lit_count_t lit_count;
-
-always_ff @(posedge clk) begin
+always_ff @(posedge clk) begin: process_instruction
     if (reset) begin
-        array_we <= '0;
-        array_wdata <= '0;
+        ram_addra <= '0;
+        ram_addrb_readback <= '0;
+        ram_addrb_readback_reg <= '0;
+        readback_pending <= 1'b0;
+        update_ram_data <= 1'b0;
     end else begin
-        for (int i = 0; i < RAM_INSTANCES; i++) begin
-            if ((i >= int'(start_col)/RAM_INSTANCES) && (i <= int'(end_col)/RAM_INSTANCES)) begin
-                array_we[i] <= (row_count > 0);
-                if (operation == TURN_OFF) begin
-                    array_wdata[RAM_DATA_WIDTH*i+:RAM_DATA_WIDTH] <= '0;
-                end else if (operation == TURN_ON) begin
-                    array_wdata[RAM_DATA_WIDTH*i+:RAM_DATA_WIDTH] <= '1;
-                end
+        if (start_process) begin: valid_transaction
+            readback_pending <= 1'b1;
+            ram_addrb_readback <= RAM_ADDR_WIDTH'(start_row);
+        end else begin
+            if (ram_addrb_readback >= RAM_ADDR_WIDTH'(end_row)) begin
+                readback_pending <= 1'b0;
             end else begin
-                array_we[i] <= 1'b0;
+                ram_addrb_readback <= ram_addrb_readback + 1'b1;
             end
         end
+        ram_addra <= ram_addrb_readback_reg;
+        ram_addrb_readback_reg <= ram_addrb_readback;
+        update_ram_data <= readback_pending;
     end
 end
 
-ram_addr_t lit_count_addr;
+assign lit_count_read_enable = finished_last_op && !(&ram_addrb_lit_count);
+
+always_ff @(posedge clk) begin: latch_last_flag
+    if (reset) begin
+        current_op_is_last <= 1'b0;
+        finished_last_op <= 1'b0;
+    end else if (!current_op_is_last && instr_ready && instr_valid && instr_last) begin
+        current_op_is_last <= 1'b1;
+    end else if (current_op_is_last && instr_ready) begin: finish_last_operation
+        finished_last_op <= 1'b1;
+    end
+end
+
+// Shared port B
+assign ram_addrb = lit_count_read_enable ? ram_addrb_lit_count : ram_addrb_readback;
 
 genvar i;
 generate
     for (i = 0; i < RAM_INSTANCES; i++) begin
 
-        ram_data_t ram_read_out;
+        localparam int LSB_INDEX = i * RAM_DATA_WIDTH;
+        localparam int MSB_INDEX = LSB_INDEX + RAM_DATA_WIDTH - 1;
+
+        logic ram_wea;
+        ram_data_t data_mask;
+        ram_data_t ram_dia, ram_doa, ram_dob;
+
+        always_comb begin: compute_mask
+            data_mask = '0;
+            for (integer j = LSB_INDEX; j <= MSB_INDEX; j = j + 1) begin
+                data_mask[j - LSB_INDEX] = (j >= start_col) && (j <= end_col);
+            end
+        end
+
+        always_ff @(posedge clk) begin: execute_operation
+            if (reset) begin
+                ram_wea <= '0;
+                ram_dia <= '0;
+            end else begin
+                ram_wea <= update_ram_data & (|data_mask);
+                unique case (operation)
+                    TURN_OFF: ram_dia <= ram_dob & ~data_mask;
+                    TOGGLE: ram_dia <= ram_dob ^ data_mask;
+                    TURN_ON: ram_dia <= ram_dob | data_mask;
+                    default: ram_dia <= ram_dob;
+                endcase
+            end
+        end
 
         light_display_ram #(
             .ADDR_WIDTH(RAM_ADDR_WIDTH),
@@ -107,32 +156,49 @@ generate
         ) light_display_ram_i (
             .clk(clk),
             // Port A: R/W light state update
-            .wea(array_we[i]),
-            .addra(RAM_ADDR_WIDTH'(row_count)), // strip extra bits (only for QoL)
-            .dia(array_wdata[RAM_DATA_WIDTH*i+:RAM_DATA_WIDTH]),
-            .doa(array_rdata[RAM_DATA_WIDTH*i+:RAM_DATA_WIDTH]),
+            .wea(ram_wea),
+            .addra(ram_addra),
+            .dia(ram_dia),
+            .doa(ram_doa),
             // Port B: RO final lit lights count
-            .addrb(RAM_ADDR_WIDTH'(lit_count_addr)), // strip extra bits (only for QoL)
-            .dob(ram_read_out)
+            .addrb(ram_addrb),
+            .dob(ram_dob)
         );
 
-        always_ff @(posedge clk) array_lit_count[i] <= $countones(ram_read_out);
+        always_ff @(posedge clk) array_lit_count[i] <= $countones(ram_dob);
+
+        wire _unused_ok_1 = 1'b0 && &{1'b0,
+            ram_doa,
+            1'b0};
 
     end
 endgenerate
 
-always_ff @(posedge clk) begin
-    if (reset) begin
-        lit_count_addr <= '0;
-    end else begin
-        lit_count_addr <= lit_count_addr + 1'b1;
+always_comb begin: count_lit_lights
+    comb_lit_count = '0;
+    for (integer j = 0; j < RAM_INSTANCES; j = j + 1) begin
+        comb_lit_count = comb_lit_count + LIT_COUNT'(array_lit_count[j]);
     end
 end
 
-always_comb begin
-    lit_count = '0;
-    for (int j = 0; j < RAM_INSTANCES; j++) begin
-        lit_count = lit_count + LIT_COUNT'(array_lit_count[j]);
+always_ff @(posedge clk) begin
+    if (reset) begin
+        ram_addrb_lit_count <= '0;
+    end else if (finished_last_op) begin
+        ram_addrb_lit_count <= ram_addrb_lit_count + 1'b1;
+    end
+end
+
+always_ff @(posedge clk) begin
+    if (reset) begin
+        lit_count <= '0;
+        lit_count_done <= 1'b0;
+    end else begin
+        if (lit_count_read_delay[LIT_COUNT_READ_LATENCY-1]) begin
+            lit_count <= lit_count + comb_lit_count;
+        end
+        lit_count_done <= finished_last_op & !lit_count_read_delay[LIT_COUNT_READ_LATENCY-1];
+        lit_count_read_delay <= {lit_count_read_delay[LIT_COUNT_READ_LATENCY-2:0], lit_count_read_enable};
     end
 end
 
@@ -141,16 +207,16 @@ always_ff @(posedge clk) begin: finish_condition
         count_done <= 1'b0;
         count_value <= '0;
     end else begin
-        if (instr_ready && instr_valid) begin
-            count_done <= instr_last;
+        if (lit_count_done) begin
+            count_done <= 1'b1;
             count_value <= RESULT_WIDTH'(lit_count);
         end
     end
 end
 
 wire _unused_ok = 1'b0 && &{1'b0,
-    last, valid, operation, start_col, end_col,
-    array_rdata,
+    last, valid, start_row, start_col, start_col, end_row, end_col,
+    readback_pending,
     1'b0};
 
 endmodule

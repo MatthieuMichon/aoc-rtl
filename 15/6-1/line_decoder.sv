@@ -18,6 +18,7 @@ module line_decoder #(
 
 localparam int OPERATION_WIDTH = 2;
 localparam int POSITION_WIDTH = 12;
+localparam logic INSTRUCTION_VALID = 1'b1;
 
 typedef logic [INBOUND_DATA_WIDTH-1:0] inbound_data_t;
 typedef logic [OPERATION_WIDTH-1:0] operation_t;
@@ -175,7 +176,7 @@ always_ff @(posedge clk) begin: output_ctrl
 end
 
 assign last = (inbound_data == NULL_CHAR);
-assign normalized_instr_data = {last, 1'b1, operation, start_row, start_col, end_row, end_col};
+assign normalized_instr_data = {last, INSTRUCTION_VALID, operation, start_row, start_col, end_row, end_col};
 
 endmodule
 `default_nettype wire
