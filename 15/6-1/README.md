@@ -544,6 +544,55 @@ Looking at the data bus written to an active RAM instance, the issue became clea
 
 A non-zero value was written which should not have happened since the lit lights area do not overlap. An interesting observation is that the mask is properly applied but the data value readback simply arrives a single clock cycle too late. The fix was trivial and simply consisted in delaying by a single clock cycle the write address and enable.
 
+### Design Components
+
+| Module                                          | Description                      | Complexity          | Thoughts       | Remarks  |
+|-------------------------------------------------|----------------------------------|---------------------|----------------|----------|
+| [`user_logic_tb`](user_logic_tb.sv)             | Testbench                        | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+| [`user_logic`](user_logic.sv)                   | Logic top-level                  | :large_blue_circle: | :kissing_smiling_eyes: Wire harness and trivial logic | Dual-clock support |
+| [`tap_decoder`](tap_decoder.sv)                 | JTAG TAP deserializer            | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+| [`line_decoder`](line_decoder.sv)               | Converts into instruction array  | :green_circle:      | :slightly_smiling_face: Several moving parts | Multiple fields to decode and keep track of |
+| [`instruction_buffer`](instruction_buffer.sv)   | Stores all the instructions      | :large_blue_circle: | :kissing_smiling_eyes: Basic dual-clock RAM | Allows downstream to process at a slower rate |
+| [`light_display`](light_display.sv)             | Processes instructions           | :yellow_circle:     | :raised_eyebrow: Made clever use of DPRAM | Read-Modify-Write with mask application at full speed |
+| [`light_display_ram`](light_display_ram.sv)     | DPRAM                            | :large_blue_circle: | :kissing_smiling_eyes: Basic DPRAM |  |
+| [`tap_encoder`](tap_encoder.sv)                 | JTAG TAP serializer              | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+
+### Simplified Diagram
+
+```mermaid
+flowchart
+tb["Testbench / BSCANE2"]
+if["User Logic Interface"]
+tap-dec["TAP Decoder"]
+dec["Line Decoder"]
+buf["Instruction Buffer"]
+subgraph disp["Light Display"]
+    fc["Flow Control"]
+    proc["Instruction Processor"]
+    ramdisp["Light Display RAM banks"]
+    mask["Bit mask application"]
+    cnt["Lit Light Count"]
+end
+tap-enc["TAP Encoder"]
+
+tb --JTAG-TAP--> if
+if --JTAG-TAP--> tap-dec
+tap-dec --ASCII Byte --> dec
+dec --Secret Key--> buf
+buf --> fc
+fc --> proc
+proc --@--> ramdisp
+proc --D--> mask
+ramdisp --D--> mask
+mask --D--> ramdisp
+proc --start count--> cnt
+cnt --@--> ramdisp
+ramdisp --D--> cnt
+cnt --Result--> tap-enc
+tap-enc --JTAG-TAP--> if
+if --JTAG TDO--> tb
+```
+
 ### Resource Usage
 
 The light display module is quite LUT heavy, which is not surprising given that each of the 1000 elements of the column must be masked individually.
