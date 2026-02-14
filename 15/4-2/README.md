@@ -188,7 +188,7 @@ disp["Dispatch"]
         dup["Duplicate"]
         subgraph md5["MD5 Top"]
             r0["MD5 Round #0"]
-            r1["MD5 Round #0"]
+            r1["MD5 Round #1"]
             rdd["(...)"]
             r63["MD5 Round #63"]
         end
