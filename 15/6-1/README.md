@@ -15,6 +15,7 @@ Status:
 # Lessons Learnt
 
 - Python is the boss for prototyping.
+- Ensure data/valid sequence is clean, especially with a CDC
 
 # Design Space Exploration
 
