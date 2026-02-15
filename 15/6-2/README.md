@@ -64,3 +64,18 @@ In practice, the Python implementation consists of multiple nested loops, the fi
 I also used two shortcuts `ram_select` and `ram_i_light_select` for speeding up the processing. In the FPGA implementation they will simply be operations performed with zero side effects (ie. null operations).
 
 Testing of this implementation showed some minor copy/paste errors which were easy to fix, after which the implementation was tested against the reference design and found to be behave as expected.
+
+# RTL Implementation
+
+As usual this second part borrows heavily from the first half of the puzzle. The following modules are directly reused without modifications:
+
+| Module                                          | Description                      | Complexity          | Thoughts       | Remarks  |
+|-------------------------------------------------|----------------------------------|---------------------|----------------|----------|
+| [`user_logic_tb`](user_logic_tb.sv)             | Testbench                        | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+| [`user_logic`](user_logic.sv)                   | Logic top-level                  | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+| [`tap_decoder`](tap_decoder.sv)                 | JTAG TAP deserializer            | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+| [`line_decoder`](line_decoder.sv)               | Converts into instruction array  | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+| [`instruction_buffer`](instruction_buffer.sv)   | Stores all the instructions      | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+| [`tap_encoder`](tap_encoder.sv)                 | JTAG TAP serializer              | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
+
+## First Iteration: RAM Instances Generate Loop
