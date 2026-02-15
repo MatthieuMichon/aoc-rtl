@@ -146,8 +146,8 @@ def fpga_user_logic(file: Path) -> int:
                 ram_i_lsb_index = ram_i * LIGHTS_PER_RAM_INSTANCE
                 ram_i_msb_index = ram_i_lsb_index + LIGHTS_PER_RAM_INSTANCE - 1
                 ram_select = (
-                    min(1 + instr["end_row"], ram_i_msb_index)
-                    - max(instr["start_row"], ram_i_lsb_index)
+                    min(1 + instr["end_col"], 1 + ram_i_msb_index)
+                    - max(instr["start_col"], ram_i_lsb_index)
                 ) > 0
                 if not ram_select:
                     continue

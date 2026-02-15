@@ -5,7 +5,7 @@ Status:
 | Test                       | Status                |
 |----------------------------|-----------------------|
 | Reference: Python script   | :white_check_mark: Ok |
-| RTL Concept: Python script | *To be done* |
+| RTL Concept: Python script | :white_check_mark: Ok |
 | Simulation: Icarus Verilog | *To be done* |
 | Simulation: Verilator      | *To be done* |
 | Simulation: Vivado Xsim    | *To be done* |
@@ -51,8 +51,16 @@ Mapping the final and peak intensities yields interesting pictures:
 
 ![](max_lights_intensity.png)
 
+## RTL Friendly Implementation
+
 For my custom input, I obtain a peak value across all the the lights of `49`. Right of the bat, this results in a six fold ($$\lceil\log_2(49)\rceil=6$$) memory requirement increase if the same implementation is required. Based on the resource usage of the previous implementation this requires 193 BRAM instances.
 
 The main challenge is the computing of per light changes which are now much more resource heavy due to the simple bitmask operations being replaced by 6-bit arithemetics and a max operation.
 
 Instead of 32 instances of 32x1000 storage elements, an optimized storage strategy would keep the 1000-deep elements but use 36 bits devided in 6 lights with 6-bit worth of intensity. Doing so requires 167 BRAM instances which is slightly less than figure from above thanks to using the extra bits (36 instead of 32).
+
+In practice, the Python implementation consists of multiple nested loops, the first iterating over all the instructions and the second over each row from each single instruction. This matches the temporal behavior of the RTL implementation. The next iterations are spatial ones, the first being for each RAM instance and finally the most inner interation is for each light of a given RAM instance.
+
+I also used two shortcuts `ram_select` and `ram_i_light_select` for speeding up the processing. In the FPGA implementation they will simply be operations performed with zero side effects (ie. null operations).
+
+Testing of this implementation showed some minor copy/paste errors which were easy to fix, after which the implementation was tested against the reference design and found to be behave as expected.
