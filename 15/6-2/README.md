@@ -4,7 +4,7 @@ Status:
 
 | Test                       | Status                |
 |----------------------------|-----------------------|
-| Reference: Python script   | *To be done* |
+| Reference: Python script   | :white_check_mark: Ok |
 | RTL Concept: Python script | *To be done* |
 | Simulation: Icarus Verilog | *To be done* |
 | Simulation: Verilator      | *To be done* |
