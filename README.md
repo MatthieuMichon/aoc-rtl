@@ -173,4 +173,4 @@ Figured I shall start from the ground up.
 ## Achievements
 
 - Found an issue with the `run_state_hw_jtag` Vivado TCL command and opened a [support request](https://adaptivesupport.amd.com/s/question/0D5Pd00001772mvKAA/)
-- This repository was **selected as a winning entry in the [Jane Street's Advent of FPGA Challenge 2025](https://blog.janestreet.com/advent-of-fpga-challenge-2025-results/):** recognized as an *"elegant framework"* and as a submission which *"demonstrates the real-world engineering challenges of getting hardware designs working correctly, not just in simulation."*.
+- This repository was **selected as a winning entry in the [Jane Street's Advent of FPGA Challenge 2025](https://blog.janestreet.com/advent-of-fpga-challenge-2025-results/#matthieu-michon-github):** recognized as an *"elegant framework"* and as a submission which *"demonstrates the real-world engineering challenges of getting hardware designs working correctly, not just in simulation."*.
