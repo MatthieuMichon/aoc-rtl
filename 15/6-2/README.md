@@ -18,7 +18,7 @@ Status:
 
 # Design Space Exploration
 
-## Reference Design
+## Python Reference Design
 
 The second part changes the instruction semantics:
 
@@ -51,7 +51,7 @@ Mapping the final and peak intensities yields interesting pictures:
 
 ![](max_lights_intensity.png)
 
-## RTL Friendly Implementation
+## Python RTL Friendly Implementation
 
 For my custom input, I obtain a peak value across all the the lights of `49`. Right of the bat, this results in a six fold ($$\lceil\log_2(49)\rceil=6$$) memory requirement increase if the same implementation is required. Based on the resource usage of the previous implementation this requires 193 BRAM instances.
 
@@ -78,4 +78,40 @@ As usual this second part borrows heavily from the first half of the puzzle. The
 | [`instruction_buffer`](instruction_buffer.sv)   | Stores all the instructions      | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
 | [`tap_encoder`](tap_encoder.sv)                 | JTAG TAP serializer              | :large_blue_circle: | :kissing_smiling_eyes: Copy-paste from previous puzzle | |
 
-## First Iteration: RAM Instances Generate Loop
+## First Iteration: Generate Loop
+
+This second part swaps the two-state light state with a discrete intensity value covering a range between 0 and 49. Furthermore the operational logic is more resource intensive as it includes addition, subtraction and a min() function.
+
+The design space consists in a grid of 1000x1000, and as such handling a single dimension fully in parallel is at the same time manageable in a entry-level FPGA and by definition maps well to the design space. This requires instantiating 1000 times the logic required for decoding and updating the light intensities. Furthermore the total intensity calculation is much more complex than simply counting the number of bits set.
+
+I started working by reusing the implementation from the previous part but very rapidly finished in a dead-end which was much too heavy and complex to make out. I decided to start from a clean slate and implement a very simple first iteration.
+
+This was enough to raise an annoying pedantic error with Icarus Verilog in which it forbids mixing procedural with continuous assignments. Thus the following code will not simulate with Icarus (Verilator has no complains).
+
+```verilog
+logic [BANKS:0] cascade_valid_array;
+
+always_ff @(posedge clk) begin: wait_last_cmd_done
+    cascade_valid_array[0] <= 1'b1;
+end
+
+genvar i;
+generate for (i = 0; i < BANKS; i++) begin
+
+    light_bank light_bank_i(
+(...)
+        // Intensity Total
+            .cascade_in_valid(cascade_valid_array[i]),
+            .cascade_in_intensity(cascade_intensity_array[i]),
+            .cascade_out_valid(cascade_valid_array[1+i]),
+            .cascade_out_intensity(cascade_intensity_array[1+i])
+    );
+
+end endgenerate
+```
+
+The only way around is to use an intermediate signal and assign it outside of an `always_ff` block.
+
+```
+assign cascade_valid_array[0] = cascade_valid_array_entry;
+```
