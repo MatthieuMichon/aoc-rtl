@@ -223,12 +223,10 @@ wire _unused_ok = 1'b0 && &{1'b0,
     input_buffer[0],
     1'b0};
 
-//`ifndef VERILATOR
 initial begin
     $dumpfile("wave.vcd");
     $dumpvars(0, user_logic_tb);
 end
-//`endif
 
 endmodule
 `default_nettype wire

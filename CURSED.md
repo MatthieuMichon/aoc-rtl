@@ -15,3 +15,5 @@
 - Be careful using the signals from BSCANE2 instances, **always** check that the `SEL` output is asserted. Check this repository for more details: [https://github.com/MatthieuMichon/bscan-waves](https://github.com/MatthieuMichon/bscan-waves)
 - All Vivado synthesis generating a Synth 8-87 warning must be terminated with extreme prejudice
 - The design behavior must be checked with all three simulators
+- Verilator is able to store string values (for FSM states) for enums in FST dump
+- Beware of integer division in SystemVerilog which discards the decimal part, the trick is to multiple by `1.0` prior to dividing, ie. `int'($ceil(1.0*COLS/COLS_PER_RAM))`

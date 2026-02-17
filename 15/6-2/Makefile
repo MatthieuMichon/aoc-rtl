@@ -14,7 +14,7 @@ IVERILOG_BUILD_DIR := sim_iverilog__$(GIT_COMMIT_SHORT)
 IVERILOG_FLAGS := -g2012 -Wall -gsupported-assertions
 
 VERILATOR_BUILD_DIR := sim_verilator__$(GIT_COMMIT_SHORT)
-VERILATOR_FLAGS := --binary --trace --assert -j 0 -Wall --Mdir $(VERILATOR_BUILD_DIR)
+VERILATOR_FLAGS := --binary --trace-fst --assert -j 0 -Wall --Mdir $(VERILATOR_BUILD_DIR)
 
 XSIM_BUILD_DIR := sim_xsim__$(GIT_COMMIT_SHORT)
 XSIM_FLAGS := -sv
@@ -55,7 +55,7 @@ $(IVERILOG_BUILD_DIR): $(SV_SOURCES)
 	mkdir -p $@
 	iverilog -o $@/a.out $(IVERILOG_FLAGS) $(SV_SOURCES) 2>&1 \
 	    | grep -v "Case unique/unique0 qualities are ignored" || true
-	$@/a.out +INPUT_FILE=$(INPUT_FILE)
+	$@/a.out -fst +INPUT_FILE=$(INPUT_FILE)
 
 .PHONY: sim_xsim
 sim_xsim: $(XSIM_BUILD_DIR)
@@ -65,7 +65,7 @@ $(XSIM_BUILD_DIR): $(SV_SOURCES)
     	xvlog --nolog -sv $(addprefix ../, $^) && \
     	xelab --nolog $(TB) -debug wave -snapshot $(TB) && \
     	xsim -nolog $(TB) -testplusarg INPUT_FILE=../$(INPUT_FILE) -R && \
-     	mv wave.vcd ../
+     	vcd2fst wave.vcd ../wave.vcd
 
 .PHONY: clean
 clean:

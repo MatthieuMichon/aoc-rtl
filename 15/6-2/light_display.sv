@@ -28,13 +28,21 @@ localparam int WR_PTR = LIGHT_UPDATE_LATENCY-1;
 localparam int RAM_ADDR_WIDTH = $clog2(ROWS);
 localparam int RAM_DATA_WIDTH = 36;
 localparam int COLS_PER_RAM = 6;
-localparam int RAM_INSTANCES = int'($ceil(COLS/COLS_PER_RAM));
+localparam int RAM_INSTANCES = int'($ceil(1.0*COLS/COLS_PER_RAM));
+localparam int COL_DATA_WIDTH = RAM_DATA_WIDTH/COLS_PER_RAM;
+localparam int COL_ACC_WIDTH = $clog2(ROWS)+COL_DATA_WIDTH;
+localparam int RAM_ACC_WIDTH = $clog2(COLS_PER_RAM)+COL_ACC_WIDTH;
+localparam int ACC_WIDTH = $clog2(RAM_INSTANCES)+RAM_ACC_WIDTH;
 
 typedef logic [OPERATION_BITS-1:0] operation_t;
 typedef logic [POSITION_BITS-1:0] postion_t;
 typedef logic [COMMAND_BITS-1:0] raw_cmd_t;
 typedef logic [POSITION_BITS-1:0] ptr_t;
 typedef logic [RAM_DATA_WIDTH-1:0] ram_data_t;
+typedef logic [COL_DATA_WIDTH-1:0] col_data_t;
+typedef logic [COL_ACC_WIDTH-1:0] col_acc_t;
+typedef logic [RAM_ACC_WIDTH-1:0] ram_acc_t;
+typedef logic [ACC_WIDTH-1:0] acc_t;
 
 typedef enum operation_t {
     TURN_OFF = 2'b00,
@@ -67,6 +75,7 @@ logic cmd_processed, last_cmd, sum_completed;
 cmd_u captured_cmd;
 logic [LIGHT_UPDATE_LATENCY-1:0] we_sr;
 ptr_t [LIGHT_UPDATE_LATENCY-1:0] row_ptr;
+acc_t [RAM_INSTANCES:0] acc_array;
 
 always_ff @(posedge clk) begin: current_state_update
     if (reset) begin
@@ -118,9 +127,6 @@ always_comb begin: next_state_logic
     endcase
 end
 
-assign last_cmd = 1'b0;
-assign sum_completed = 1'b1;
-
 always_ff @(posedge clk) begin: manage_backpressure
     if (reset) begin
         instr_ready <= 1'b0;
@@ -137,6 +143,13 @@ always_ff @(posedge clk) begin: manage_backpressure
     end
 end
 
+always_ff @(posedge clk) begin: track_last_cmd
+    if (reset) begin
+        last_cmd <= 1'b0;
+    end else if (instr_last && instr_ready && instr_valid) begin
+        last_cmd <= 1'b1;
+    end
+end
 
 always_ff @(posedge clk) begin: update_row_ptr
     if (reset) begin
@@ -160,7 +173,7 @@ always_ff @(posedge clk) begin: update_row_ptr
                 row_ptr[RD_PTR] <= '0;
             end
             SM_WAIT_INTENSITY_SUM: begin
-                cmd_processed <= (int'(row_ptr[RD_PTR]) > ROWS + LIGHT_UPDATE_LATENCY);
+                sum_completed <= (int'(row_ptr[RD_PTR]) > ROWS + LIGHT_UPDATE_LATENCY);
                 row_ptr[RD_PTR] <= row_ptr[RD_PTR] + 1'b1;
             end
             default: begin end
@@ -168,13 +181,28 @@ always_ff @(posedge clk) begin: update_row_ptr
     end
 end
 
-localparam int COL_DATA_WIDTH = 6;
-typedef logic [COL_DATA_WIDTH-1:0] col_data_t;
+always_ff @(posedge clk) acc_array[0] <= '0;
 
 genvar i, j; generate
 for (i=0; i<RAM_INSTANCES; i++) begin: per_ram
 
     ram_data_t ram_rd_data, ram_wr_data;
+    col_acc_t [COLS_PER_RAM-1:0] per_col_acc;
+    ram_acc_t comb_per_ram_acc;
+
+    light_display_ram #(
+        .ADDR_WIDTH(RAM_ADDR_WIDTH),
+        .DATA_WIDTH(RAM_DATA_WIDTH)
+    ) light_display_ram_i (
+        .clk,
+        // Port A: read-only
+            .addra(RAM_ADDR_WIDTH'(row_ptr[RD_PTR])),
+            .doa(ram_rd_data),
+        // Port B: write-only
+            .web(we_sr[WR_PTR]),
+            .addrb(RAM_ADDR_WIDTH'(row_ptr[WR_PTR])),
+            .dib(ram_wr_data)
+    );
 
     for (j=0; j<COLS_PER_RAM; j++) begin: per_col_per_ram
 
@@ -189,8 +217,9 @@ for (i=0; i<RAM_INSTANCES; i++) begin: per_ram
         endfunction
 
         assign col_rd_data = ram_rd_data[j*COL_DATA_WIDTH+:COL_DATA_WIDTH];
+        assign ram_wr_data[j*COL_DATA_WIDTH+:COL_DATA_WIDTH] = col_wr_data;
 
-        always_ff @(posedge clk) begin
+        always_ff @(posedge clk) begin: execute_op
             if (is_col_selected(captured_cmd, COL_INDEX)) begin
                 unique case (captured_cmd.f.op)
                     TURN_OFF: begin
@@ -209,22 +238,26 @@ for (i=0; i<RAM_INSTANCES; i++) begin: per_ram
             end
         end
 
-        assign ram_wr_data[j*COL_DATA_WIDTH+:COL_DATA_WIDTH] = col_wr_data;
+        always_ff @(posedge clk) begin
+            if (reset) begin
+                per_col_acc[j] <= 0;
+            end else if (last_cmd && !sum_completed) begin
+                per_col_acc[j] <= per_col_acc[j] + COL_ACC_WIDTH'(col_rd_data);
+            end
+        end
+
     end
 
-    light_display_ram #(
-        .ADDR_WIDTH(RAM_ADDR_WIDTH),
-        .DATA_WIDTH(RAM_DATA_WIDTH)
-    ) light_display_ram_i (
-        .clk,
-        // Port A: read-only
-            .addra(RAM_ADDR_WIDTH'(row_ptr[RD_PTR])),
-            .doa(ram_rd_data),
-        // Port B: write-only
-            .web(we_sr[WR_PTR]),
-            .addrb(RAM_ADDR_WIDTH'(row_ptr[WR_PTR])),
-            .dib(ram_wr_data)
-    );
+    always_comb begin
+        comb_per_ram_acc = '0;
+        for (int k=0; k<COLS_PER_RAM; k++) begin
+            comb_per_ram_acc = comb_per_ram_acc + (COL_ACC_WIDTH+3)'(per_col_acc[k]);
+        end
+    end
+
+    always_ff @(posedge clk) begin
+        acc_array[1+i] <= acc_array[i] + ACC_WIDTH'(comb_per_ram_acc);
+    end
 
     wire _unused_ok = 1'b0 && &{1'b0,
         1'b0};
@@ -232,8 +265,8 @@ for (i=0; i<RAM_INSTANCES; i++) begin: per_ram
 end
 endgenerate;
 
-assign count_done = 1'b1;
-assign count_value = '1;
+assign count_done = sum_completed;
+assign count_value = 24'(acc_array[RAM_INSTANCES]);
 
 wire _unused_ok = 1'b0 && &{1'b0,
     instr_last,
