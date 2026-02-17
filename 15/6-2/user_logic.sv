@@ -99,7 +99,7 @@ instruction_buffer #(
 logic count_done_cclk;
 result_t count_value_cclk;
 
-light_array #(
+light_display #(
     .INSTRUCTION_WIDTH(INSTRUCTION_WIDTH),
     .RESULT_WIDTH(RESULT_WIDTH)
 ) light_display_i (
