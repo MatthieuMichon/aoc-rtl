@@ -115,3 +115,5 @@ The only way around is to use an intermediate signal and assign it outside of an
 ```
 assign cascade_valid_array[0] = cascade_valid_array_entry;
 ```
+
+In the end I refactored the code and ended up with something at least producing results in Verilator.

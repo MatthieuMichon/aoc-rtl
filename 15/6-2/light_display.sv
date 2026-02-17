@@ -155,6 +155,7 @@ always_ff @(posedge clk) begin: update_row_ptr
     if (reset) begin
         cmd_processed <= 1'b0;
         we_sr <= '0;
+        sum_completed <= 1'b0;
         row_ptr <= '0;
     end else begin
         cmd_processed <= 1'b0;
@@ -165,7 +166,7 @@ always_ff @(posedge clk) begin: update_row_ptr
                 row_ptr[RD_PTR] <= captured_cmd.f.start_row;
             end
             SM_WAIT_CMD_PROCESSED: begin
-                cmd_processed <= (row_ptr[WR_PTR] >= captured_cmd.f.end_row);
+                cmd_processed <= (row_ptr[WR_PTR] > captured_cmd.f.end_row);
                 we_sr <= {we_sr[$size(we_sr)-2:0], (row_ptr[RD_PTR] < captured_cmd.f.end_row)};
                 row_ptr <= {row_ptr[$size(row_ptr)-2:0], row_ptr[RD_PTR]+1'b1};
             end
@@ -235,6 +236,8 @@ for (i=0; i<RAM_INSTANCES; i++) begin: per_ram
                         col_wr_data <= col_rd_data + COL_DATA_WIDTH'(1);
                     end
                 endcase
+            end else begin
+                col_wr_data <= col_rd_data;
             end
         end
 
@@ -256,7 +259,11 @@ for (i=0; i<RAM_INSTANCES; i++) begin: per_ram
     end
 
     always_ff @(posedge clk) begin
-        acc_array[1+i] <= acc_array[i] + ACC_WIDTH'(comb_per_ram_acc);
+        if (reset) begin
+            acc_array[1+i] <= '0;
+        end else if (last_cmd && !sum_completed) begin
+            acc_array[1+i] <= acc_array[i] + ACC_WIDTH'(comb_per_ram_acc);
+        end
     end
 
     wire _unused_ok = 1'b0 && &{1'b0,
