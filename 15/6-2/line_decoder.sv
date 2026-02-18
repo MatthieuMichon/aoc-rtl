@@ -18,12 +18,10 @@ module line_decoder #(
 
 localparam int OPERATION_WIDTH = 2;
 localparam int POSITION_WIDTH = 12;
-localparam logic INSTRUCTION_VALID = 1'b1;
 
 typedef logic [INBOUND_DATA_WIDTH-1:0] inbound_data_t;
 typedef logic [OPERATION_WIDTH-1:0] operation_t;
 typedef logic [POSITION_WIDTH-1:0] position_t;
-// from `man ascii`
 typedef enum inbound_data_t {
     NULL_CHAR = 8'h00,
     LF_CHAR = 8'h0A,
@@ -39,9 +37,15 @@ typedef enum inbound_data_t {
 typedef enum operation_t {
     TURN_OFF = 2'b00,
     TOGGLE = 2'b01,
+    RESERVED = 2'b10,
     TURN_ON = 2'b11
-} operations_t;
-typedef enum logic [3-1:0] {
+} op_e;
+typedef struct packed {
+    op_e op;
+    position_t start_row, start_col;
+    position_t end_row, end_col;
+} cmd_s;
+typedef enum logic [2-1:0] {
     CAPTURE_START_ROW = 0,
     CAPTURE_START_COL = 1,
     CAPTURE_END_ROW = 2,
@@ -50,9 +54,8 @@ typedef enum logic [3-1:0] {
 
 state_t current_state, next_state;
 inbound_data_t prev_char;
-logic last;
-operation_t operation;
-position_t position, start_row, start_col, end_row, end_col;
+position_t position;
+cmd_s cmd;
 
 function is_digit(inbound_data_t char);
     is_digit = char >= ZERO_CHAR && char <= NINE_CHAR;
@@ -68,14 +71,14 @@ end
 
 always_ff @(posedge clk) begin: capture_operation
     if (reset) begin
-        operation <= '0;
+        cmd.op <= TURN_OFF;
     end else begin
         if (inbound_valid) begin
             unique case ({prev_char, inbound_data})
-                {O_CHAR, F_CHAR}: operation <= TURN_OFF;
-                {T_CHAR, O_CHAR}: operation <= TOGGLE;
-                {O_CHAR, N_CHAR}: operation <= TURN_ON;
-                default: begin /* ignore */ end
+                {O_CHAR, F_CHAR}: cmd.op <= TURN_OFF;
+                {T_CHAR, O_CHAR}: cmd.op <= TOGGLE;
+                {O_CHAR, N_CHAR}: cmd.op <= TURN_ON;
+                default: /* no-op */;
             endcase
         end
     end
@@ -137,24 +140,17 @@ end
 
 always_ff @(posedge clk) begin: position_fan_out
     if (reset) begin
-        start_row <= '0;
-        start_col <= '0;
-        end_row <= '0;
-        end_col <= '0;
+        cmd.start_row <= '0;
+        cmd.start_col <= '0;
+        cmd.end_row <= '0;
+        cmd.end_col <= '0;
     end else if (inbound_valid) begin
         unique case (current_state)
-            CAPTURE_START_ROW: begin
-                start_row <= position;
-            end
-            CAPTURE_START_COL: begin
-                start_col <= position;
-            end
-            CAPTURE_END_ROW: begin
-                end_row <= position;
-            end
-            CAPTURE_END_COL: begin
-                end_col <= position;
-            end
+            CAPTURE_START_ROW: cmd.start_row <= position;
+            CAPTURE_START_COL: cmd.start_col <= position;
+            CAPTURE_END_ROW: cmd.end_row <= position;
+            CAPTURE_END_COL: cmd.end_col <= position;
+            default: /* no-op */;
         endcase
     end
 end
@@ -166,17 +162,13 @@ always_ff @(posedge clk) begin: output_ctrl
     end else begin
         normalized_instr_valid <= 1'b0;
         if (inbound_valid) begin
-            unique case (prev_char)
-                NULL_CHAR: end_of_file <= (inbound_data == NULL_CHAR);
-                LF_CHAR: normalized_instr_valid <= 1'b1;
-                default: begin /* ignore */ end
-            endcase
+            end_of_file <= (inbound_data == NULL_CHAR);
+            normalized_instr_valid <= (prev_char == LF_CHAR);
         end
     end
 end
 
-assign last = (inbound_data == NULL_CHAR);
-assign normalized_instr_data = {last, INSTRUCTION_VALID, operation, start_row, start_col, end_row, end_col};
+assign normalized_instr_data = cmd;
 
 endmodule
 `default_nettype wire

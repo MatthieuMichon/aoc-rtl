@@ -35,7 +35,7 @@ localparam int RAM_ACC_WIDTH = $clog2(COLS_PER_RAM)+COL_ACC_WIDTH;
 localparam int ACC_WIDTH = $clog2(RAM_INSTANCES)+RAM_ACC_WIDTH;
 
 typedef logic [OPERATION_BITS-1:0] operation_t;
-typedef logic [POSITION_BITS-1:0] postion_t;
+typedef logic [POSITION_BITS-1:0] position_t;
 typedef logic [COMMAND_BITS-1:0] raw_cmd_t;
 typedef logic [POSITION_BITS-1:0] ptr_t;
 typedef logic [RAM_DATA_WIDTH-1:0] ram_data_t;
@@ -52,12 +52,11 @@ typedef enum operation_t {
 } op_e;
 typedef struct packed {
     op_e op;
-    postion_t start_row, start_col;
-    postion_t end_row, end_col;
+    position_t start_row, start_col;
+    position_t end_row, end_col;
 } cmd_s;
 typedef union packed {
     cmd_s f;
-    //raw_cmd_t raw;
 } cmd_u;
 
 typedef enum logic [3-1:0] {

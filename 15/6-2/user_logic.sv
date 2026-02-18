@@ -22,7 +22,7 @@ localparam int RESULT_WIDTH = 24;
 localparam int UPSTREAM_BYPASS_BITS = 1; // ARM DAP controller in BYPASS mode
 localparam int INBOUND_DATA_WIDTH = $bits(byte);
 localparam int CDC_SYNC_STAGES = 3;
-localparam int INSTRUCTION_WIDTH = 2 + 4 * 12 + 2;
+localparam int INSTRUCTION_WIDTH = 2+4*12; // op + four positions
 
 typedef logic [INBOUND_DATA_WIDTH-1:0] inbound_data_t;
 typedef logic [INSTRUCTION_WIDTH-1:0] instr_t;
@@ -86,10 +86,12 @@ instruction_buffer #(
 ) instruction_buffer_i (
     // Port A: Write Port
         .wr_clk(tck),
+        .wr_last(end_of_file),
         .wr_valid(normalized_instr_valid),
         .wr_data(normalized_instr_data),
     // Port B: Read Port
         .rd_clk(conf_clk),
+        .rd_reset(reset_cclk),
         .rd_last(rd_last_cclk),
         .rd_ready(rd_ready_cclk),
         .rd_valid(rd_valid_cclk),

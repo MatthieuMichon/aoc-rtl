@@ -202,7 +202,7 @@ Vivado used all the BRAM units and fallback to LUTRAM for the remaining instance
 
 Well at least there is no point in wasting time trying to salvage this design :sweat_smile:
 
-# Revisited Python RTL-friendly Implementation
+# Revisited FPGA Implementation
 
 Halfing the number of columns to be stored in memory results in 3 Mbits, which represents 84 RAMB36 or 167 out of 220 available RAMB16 instances and therefore will fit in the Zynq-7020. Sadly this requires reworking several parts of the design.
 
@@ -210,3 +210,7 @@ Halfing the number of columns to be stored in memory results in 3 Mbits, which r
 - At the end of each readback the total intensity value must be computed.
 - All the memory contents used for storing light intensities must be scrubbed after the first readback.
 - The total obtained at each readback must be tallied and then reported back once the last readback is completed.
+
+## First Iteration: Clean-up
+
+Before throwing myself into refactoring the backend I thought that it would be wise to tidy up things left and right. Thus I got rid of the redundant `last` and `valid` fields from the instruction structure.

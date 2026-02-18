@@ -1,1 +1,2 @@
 turn on 0,0 through 0,11
+turn on 0,12 through 0,17
