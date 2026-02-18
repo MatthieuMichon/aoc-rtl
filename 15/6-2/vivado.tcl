@@ -92,11 +92,12 @@ proc ::build {arg_dict} {
     # Synthesize Design
 
         set directive RuntimeOptimized; # speed-run the build process
-        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter synVerbose 1"
+        #set_param synth.elaboration.rodinMoreOptions "rt::set_parameter synVerbose 1"
         synth_design -top [lindex [find_top] 0] \
             -directive $directive \
             -flatten_hierarchy none \
             -debug_log -verbose
+        report_utilization -file utilization-synth.txt
         opt_design \
             -directive $directive \
             -debug_log -verbose

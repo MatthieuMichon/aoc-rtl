@@ -14,7 +14,7 @@ Status:
 
 # Lessons Learnt
 
-- *To be done*
+- Xilinx lists BRAM resources in RAMB18 units, not in RAMB36
 
 # Design Space Exploration
 
@@ -116,4 +116,97 @@ The only way around is to use an intermediate signal and assign it outside of an
 assign cascade_valid_array[0] = cascade_valid_array_entry;
 ```
 
-In the end I refactored the code and ended up with something at least producing results in Verilator.
+In the end I refactored the code and ended up with something at least producing results in Verilator. Following some minor fixes, I obtained the same results accross all three simulators and wanted to do a sanity check by building the FPGA firmware.
+
+### FPGA Build Issue
+
+The first try ended up with a failure which didn't surprise me, however the reason of the error left me a bit puzzled.
+
+```
+ERROR: [DRC UTLZ-1] Resource utilization: RAMD64E over-utilized in Top Level Design (This design requires more RAMD64E cells than are available in the target device. This design requires 21504 of such cell types but only 17400 compatible sites are available in the target device. Please analyze your synthesis results and constraints to ensure the design is mapped to Xilinx primitives as expected. If so, please consider targeting a larger device.)
+INFO: [Vivado_Tcl 4-198] DRC finished with 3 Errors
+INFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.
+ERROR: [Vivado_Tcl 4-23] Error(s) found during DRC. Placer not run.
+```
+
+I had no explanations as to why distributed RAM would be used, let alone with `more RAMD64E cells than are available in the target device`. My design was specifically arranged for inferring BRAMs as shown in the synthesis log:
+
+```
+Module light_display_ram 
+Detailed RTL Component Info : 
++---Registers : 
+	               36 Bit    Registers := 1     
++---RAMs : 
+	              36K Bit	(1024 X 36 bit)          RAMs := 1     
+```
+
+The synthesizer did notice the RAM and inferred the correct parameters, so this is really strange. Further down the log, I noticed that these RAMs were mapped in RAMB36:
+
+|Module Name                                                          | RTL Object   | PORT A (Depth x Width) | W | R | PORT B (Depth x Width) | W | R | Ports driving FF | RAMB18 | RAMB36 | 
+|---------------------------------------------------------------------|--------------|------------------------|---|---|------------------------|---|---|------------------|--------|--------|
+|\per_ram[0].light_display_ram_i                                      | ram_reg      | 1 K x 36(READ_FIRST)   | W |   | 1 K x 36(WRITE_FIRST)  |   | R | Port A and B     | 0      | 1      | 
+
+Scrolling down the log, the distributed RAM mapping report made me do a double take (only the first entry of the 28 is shown):
+
+|Module Name                                                         | RTL Object | Inference | Size (Depth x Width) | Primitives    | 
+|--------------------------------------------------------------------|------------|-----------|----------------------|---------------|
+|user_logic_i/light_display_i/i_0/\per_ram[60].light_display_ram_i   | ram_reg    | Implied   | 1 K x 36             | RAM64M x 192  | 
+
+I struggled to find a reason why Vivado would switch to RAMB36, the device is listed with 220 block RAMs so surely this is not because all the RAMs were used right? After all this is what is reported in the cell usage table:
+
+|Index |Cell         |Count |
+|------|-------------|------|
+|1     |BSCANE2      |     1|
+|2     |CARRY4       | 12704|
+|3     |LUT1         |  1264|
+|4     |LUT2         | 26789|
+|5     |LUT3         | 10387|
+|6     |LUT4         |  5566|
+|7     |LUT5         |  5312|
+|8     |LUT6         | 11240|
+|9     |MUXF7        |  2016|
+|10    |MUXF8        |  1008|
+|11    |RAM64M       |  5376|
+|12    |RAMB36E1     |   139|
+|13    |RAMB36E1_1   |     1|
+|14    |USR_ACCESSE2 |     1|
+|15    |FDRE         | 27393|
+|16    |FDSE         |     1|
+
+Looking at the numbers I noticed that a total of 140 BRAMs, which is exactly half of the available 280 BRAMs:
+
+
+```
+Part Resources:
+DSPs: 220 (col length:60)
+BRAMs: 280 (col length: RAMB18 60 RAMB36 30)
+```
+
+Interesting that RAMB18 is mentioned, surely the count of 280 is in RAMB36 units, right? Remembering a rule of marketing is to use the metric which reflects in the best value, I understood I was toasted. For good measure I added a utilization report after synthesis which confirmed my suspicions:
+
+|     Site Type     | Used | Fixed | Prohibited | Available |  Util% |
+|-------------------|------|-------|------------|-----------|--------|
+| Block RAM Tile    |  140 |     0 |          0 |       140 | 100.00 |
+|   RAMB36/FIFO*    |  140 |     0 |          0 |       140 | 100.00 |
+
+Vivado used all the BRAM units and fallback to LUTRAM for the remaining instances, which resulted in a design unable to fit in the Zynq-7020:
+
+|          Site Type         |  Used | Fixed | Prohibited | Available |  Util% |
+|----------------------------|-------|-------|------------|-----------|--------|
+| Slice LUTs*                | 69733 |     0 |          0 |     53200 | 131.08 |
+|   LUT as Logic             | 48229 |     0 |          0 |     53200 |  90.66 |
+|   LUT as Memory            | 21504 |     0 |          0 |     17400 | 123.59 |
+|     LUT as Distributed RAM | 21504 |     0 |            |           |        |
+| Slice Registers            | 27394 |     0 |          0 |    106400 |  25.75 |
+|   Register as Flip Flop    | 27394 |     0 |          0 |    106400 |  25.75 |
+
+Well at least there is no point in wasting time trying to salvage this design :sweat_smile:
+
+# Revisited Python RTL-friendly Implementation
+
+Halfing the number of columns to be stored in memory results in 3 Mbits, which represents 84 RAMB36 or 167 out of 220 available RAMB16 instances and therefore will fit in the Zynq-7020. Sadly this requires reworking several parts of the design.
+
+- The instruction memory must be readback twice instead of once.
+- At the end of each readback the total intensity value must be computed.
+- All the memory contents used for storing light intensities must be scrubbed after the first readback.
+- The total obtained at each readback must be tallied and then reported back once the last readback is completed.
