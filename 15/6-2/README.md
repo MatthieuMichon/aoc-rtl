@@ -213,4 +213,104 @@ Halfing the number of columns to be stored in memory results in 3 Mbits, which r
 
 ## First Iteration: Clean-up
 
-Before throwing myself into refactoring the backend I thought that it would be wise to tidy up things left and right. Thus I got rid of the redundant `last` and `valid` fields from the instruction structure.
+Before throwing myself into refactoring the backend I thought that it would be wise to tidy up things left and right. Thus I got rid of the redundant `last` and `valid` fields from the instruction structure. I followed by implementing the required changes in the instruction buffer module for allowing multiple readbacks of the stored instructions. I could have changed the upstream logic for simply pushing twice the instruction list but I felt that doing so was not in proper spirit of these challenges, thus I opted for the hard way.
+
+Repurposing the memory array in order to use only half of the columns but running the instructions twice required a quite large redesign of the light display module. I also took the opportunity to implement a proper skid-buffer allowing for reading the contents of BRAM in a synchronous fashion while using a bus with a zero-cycle latency (AXI-stream style ready/valid flow-control).
+
+In the end small-scale simulation behave as expected. I tried runing a FPGA firmware build a got some adequate results resource-wise:
+
+|   Ref Name   |  Used | Functional Category |
+|--------------|-------|---------------------|
+| FDRE         | 39718 |        Flop & Latch |
+| LUT2         | 13617 |                 LUT |
+| LUT6         | 11098 |                 LUT |
+| LUT3         |  9462 |                 LUT |
+| CARRY4       |  6403 |          CarryLogic |
+| MUXF7        |  3468 |               MuxFx |
+| LUT4         |  2846 |                 LUT |
+| LUT5         |  2548 |                 LUT |
+| MUXF8        |  1632 |               MuxFx |
+| LUT1         |   311 |                 LUT |
+| RAMB36E1     |    84 |        Block Memory |
+| BUFG         |     2 |               Clock |
+| USR_ACCESSE2 |     1 |              Others |
+| FDSE         |     1 |        Flop & Latch |
+| BSCANE2      |     1 |              Others |
+
+Totally as expected, the light display module is quite hungry, and having a few logic constructs replicated 500-ish times is totally fair.
+
+```
+Module light_display 
+Detailed RTL Component Info : 
++---Adders : 
+	   2 Input   26 Bit       Adders := 84    
+	   6 Input   19 Bit       Adders := 84    
+	   2 Input   12 Bit       Adders := 2     
+	   2 Input   11 Bit       Adders := 503   
+	   2 Input    7 Bit       Adders := 1     
++---Registers : 
+	               50 Bit    Registers := 1     
+	               26 Bit    Registers := 85    
+	               12 Bit    Registers := 3     
+	                7 Bit    Registers := 1     
+	                6 Bit    Registers := 504   
+	                3 Bit    Registers := 1     
+	                1 Bit    Registers := 8     
++---Muxes : 
+	  11 Input   12 Bit        Muxes := 3     
+	   2 Input    9 Bit        Muxes := 1     
+	  11 Input    7 Bit        Muxes := 1     
+	   4 Input    6 Bit        Muxes := 504   
+	   2 Input    6 Bit        Muxes := 504   
+	  11 Input    4 Bit        Muxes := 2     
+	   2 Input    4 Bit        Muxes := 5     
+	   2 Input    3 Bit        Muxes := 3     
+	  11 Input    3 Bit        Muxes := 1     
+	   3 Input    3 Bit        Muxes := 1     
+	   2 Input    2 Bit        Muxes := 1     
+	   2 Input    1 Bit        Muxes := 3     
+	  11 Input    1 Bit        Muxes := 11    
+```
+
+The QoR report warns me that I'm starting to strech the device resources:
+
+| Name                                           | Threshold | Actual | Used  | Available | Score | Status |
+|------------------------------------------------|-----------|--------|-------|-----------|-------|--------|
+| Utilization                                    |           |        |       |           |   4.0 |        |
+| *  Registers                                   |     55.00 |  37.33 | 39719 |    106400 |       |     OK |
+| *  LUTs                                        |     70.00 |  59.98 | 31910 |     53200 |       |     OK |
+| *  Memory LUTs                                 |     30.00 |   0.00 |     0 |     17400 |       |     OK |
+| *  MUXF7                                       |     15.00 |  13.04 |  3468 |     26600 |       |     OK |
+| *  CARRY8                                      |     25.00 |   0.00 |     0 |         0 |       |     OK |
+| *  RAMBs                                       |     80.00 |  60.00 |    84 |       140 |       |     OK |
+| *  URAMs                                       |     80.00 |   0.00 |     0 |         0 |       |     OK |
+| *  DSPs                                        |     80.00 |   0.00 |     0 |       220 |       |     OK |
+| *  Max LUT Combined                            |     20.00 |  24.98 |  7972 |     31910 |       | REVIEW |
+| *  Min LUT Combined                            |     <2.00 |  24.98 |  7972 |     31910 |       |     OK |
+| *  DSPs + Block RAM + Ultra RAM                |     70.00 |  23.33 |    84 |       360 |       |     OK |
+| *  Control Sets                                |      7.50 |   4.03 |   536 |     13300 |       |     OK |
+
+Timing wise I have a nasty route delay of 14.087ns:
+
+```
+Max Delay Paths
+--------------------------------------------------------------------------------------
+Slack (MET) :             0.313ns  (required time - arrival time)
+  Source:                 user_logic_i/light_display_i/sum_row_sweep_pending_reg/C
+                            (rising edge-triggered cell FDRE clocked by CFGCLK  {rise@0.000ns fall@7.500ns period=15.000ns})
+  Destination:            user_logic_i/light_display_i/per_ram[65].per_col_per_ram[2].per_col_acc_reg[2][12]/CE
+                            (rising edge-triggered cell FDRE clocked by CFGCLK  {rise@0.000ns fall@7.500ns period=15.000ns})
+  Path Group:             CFGCLK
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            15.000ns  (CFGCLK rise@15.000ns - CFGCLK rise@0.000ns)
+  Data Path Delay:        14.543ns  (logic 0.456ns (3.136%)  route 14.087ns (96.864%))
+  Logic Levels:           0  
+  Clock Path Skew:        0.096ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    3.626ns = ( 18.626 - 15.000 ) 
+    Source Clock Delay      (SCD):    3.823ns
+    Clock Pessimism Removal (CPR):    0.293ns
+```
+
+These results suggests that the routing was somewhat challenging and thought that the floorplan would be worth a look. Indeed it didn't disappoint :grin:
+
+![](floorplan.png)
