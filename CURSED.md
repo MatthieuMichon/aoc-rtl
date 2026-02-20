@@ -17,3 +17,4 @@
 - The design behavior must be checked with all three simulators
 - Verilator is able to store string values (for FSM states) for enums in FST dump
 - Beware of integer division in SystemVerilog which discards the decimal part, the trick is to multiple by `1.0` prior to dividing, ie. `int'($ceil(1.0*COLS/COLS_PER_RAM))`
+- Thanks to Verilator being able to export the FSM names in string **in FST wavefiles** there is no need for creating extra code storing the FSM state variables as strings into adhoc variables.

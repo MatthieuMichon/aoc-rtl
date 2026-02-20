@@ -182,7 +182,7 @@ always_ff @(posedge clk) begin: update_row_ptr
                 row_ptr[RD_PTR] <= '0;
             end
             SM_WAIT_INTENSITY_SUM: begin
-                sum_completed <= (int'(row_ptr[RD_PTR]) > ROWS + LIGHT_UPDATE_LATENCY);
+                sum_completed <= !sum_completed && (int'(row_ptr[RD_PTR]) > ROWS + LIGHT_UPDATE_LATENCY);
                 row_ptr[RD_PTR] <= row_ptr[RD_PTR] + 1'b1;
             end
             SM_FINISHED: begin
@@ -249,7 +249,7 @@ for (i=0; i<RAM_INSTANCES; i++) begin: per_ram
                         col_wr_data <= (|col_rd_data) ? (col_rd_data - 1'b1) : col_rd_data;
                     end
                     TOGGLE: begin
-                        col_wr_data <= col_rd_data + COL_DATA_WIDTH'(1);
+                        col_wr_data <= col_rd_data + COL_DATA_WIDTH'(2);
                     end
                     RESERVED: begin
                         col_wr_data <= col_rd_data;
@@ -257,6 +257,7 @@ for (i=0; i<RAM_INSTANCES; i++) begin: per_ram
                     TURN_ON: begin
                         col_wr_data <= col_rd_data + COL_DATA_WIDTH'(1);
                     end
+                    default: begin /* no-op */ end
                 endcase
             end else begin
                 col_wr_data <= col_rd_data;
