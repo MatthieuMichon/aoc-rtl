@@ -22,13 +22,14 @@ localparam int POSITION_BITS = 12;
 localparam int COMMAND_BITS = OPERATION_BITS+4*POSITION_BITS;
 localparam int LIGHT_UPDATE_LATENCY = 3;
 localparam int ROWS = 1000;
-localparam int COLS = 1000;
+localparam int COLS_PER_PASS = 504; // multiple of COLS_PER_RAM
+localparam int PASS_OFFSET_WIDTH = $clog2(COLS_PER_PASS);
 localparam int RD_PTR = 0;
 localparam int WR_PTR = LIGHT_UPDATE_LATENCY-1;
 localparam int RAM_ADDR_WIDTH = $clog2(ROWS);
 localparam int RAM_DATA_WIDTH = 36;
 localparam int COLS_PER_RAM = 6;
-localparam int RAM_INSTANCES = int'($ceil(1.0*COLS/COLS_PER_RAM));
+localparam int RAM_INSTANCES = int'($ceil(1.0*COLS_PER_PASS/COLS_PER_RAM));
 localparam int COL_DATA_WIDTH = RAM_DATA_WIDTH/COLS_PER_RAM;
 localparam int COL_ACC_WIDTH = $clog2(ROWS)+COL_DATA_WIDTH;
 localparam int RAM_ACC_WIDTH = $clog2(COLS_PER_RAM)+COL_ACC_WIDTH;
@@ -38,6 +39,7 @@ typedef logic [OPERATION_BITS-1:0] operation_t;
 typedef logic [POSITION_BITS-1:0] position_t;
 typedef logic [COMMAND_BITS-1:0] raw_cmd_t;
 typedef logic [POSITION_BITS-1:0] ptr_t;
+typedef logic [PASS_OFFSET_WIDTH-1:0] pass_offset_t;
 typedef logic [RAM_DATA_WIDTH-1:0] ram_data_t;
 typedef logic [COL_DATA_WIDTH-1:0] col_data_t;
 typedef logic [COL_ACC_WIDTH-1:0] col_acc_t;
@@ -70,11 +72,12 @@ typedef enum logic [3-1:0] {
 } sm_states_e;
 
 sm_states_e curr_state, next_state;
-logic cmd_processed, last_cmd, sum_completed;
+logic cmd_processed, last_cmd, sum_completed, first_pass_completed;
 cmd_u captured_cmd;
 logic [LIGHT_UPDATE_LATENCY-1:0] we_sr;
 ptr_t [LIGHT_UPDATE_LATENCY-1:0] row_ptr;
 acc_t [RAM_INSTANCES:0] acc_array;
+pass_offset_t offset_pass;
 
 always_ff @(posedge clk) begin: current_state_update
     if (reset) begin
@@ -118,6 +121,8 @@ always_comb begin: next_state_logic
         SM_WAIT_INTENSITY_SUM: begin
             if (!sum_completed) begin
                 next_state = SM_WAIT_INTENSITY_SUM;
+            end else if (!first_pass_completed) begin: finished_first_pass
+                next_state = SM_ASSERT_READY;
             end else begin
                 next_state = SM_FINISHED;
             end
@@ -132,7 +137,7 @@ always_ff @(posedge clk) begin: manage_backpressure
         captured_cmd <= '0;
     end else begin
         instr_ready <= 1'b0;
-        unique case (curr_state)
+        unique case (next_state)
             SM_ASSERT_READY: begin
                 instr_ready <= 1'b1;
                 captured_cmd <= COMMAND_BITS'(instr_data);
@@ -145,13 +150,14 @@ end
 always_ff @(posedge clk) begin: track_last_cmd
     if (reset) begin
         last_cmd <= 1'b0;
-    end else if (instr_last && instr_ready && instr_valid) begin
-        last_cmd <= 1'b1;
+    end else if (instr_ready && instr_valid) begin
+        last_cmd <= instr_last;
     end
 end
 
 always_ff @(posedge clk) begin: update_row_ptr
     if (reset) begin
+        count_done <= 1'b0;
         cmd_processed <= 1'b0;
         we_sr <= '0;
         sum_completed <= 1'b0;
@@ -160,6 +166,9 @@ always_ff @(posedge clk) begin: update_row_ptr
         cmd_processed <= 1'b0;
         we_sr <= {we_sr[$size(we_sr)-2:0], 1'b0};
         unique case (curr_state)
+            SM_ASSERT_READY: begin
+                sum_completed <= 1'b0;
+            end
             SM_CAPTURE_CMD: begin
                 we_sr[RD_PTR] <= 1'b1;
                 row_ptr[RD_PTR] <= captured_cmd.f.start_row;
@@ -176,8 +185,21 @@ always_ff @(posedge clk) begin: update_row_ptr
                 sum_completed <= (int'(row_ptr[RD_PTR]) > ROWS + LIGHT_UPDATE_LATENCY);
                 row_ptr[RD_PTR] <= row_ptr[RD_PTR] + 1'b1;
             end
+            SM_FINISHED: begin
+                count_done <= 1'b1;
+            end
             default: begin end
         endcase
+    end
+end
+
+always_ff @(posedge clk) begin: track_first_pass_completed
+    if (reset) begin
+        first_pass_completed <= 1'b0;
+        offset_pass <= '0;
+    end else if (sum_completed) begin
+        first_pass_completed <= 1'b1;
+        offset_pass <= offset_pass + pass_offset_t'(COLS_PER_PASS);
     end
 end
 
@@ -210,17 +232,18 @@ for (i=0; i<RAM_INSTANCES; i++) begin: per_ram
 
         col_data_t col_rd_data, col_wr_data;
 
-        function automatic logic is_col_selected(cmd_u cmd, int index);
+        function automatic logic is_col_selected(
+                cmd_u cmd, int index, pass_offset_t offset);
             is_col_selected =
-                    (int'(cmd.f.start_col) <= index) &&
-                    (index <= int'(cmd.f.end_col));
+                    (int'(cmd.f.start_col) <= (index + int'(offset))) &&
+                    ((index + int'(offset)) <= int'(cmd.f.end_col));
         endfunction
 
         assign col_rd_data = ram_rd_data[j*COL_DATA_WIDTH+:COL_DATA_WIDTH];
         assign ram_wr_data[j*COL_DATA_WIDTH+:COL_DATA_WIDTH] = col_wr_data;
 
         always_ff @(posedge clk) begin: execute_op
-            if (is_col_selected(captured_cmd, COL_INDEX)) begin
+            if (is_col_selected(captured_cmd, COL_INDEX, offset_pass)) begin
                 unique case (captured_cmd.f.op)
                     TURN_OFF: begin
                         col_wr_data <= (|col_rd_data) ? (col_rd_data - 1'b1) : col_rd_data;
@@ -271,7 +294,6 @@ for (i=0; i<RAM_INSTANCES; i++) begin: per_ram
 end
 endgenerate;
 
-assign count_done = sum_completed;
 assign count_value = 24'(acc_array[RAM_INSTANCES]);
 
 wire _unused_ok = 1'b0 && &{1'b0,
