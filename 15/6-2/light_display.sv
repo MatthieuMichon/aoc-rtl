@@ -78,14 +78,14 @@ typedef enum logic [4-1:0] {
 } sm_states_e;
 
 sm_states_e curr_state, next_state;
-logic cmd_processed, last_cmd;
+logic cmd_pending, cmd_processed, last_cmd;
 logic sum_row_sweep_pending, sum_ram_cascade_pending, sum_completed;
 logic clearing_ram_pending, first_pass_completed;
 cmd_u captured_cmd;
 logic [LIGHT_UPDATE_LATENCY-1:0] we_sr;
 ptr_t [LIGHT_UPDATE_LATENCY-1:0] row_ptr;
 ram_index_t ram_sweep_index;
-acc_t [RAM_INSTANCES:0] acc_array;
+acc_t acc_array [RAM_INSTANCES:0];
 pass_offset_t offset_pass;
 
 always_ff @(posedge clk) begin: current_state_update
@@ -193,6 +193,7 @@ always_ff @(posedge clk) begin: update_internal_vars
         cmd_processed <= 1'b0;
         row_ptr <= '0;
         we_sr <= '0;
+        cmd_pending <= 1'b0;
         sum_row_sweep_pending <= 1'b0;
         sum_ram_cascade_pending <= 1'b0;
         sum_completed <= 1'b0;
@@ -202,6 +203,7 @@ always_ff @(posedge clk) begin: update_internal_vars
     end else begin
         cmd_processed <= 1'b0;
         we_sr <= {we_sr[$size(we_sr)-2:0], 1'b0};
+        cmd_pending <= 1'b0;
         sum_row_sweep_pending <= 1'b0;
         clearing_ram_pending <= 1'b0;
         unique case (curr_state)
@@ -211,11 +213,13 @@ always_ff @(posedge clk) begin: update_internal_vars
             SM_CAPTURE_CMD: begin
                 we_sr[RD_PTR] <= 1'b1;
                 row_ptr[RD_PTR] <= captured_cmd.f.start_row;
+                cmd_pending <= 1'b1;
             end
             SM_WAIT_CMD_PROCESSED: begin
                 cmd_processed <= (row_ptr[WR_PTR] > captured_cmd.f.end_row);
                 we_sr <= {we_sr[$size(we_sr)-2:0], (row_ptr[RD_PTR] < captured_cmd.f.end_row)};
                 row_ptr <= {row_ptr[$size(row_ptr)-2:0], row_ptr[RD_PTR]+1'b1};
+                cmd_pending <= 1'b1;
             end
             SM_START_INTENSITY_SUM: begin
                 sum_row_sweep_pending <= 1'b1;
@@ -300,7 +304,7 @@ for (i=0; i<RAM_INSTANCES; i++) begin: per_ram
         endfunction
 
         assign col_rd_data = ram_rd_data[j*COL_DATA_WIDTH+:COL_DATA_WIDTH];
-        assign ram_wr_data[j*COL_DATA_WIDTH+:COL_DATA_WIDTH] = clearing_ram_pending ? '0 : col_wr_data;
+        assign ram_wr_data[j*COL_DATA_WIDTH+:COL_DATA_WIDTH] = cmd_pending ? col_wr_data : '0;
 
         always_ff @(posedge clk) begin: execute_op
             if (is_col_selected(captured_cmd, COL_INDEX, offset_pass)) begin
@@ -345,14 +349,19 @@ for (i=0; i<RAM_INSTANCES; i++) begin: per_ram
         end
     end
 
+    acc_t acc_cin, acc_cout;
+
+    assign acc_cin = acc_array[i];
+    assign acc_array[1+i] = acc_cout;
+
     always_ff @(posedge clk) begin: acc_array_cascade
         if (reset) begin
-            acc_array[1+i] <= '0;
+            acc_cout <= '0;
         end else begin
             if (sum_ram_cascade_pending) begin
-                acc_array[1+i] <= acc_array[i] + ACC_WIDTH'(comb_per_ram_acc);
+                acc_cout <= acc_cin + ACC_WIDTH'(comb_per_ram_acc);
             end else if (sum_completed) begin
-                acc_array[1+i] <= '0;
+                acc_cout <= '0;
             end
         end
     end
@@ -361,8 +370,9 @@ end
 endgenerate;
 
 ptr_t debug__row_ptr;
-acc_t debug__last_col = acc_array[RAM_INSTANCES];
+acc_t debug__last_col;
 assign debug__row_ptr = POSITION_BITS'(row_ptr);
+assign debug__last_col = acc_array[RAM_INSTANCES];
 
 wire _unused_ok = 1'b0 && &{1'b0,
     debug__row_ptr,

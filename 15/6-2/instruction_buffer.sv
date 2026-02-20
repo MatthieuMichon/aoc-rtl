@@ -70,17 +70,23 @@ always_ff @(posedge rd_clk) begin: track_last_rising
     end
 end
 
+logic ram_rd_en;
+
 always_ff @(posedge rd_clk) begin: update_rd_ptr
     if (rd_reset) begin
         rd_ptr <= '0;
+        ram_rd_en <= 1'b0;
     end else begin
         if (wr_completed) begin
-            if (!skid_valid || (rd_ready && rd_valid)) begin: rd_enable
+            if (rd_ready && rd_valid) begin: rd_enable
                 if (!rd_last) begin: not_last_instruction
                     rd_ptr <= rd_ptr + 1'b1;
+                    ram_rd_en <= 1'b1;
                 end else begin
                     rd_ptr <= '0;
                 end
+            end else begin
+                ram_rd_en <= 1'b0;
             end
         end
     end
@@ -92,16 +98,21 @@ always_ff @(posedge rd_clk) begin: manage_skid_buffer
         skid_valid <= 1'b0;
         skid_buffer <= '0;
     end else begin
-        if (wr_completed) begin
-            if (!skid_valid || (rd_ready && rd_valid)) begin: rd_enable
-                if (!rd_last) begin: not_last_instruction
-                    rd_valid <= 1'b1;
-                    skid_valid <= 1'b1;
-                    skid_buffer <= ram_do;
-                end else begin
-                    skid_valid <= 1'b0;
-                end
+        if (wr_completed && !(rd_last && rd_ready && rd_valid)) begin: forward_data
+            rd_valid <= 1'b1;
+            if (!skid_valid && !rd_ready) begin: buffer_data
+                skid_valid <= ram_rd_en;
+                skid_buffer <= ram_do;
+            end else if (!skid_valid && rd_ready) begin
+                skid_buffer <= ram_do;
+            end else if (skid_valid && !rd_ready) begin
+                skid_valid <= ram_rd_en;
+            end else if (skid_valid && rd_ready) begin
+                skid_valid <= 1'b0;
             end
+        end else begin
+            rd_valid <= 1'b0;
+            skid_valid <= 1'b0;
         end
     end
 end
