@@ -211,12 +211,12 @@ always_ff @(posedge clk) begin: update_internal_vars
                 sum_completed <= 1'b0;
             end
             SM_CAPTURE_CMD: begin
-                we_sr[RD_PTR] <= 1'b1;
-                row_ptr[RD_PTR] <= captured_cmd.f.start_row;
+                we_sr <= {LIGHT_UPDATE_LATENCY{1'b1}};
+                row_ptr <= {LIGHT_UPDATE_LATENCY{captured_cmd.f.start_row}};
                 cmd_pending <= 1'b1;
             end
             SM_WAIT_CMD_PROCESSED: begin
-                cmd_processed <= (row_ptr[WR_PTR] > captured_cmd.f.end_row);
+                cmd_processed <= (row_ptr[WR_PTR] >= captured_cmd.f.end_row);
                 we_sr <= {we_sr[$size(we_sr)-2:0], (row_ptr[RD_PTR] < captured_cmd.f.end_row)};
                 row_ptr <= {row_ptr[$size(row_ptr)-2:0], row_ptr[RD_PTR]+1'b1};
                 cmd_pending <= 1'b1;
