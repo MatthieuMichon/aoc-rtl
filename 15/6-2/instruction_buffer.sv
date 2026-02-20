@@ -31,8 +31,7 @@ logic skid_valid;
 
 addr_t wr_ptr = '0, rd_ptr;
 (* ASYNC_REG = "TRUE" *) logic wr_last_rd_clk, wr_last_rd_clk_reg;
-logic wr_last_rd_clk_reg_prev, wr_last_rd_clk_reg_rising;
-logic rd_pending, first_pass_done;
+logic wr_last_rd_clk_reg_prev, wr_last_rd_clk_reg_rising, wr_completed;
 
 always_ff @(posedge wr_clk) begin: wr_ptr_self_incr
     if (wr_valid) begin
@@ -61,52 +60,48 @@ always_ff @(posedge rd_clk) begin: track_last_rising
     if (rd_reset) begin
         wr_last_rd_clk_reg_prev <= 1'b0;
         wr_last_rd_clk_reg_rising <= 1'b0;
+        wr_completed <= 1'b0;
     end else begin
         wr_last_rd_clk_reg_prev <= wr_last_rd_clk_reg;
         wr_last_rd_clk_reg_rising <= wr_last_rd_clk_reg && !wr_last_rd_clk_reg_prev;
-    end
-end
-
-always_ff @(posedge rd_clk) begin: read_data
-    if (rd_reset) begin
-        rd_pending <= 1'b0;
-    end else begin
-        if (!rd_pending && (wr_last_rd_clk_reg_rising || first_pass_done && rd_ready)) begin: start_read
-            rd_pending <= 1'b1;
-        end else if (rd_pending) begin
-            rd_pending <= !(rd_last && rd_ready && rd_valid);
+        if (wr_last_rd_clk_reg_rising) begin
+            wr_completed <= 1'b1;
         end
     end
 end
 
-always_ff @(posedge rd_clk) begin
+always_ff @(posedge rd_clk) begin: update_rd_ptr
     if (rd_reset) begin
         rd_ptr <= '0;
+    end else begin
+        if (wr_completed) begin
+            if (!skid_valid || (rd_ready && rd_valid)) begin: rd_enable
+                if (!rd_last) begin: not_last_instruction
+                    rd_ptr <= rd_ptr + 1'b1;
+                end else begin
+                    rd_ptr <= '0;
+                end
+            end
+        end
+    end
+end
+
+always_ff @(posedge rd_clk) begin: manage_skid_buffer
+    if (rd_reset) begin
         rd_valid <= 1'b0;
         skid_valid <= 1'b0;
         skid_buffer <= '0;
     end else begin
-        if (rd_pending && !rd_last && (rd_ready || !skid_valid)) begin: commit_read_op
-            rd_ptr <= rd_ptr + 1'b1;
-        end else if (rd_last && rd_ready && rd_valid) begin
-            rd_ptr <= '0;
-        end
-        if (rd_ready) begin
-            rd_valid  <= (rd_pending || skid_valid) && !rd_last;
-            skid_valid <= 1'b0;
-        end else if (rd_valid && !skid_valid) begin: backpressure
-            skid_valid <= rd_pending;
-            skid_buffer  <= ram_do;
-        end
-    end
-end
-
-always_ff @(posedge rd_clk) begin: track_first_pass
-    if (rd_reset) begin
-        first_pass_done <= 1'b0;
-    end else begin
-        if (rd_last && rd_ready && rd_valid) begin
-            first_pass_done <= 1'b1;
+        if (wr_completed) begin
+            if (!skid_valid || (rd_ready && rd_valid)) begin: rd_enable
+                if (!rd_last) begin: not_last_instruction
+                    rd_valid <= 1'b1;
+                    skid_valid <= 1'b1;
+                    skid_buffer <= ram_do;
+                end else begin
+                    skid_valid <= 1'b0;
+                end
+            end
         end
     end
 end

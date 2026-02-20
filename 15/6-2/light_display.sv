@@ -30,6 +30,7 @@ localparam int RAM_ADDR_WIDTH = $clog2(ROWS);
 localparam int RAM_DATA_WIDTH = 36;
 localparam int COLS_PER_RAM = 6;
 localparam int RAM_INSTANCES = int'($ceil(1.0*COLS_PER_PASS/COLS_PER_RAM));
+localparam int RAM_INDEX_WIDTH = $clog2(RAM_INSTANCES);
 localparam int COL_DATA_WIDTH = RAM_DATA_WIDTH/COLS_PER_RAM;
 localparam int COL_ACC_WIDTH = $clog2(ROWS)+COL_DATA_WIDTH;
 localparam int RAM_ACC_WIDTH = $clog2(COLS_PER_RAM)+COL_ACC_WIDTH;
@@ -40,6 +41,7 @@ typedef logic [POSITION_BITS-1:0] position_t;
 typedef logic [COMMAND_BITS-1:0] raw_cmd_t;
 typedef logic [POSITION_BITS-1:0] ptr_t;
 typedef logic [PASS_OFFSET_WIDTH-1:0] pass_offset_t;
+typedef logic [RAM_INDEX_WIDTH-1:0] ram_index_t;
 typedef logic [RAM_DATA_WIDTH-1:0] ram_data_t;
 typedef logic [COL_DATA_WIDTH-1:0] col_data_t;
 typedef logic [COL_ACC_WIDTH-1:0] col_acc_t;
@@ -61,21 +63,28 @@ typedef union packed {
     cmd_s f;
 } cmd_u;
 
-typedef enum logic [3-1:0] {
+typedef enum logic [4-1:0] {
     SM_WAIT_RESET_FALLING,
     SM_ASSERT_READY,
     SM_CAPTURE_CMD,
     SM_WAIT_CMD_PROCESSED,
     SM_START_INTENSITY_SUM,
-    SM_WAIT_INTENSITY_SUM,
+    SM_WAIT_INTENSITY_SUM_ROW_SWEEP,
+    SM_WAIT_INTENSITY_SUM_RAM_CASCADE,
+    SM_CAPTURE_SUM,
+    SM_START_CLEARING_RAM,
+    SM_WAIT_CLEARING_RAM,
     SM_FINISHED
 } sm_states_e;
 
 sm_states_e curr_state, next_state;
-logic cmd_processed, last_cmd, sum_completed, first_pass_completed;
+logic cmd_processed, last_cmd;
+logic sum_row_sweep_pending, sum_ram_cascade_pending, sum_completed;
+logic clearing_ram_pending, first_pass_completed;
 cmd_u captured_cmd;
 logic [LIGHT_UPDATE_LATENCY-1:0] we_sr;
 ptr_t [LIGHT_UPDATE_LATENCY-1:0] row_ptr;
+ram_index_t ram_sweep_index;
 acc_t [RAM_INSTANCES:0] acc_array;
 pass_offset_t offset_pass;
 
@@ -116,15 +125,37 @@ always_comb begin: next_state_logic
             end
         end
         SM_START_INTENSITY_SUM: begin
-            next_state = SM_WAIT_INTENSITY_SUM;
+            next_state = SM_WAIT_INTENSITY_SUM_ROW_SWEEP;
         end
-        SM_WAIT_INTENSITY_SUM: begin
-            if (!sum_completed) begin
-                next_state = SM_WAIT_INTENSITY_SUM;
-            end else if (!first_pass_completed) begin: finished_first_pass
-                next_state = SM_ASSERT_READY;
+        SM_WAIT_INTENSITY_SUM_ROW_SWEEP: begin
+            if (sum_row_sweep_pending) begin
+                next_state = SM_WAIT_INTENSITY_SUM_ROW_SWEEP;
             end else begin
+                next_state = SM_WAIT_INTENSITY_SUM_RAM_CASCADE;
+            end
+        end
+        SM_WAIT_INTENSITY_SUM_RAM_CASCADE: begin
+            if (sum_ram_cascade_pending) begin
+                next_state = SM_WAIT_INTENSITY_SUM_RAM_CASCADE;
+            end else begin
+                next_state = SM_CAPTURE_SUM;
+            end
+        end
+        SM_CAPTURE_SUM: begin
+            if (!first_pass_completed) begin: finished_first_pass
+                next_state = SM_START_CLEARING_RAM;
+            end else begin: finished_second_pass
                 next_state = SM_FINISHED;
+            end
+        end
+        SM_START_CLEARING_RAM: begin
+            next_state = SM_WAIT_CLEARING_RAM;
+        end
+        SM_WAIT_CLEARING_RAM: begin
+            if (clearing_ram_pending) begin
+                next_state = SM_WAIT_CLEARING_RAM;
+            end else begin
+                next_state = SM_ASSERT_READY;
             end
         end
         default: next_state = SM_FINISHED;
@@ -155,16 +186,24 @@ always_ff @(posedge clk) begin: track_last_cmd
     end
 end
 
-always_ff @(posedge clk) begin: update_row_ptr
+always_ff @(posedge clk) begin: update_internal_vars
     if (reset) begin
         count_done <= 1'b0;
+        count_value <= '0;
         cmd_processed <= 1'b0;
-        we_sr <= '0;
-        sum_completed <= 1'b0;
         row_ptr <= '0;
+        we_sr <= '0;
+        sum_row_sweep_pending <= 1'b0;
+        sum_ram_cascade_pending <= 1'b0;
+        sum_completed <= 1'b0;
+        first_pass_completed <= 1'b0;
+        clearing_ram_pending <= 1'b0;
+        ram_sweep_index <= '0;
     end else begin
         cmd_processed <= 1'b0;
         we_sr <= {we_sr[$size(we_sr)-2:0], 1'b0};
+        sum_row_sweep_pending <= 1'b0;
+        clearing_ram_pending <= 1'b0;
         unique case (curr_state)
             SM_ASSERT_READY: begin
                 sum_completed <= 1'b0;
@@ -179,11 +218,34 @@ always_ff @(posedge clk) begin: update_row_ptr
                 row_ptr <= {row_ptr[$size(row_ptr)-2:0], row_ptr[RD_PTR]+1'b1};
             end
             SM_START_INTENSITY_SUM: begin
+                sum_row_sweep_pending <= 1'b1;
+                sum_ram_cascade_pending <= 1'b1;
                 row_ptr[RD_PTR] <= '0;
+                ram_sweep_index <= '0;
             end
-            SM_WAIT_INTENSITY_SUM: begin
-                sum_completed <= !sum_completed && (int'(row_ptr[RD_PTR]) > ROWS + LIGHT_UPDATE_LATENCY);
+            SM_WAIT_INTENSITY_SUM_ROW_SWEEP: begin
+                sum_row_sweep_pending <= (int'(row_ptr[RD_PTR]) < ROWS + LIGHT_UPDATE_LATENCY);
                 row_ptr[RD_PTR] <= row_ptr[RD_PTR] + 1'b1;
+            end
+            SM_WAIT_INTENSITY_SUM_RAM_CASCADE: begin
+                sum_ram_cascade_pending <= (ram_sweep_index < RAM_INDEX_WIDTH'(RAM_INSTANCES));
+                // sum_ram_cascade_pending <= (ram_sweep_index < PASS_OFFSET_WIDTH'(COLS_PER_PASS));
+                ram_sweep_index <= ram_sweep_index + 1'b1;
+            end
+            SM_CAPTURE_SUM: begin
+                count_value <= count_value + RESULT_WIDTH'(acc_array[RAM_INSTANCES]);
+                first_pass_completed <= 1'b1;
+                sum_completed <= 1'b1;
+            end
+            SM_START_CLEARING_RAM: begin
+                clearing_ram_pending <= 1'b1;
+                we_sr[WR_PTR] <= 1'b1;
+                row_ptr[WR_PTR] <= '0;
+            end
+            SM_WAIT_CLEARING_RAM: begin
+                clearing_ram_pending <= (int'(row_ptr[WR_PTR]) < ROWS);
+                we_sr[WR_PTR] <= 1'b1;
+                row_ptr[WR_PTR] <= row_ptr[WR_PTR] + 1'b1;
             end
             SM_FINISHED: begin
                 count_done <= 1'b1;
@@ -195,11 +257,9 @@ end
 
 always_ff @(posedge clk) begin: track_first_pass_completed
     if (reset) begin
-        first_pass_completed <= 1'b0;
         offset_pass <= '0;
     end else if (sum_completed) begin
-        first_pass_completed <= 1'b1;
-        offset_pass <= offset_pass + pass_offset_t'(COLS_PER_PASS);
+        offset_pass <= pass_offset_t'(COLS_PER_PASS);
     end
 end
 
@@ -240,7 +300,7 @@ for (i=0; i<RAM_INSTANCES; i++) begin: per_ram
         endfunction
 
         assign col_rd_data = ram_rd_data[j*COL_DATA_WIDTH+:COL_DATA_WIDTH];
-        assign ram_wr_data[j*COL_DATA_WIDTH+:COL_DATA_WIDTH] = col_wr_data;
+        assign ram_wr_data[j*COL_DATA_WIDTH+:COL_DATA_WIDTH] = clearing_ram_pending ? '0 : col_wr_data;
 
         always_ff @(posedge clk) begin: execute_op
             if (is_col_selected(captured_cmd, COL_INDEX, offset_pass)) begin
@@ -264,45 +324,49 @@ for (i=0; i<RAM_INSTANCES; i++) begin: per_ram
             end
         end
 
-        always_ff @(posedge clk) begin
+        always_ff @(posedge clk) begin: sum_per_row
             if (reset) begin
                 per_col_acc[j] <= 0;
-            end else if (last_cmd && !sum_completed) begin
-                per_col_acc[j] <= per_col_acc[j] + COL_ACC_WIDTH'(col_rd_data);
+            end else begin
+                if (sum_row_sweep_pending) begin
+                    per_col_acc[j] <= per_col_acc[j] + COL_ACC_WIDTH'(col_rd_data);
+                end else if (sum_completed) begin
+                    per_col_acc[j] <= '0;
+                end
             end
         end
 
     end
 
-    always_comb begin
+    always_comb begin: sum_per_col
         comb_per_ram_acc = '0;
         for (int k=0; k<COLS_PER_RAM; k++) begin
             comb_per_ram_acc = comb_per_ram_acc + (COL_ACC_WIDTH+3)'(per_col_acc[k]);
         end
     end
 
-    always_ff @(posedge clk) begin
+    always_ff @(posedge clk) begin: acc_array_cascade
         if (reset) begin
             acc_array[1+i] <= '0;
-        end else if (last_cmd && !sum_completed) begin
-            acc_array[1+i] <= acc_array[i] + ACC_WIDTH'(comb_per_ram_acc);
+        end else begin
+            if (sum_ram_cascade_pending) begin
+                acc_array[1+i] <= acc_array[i] + ACC_WIDTH'(comb_per_ram_acc);
+            end else if (sum_completed) begin
+                acc_array[1+i] <= '0;
+            end
         end
     end
-
-    wire _unused_ok = 1'b0 && &{1'b0,
-        1'b0};
 
 end
 endgenerate;
 
-assign count_value = 24'(acc_array[RAM_INSTANCES]);
+ptr_t debug__row_ptr;
+acc_t debug__last_col = acc_array[RAM_INSTANCES];
+assign debug__row_ptr = POSITION_BITS'(row_ptr);
 
 wire _unused_ok = 1'b0 && &{1'b0,
-    instr_last,
-    instr_data,
-    count_done,
-    count_value,
-    we_sr,
+    debug__row_ptr,
+    debug__last_col,
     1'b0};
 
 endmodule

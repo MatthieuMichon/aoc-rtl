@@ -1,2 +1,8 @@
-turn on 0,0 through 0,11
-turn on 0,12 through 0,17
+turn on 0,0 through 0,0
+turn on 0,503 through 0,503
+turn on 999,0 through 999,0
+turn on 999,503 through 999,503
+turn on 0,504 through 0,504
+turn on 0,999 through 0,999
+turn on 999,504 through 999,504
+turn on 999,999 through 999,999
