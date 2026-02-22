@@ -317,6 +317,8 @@ These results suggests that the routing was somewhat challenging and thought tha
 
 ### Invalid Results
 
+#### Input Contents Bissection
+
 | Lines   | Reference | Simulation | Results | Remarks   |
 |---------|-----------|------------|---------|-----------|
 | 300     | 17836115  | 1077762    | :x: NG  | Full file |
@@ -347,6 +349,8 @@ Manually computing the expected result:
 176256+87360=263616
 ```
 
+#### Narrowing Down the Issue
+
 I tried to reduce the area by dividing by ten and got 2747 vs 2834 with the following:
 
 ```
@@ -355,3 +359,29 @@ turn on 41,14 through 86,33
 ```
 
 Interestingly, only rows below 504 are used meaning that the dual pass logic is not at fault for this specific case.
+
+I further reduced the area by using a single column, while using row index values resulting in the problem still manifesting.
+
+```
+turn on 2,1 through 18,1
+turn on 1,1 through 8,1
+```
+
+Looking at the waveforms, I noticed that the write enable was asserted two cycles too early, although the address value didn't change making this behavior having no effect related to this issue, I still fixed this issue if only to make the sequence more easy to understand. I noticed this time that the readback had picked up values from the previous cycle which absolutely wrong. The fix was easy enough.
+
+```diff
+always_ff @(posedge clk) begin: sum_per_row
+    if (reset) begin
+        per_col_acc[j] <= 0;
++        sum_read_pending <= 1'b0;
+    end else begin
+-        if (sum_row_sweep_pending) begin
++        if (sum_read_pending) begin
+            per_col_acc[j] <= per_col_acc[j] + COL_ACC_WIDTH'(col_rd_data);
+        end else if (sum_completed) begin
+            per_col_acc[j] <= '0;
+        end
++        sum_read_pending <= sum_row_sweep_pending;
+    end
+end
+```

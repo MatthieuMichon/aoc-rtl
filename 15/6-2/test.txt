@@ -1,2 +1,2 @@
-turn on 77,1 through 97,87
-turn on 41,14 through 86,33
+turn on 774,14 through 977,877
+turn on 410,146 through 864,337

@@ -79,7 +79,7 @@ typedef enum logic [4-1:0] {
 
 sm_states_e curr_state, next_state;
 logic cmd_pending, cmd_processed, last_cmd;
-logic sum_row_sweep_pending, sum_ram_cascade_pending, sum_completed;
+logic sum_row_sweep_pending, sum_read_pending, sum_ram_cascade_pending, sum_completed;
 logic clearing_ram_pending, first_pass_completed;
 cmd_u captured_cmd;
 logic [LIGHT_UPDATE_LATENCY-1:0] we_sr;
@@ -211,7 +211,7 @@ always_ff @(posedge clk) begin: update_internal_vars
                 sum_completed <= 1'b0;
             end
             SM_CAPTURE_CMD: begin
-                we_sr <= {LIGHT_UPDATE_LATENCY{1'b1}};
+                we_sr <= LIGHT_UPDATE_LATENCY'(1'b1);
                 row_ptr <= {LIGHT_UPDATE_LATENCY{captured_cmd.f.start_row}};
                 cmd_pending <= 1'b1;
             end
@@ -222,18 +222,18 @@ always_ff @(posedge clk) begin: update_internal_vars
                 cmd_pending <= 1'b1;
             end
             SM_START_INTENSITY_SUM: begin
-                sum_row_sweep_pending <= 1'b1;
                 sum_ram_cascade_pending <= 1'b1;
+                sum_row_sweep_pending <= 1'b1;
                 row_ptr[RD_PTR] <= '0;
                 ram_sweep_index <= '0;
             end
             SM_WAIT_INTENSITY_SUM_ROW_SWEEP: begin
+                sum_ram_cascade_pending <= 1'b1;
                 sum_row_sweep_pending <= (int'(row_ptr[RD_PTR]) < ROWS + LIGHT_UPDATE_LATENCY);
                 row_ptr[RD_PTR] <= row_ptr[RD_PTR] + 1'b1;
             end
             SM_WAIT_INTENSITY_SUM_RAM_CASCADE: begin
                 sum_ram_cascade_pending <= (ram_sweep_index < RAM_INDEX_WIDTH'(RAM_INSTANCES));
-                // sum_ram_cascade_pending <= (ram_sweep_index < PASS_OFFSET_WIDTH'(COLS_PER_PASS));
                 ram_sweep_index <= ram_sweep_index + 1'b1;
             end
             SM_CAPTURE_SUM: begin
@@ -331,12 +331,14 @@ for (i=0; i<RAM_INSTANCES; i++) begin: per_ram
         always_ff @(posedge clk) begin: sum_per_row
             if (reset) begin
                 per_col_acc[j] <= 0;
+                sum_read_pending <= 1'b0;
             end else begin
-                if (sum_row_sweep_pending) begin
+                if (sum_read_pending) begin
                     per_col_acc[j] <= per_col_acc[j] + COL_ACC_WIDTH'(col_rd_data);
                 end else if (sum_completed) begin
                     per_col_acc[j] <= '0;
                 end
+                sum_read_pending <= sum_row_sweep_pending;
             end
         end
 
