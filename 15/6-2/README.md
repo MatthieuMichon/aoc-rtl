@@ -314,3 +314,44 @@ Slack (MET) :             0.313ns  (required time - arrival time)
 These results suggests that the routing was somewhat challenging and thought that the floorplan would be worth a look. Indeed it didn't disappoint :grin:
 
 ![](floorplan.png)
+
+### Invalid Results
+
+| Lines   | Reference | Simulation | Results | Remarks   |
+|---------|-----------|------------|---------|-----------|
+| 300     | 17836115  | 1077762    | :x: NG  | Full file |
+| 150     | 10211132  | 10215078   | :x: NG  | Much closer |
+| 75      | 3911906   | 3913498    | :x: NG  |  |
+| 37      | 1156964   | 1158667    | :x: NG  |  |
+| 18      | 906532    | 907216     | :x: NG  |  |
+| 10      | 225924    | 226693     | :x: NG  |  |
+| 5       | 265242    | 266106     | :x: NG  |  |
+| 2       | 1626      | 1626       | :white_check_mark: OK |  |
+| 4       | 177882    | 177882     | :white_check_mark: OK |  |
+| 1 (5:5) | 87360     | 87360      | :white_check_mark: OK |  |
+| 4 (1:5) | 263616    | 264480     | :x: NG  |  |
+| 2 (4:5) | 263616    | 264480     | :x: NG  | Removed `off` instruction which had no effect due to the `min` logic |
+
+The two following instructions cause the FPGA implementation to behave unexpectedly:
+
+```
+turn on 774,14 through 977,877
+turn on 410,146 through 864,337
+```
+
+Manually computing the expected result:
+
+```
+(977-774+1)*(877-14+1)=176256
+(864-410+1)*(337-146+1)=87360
+176256+87360=263616
+```
+
+I tried to reduce the area by dividing by ten and got 2747 vs 2834 with the following:
+
+```
+turn on 77,1 through 97,87
+turn on 41,14 through 86,33
+```
+
+Interestingly, only rows below 504 are used meaning that the dual pass logic is not at fault for this specific case.
