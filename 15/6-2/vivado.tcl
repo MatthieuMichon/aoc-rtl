@@ -92,7 +92,26 @@ proc ::build {arg_dict} {
     # Synthesize Design
 
         set directive RuntimeOptimized; # speed-run the build process
-        #set_param synth.elaboration.rodinMoreOptions "rt::set_parameter synVerbose 1"
+
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter oasisTimerDebug {true}"
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter debugTiming {true}"
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter debugTimingInformation {true}"
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter debugTimingReport {true}"
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter timingDebugRetiming {true}"
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter muxVerbose {1}"
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter collapseLutsVerbose {true}"
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter retimeHighFanoutVerbose {1}"
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter verboseCtrlExtraction {1}"
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter nlOptGatedClockVerbose {1}"
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter ioVerbose {1}"
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter optVerbose {1}"
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter ramSynVerbose {1}"
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter xilinxMuxDecompVerbose {true}"
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter ChopperVerbose {1}"
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter FPlaceVerbose {1}"
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter ExtractVerbose {1}"
+        set_param synth.elaboration.rodinMoreOptions "rt::set_parameter synVerbose {1}"
+
         synth_design -top [lindex [find_top] 0] \
             -directive $directive \
             -flatten_hierarchy none \

@@ -6,15 +6,17 @@ Status:
 |----------------------------|-----------------------|
 | Reference: Python script   | :white_check_mark: Ok |
 | RTL Concept: Python script | :white_check_mark: Ok |
-| Simulation: Icarus Verilog | *To be done* |
-| Simulation: Verilator      | *To be done* |
-| Simulation: Vivado Xsim    | *To be done* |
-| Synthesis: Vivado Zynq7    | *To be done* |
-| On-board: Zynq7            | *To be done* |
+| Simulation: Icarus Verilog | :white_check_mark: Ok |
+| Simulation: Verilator      | :white_check_mark: Ok |
+| Simulation: Vivado Xsim    | :white_check_mark: Ok |
+| Synthesis: Vivado Zynq7    | :white_check_mark: Ok |
+| On-board: Zynq7            | :white_check_mark: Ok |
 
 # Lessons Learnt
 
 - Xilinx lists BRAM resources in RAMB18 units, not in RAMB36
+- Off by one errors can be hidden or exposed depending on the state left by the last command
+- Plenty of undocumented TCL debug commands can be found in Vivado's `parameter.tcl` file
 
 # Design Space Exploration
 
@@ -403,3 +405,74 @@ The expected result with the complete 300-line input contents is over 16.7M whic
 | Lines   | Reference | Simulation | Before  | After                 | Remarks |
 |---------|-----------|------------|---------|-----------------------|---------|
 | 300     | 17836115  | 17836115   | :x: NG  | :white_check_mark: OK | Result width increased to 32 |
+
+Looking at the FSM state machine inference from the Vivado log file, I noticed a `iSTATE` which does not exists in the `light_decoder.sv` source file. Correlating the declared states with the following table, this state appears to match the `SM_FINISHED` state which is missing from the table.
+
+|                   State |                     New Encoding |                Previous Encoding 
+|-------------------------|----------------------------------|---------------------------------------
+|   SM_WAIT_RESET_FALLING |                             0000 |                             0000
+|         SM_ASSERT_READY |                             0001 |                             0001
+|          SM_CAPTURE_CMD |                             0010 |                             0010
+|   SM_WAIT_CMD_PROCESSED |                             0011 |                             0011
+|  SM_START_INTENSITY_SUM |                             0100 |                             0100
+|SM_WAIT_INTENSITY_SUM_ROW_SWEEP |                      0101 |                             0101
+|SM_WAIT_INTENSITY_SUM_RAM_CASCADE |                    0110 |                             0110
+|          SM_CAPTURE_SUM |                             0111 |                             0111
+|   SM_START_CLEARING_RAM |                             1000 |                             1000
+|    SM_WAIT_CLEARING_RAM |                             1001 |                             1001
+|                  iSTATE |                             1010 |                             1010
+
+Sure enough the `iSTATE` is now replaced with a `SM_FINISHED` state. For some reason Vivado decided to use a one-hot encoding instead of the conventional binary encoding.
+
+|                   State |                     New Encoding |                Previous Encoding
+|-------------------------|----------------------------------|----------------------------------------
+|   SM_WAIT_RESET_FALLING |                      00000000001 |                             0000
+|         SM_ASSERT_READY |                      00000000010 |                             0001
+|          SM_CAPTURE_CMD |                      00000000100 |                             0010
+|   SM_WAIT_CMD_PROCESSED |                      00000001000 |                             0011
+|  SM_START_INTENSITY_SUM |                      00000010000 |                             0100
+|SM_WAIT_INTENSITY_SUM_ROW_SWEEP |               00000100000 |                             0101
+|SM_WAIT_INTENSITY_SUM_RAM_CASCADE |             00001000000 |                             0110
+|          SM_CAPTURE_SUM |                      00010000000 |                             0111
+|   SM_START_CLEARING_RAM |                      00100000000 |                             1000
+|    SM_WAIT_CLEARING_RAM |                      01000000000 |                             1001
+|             SM_FINISHED |                      10000000000 |                             1010
+
+For reference the simplified state machine behavior is the following:
+
+```mermaid
+flowchart
+SM_WAIT_RESET_FALLING --> SM_ASSERT_READY
+SM_ASSERT_READY --> SM_ASSERT_READY
+SM_CAPTURE_CMD --> SM_WAIT_CMD_PROCESSED
+SM_WAIT_CMD_PROCESSED --> SM_START_INTENSITY_SUM
+SM_START_INTENSITY_SUM --> SM_WAIT_INTENSITY_SUM_ROW_SWEEP
+SM_WAIT_INTENSITY_SUM_ROW_SWEEP --> SM_WAIT_INTENSITY_SUM_RAM_CASCADE
+SM_WAIT_INTENSITY_SUM_RAM_CASCADE --> SM_CAPTURE_SUM
+SM_CAPTURE_SUM --> SM_START_CLEARING_RAM
+SM_START_CLEARING_RAM --> SM_WAIT_CLEARING_RAM
+SM_WAIT_CLEARING_RAM --> SM_FINISHED
+SM_FINISHED
+```
+
+Resource utilisation seems fair.
+
+|        Site Type        |  Used | Fixed | Prohibited | Available | Util% |
+|-------------------------|-------|-------|------------|-----------|-------|
+| Slice LUTs              | 31885 |     0 |          0 |     53200 | 59.93 |
+|   LUT as Logic          | 31885 |     0 |          0 |     53200 | 59.93 |
+|   LUT as Memory         |     0 |     0 |          0 |     17400 |  0.00 |
+| Slice Registers         | 39908 |     0 |          0 |    106400 | 37.51 |
+|   Register as Flip Flop | 39908 |     0 |          0 |    106400 | 37.51 |
+|   Register as Latch     |     0 |     0 |          0 |    106400 |  0.00 |
+| F7 Muxes                |  3468 |     0 |          0 |     26600 | 13.04 |
+| F8 Muxes                |  1632 |     0 |          0 |     13300 | 12.27 |
+| Unique Control Sets     |   536 |       |          0 |     13300 |  4.03 |
+
+Vivado had no trouble spreading the design across the whole device:
+
+|                  Site Type                 |  Used | Fixed | Prohibited | Available | Util% |
+|--------------------------------------------|-------|-------|------------|-----------|-------|
+| Slice                                      | 13274 |     0 |          0 |     13300 | 99.80 |
+|   SLICEL                                   |  8935 |     0 |            |           |       |
+|   SLICEM                                   |  4339 |     0 |            |           |       |

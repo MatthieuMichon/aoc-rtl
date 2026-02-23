@@ -159,6 +159,7 @@ Figured I shall start from the ground up.
 | [5.1](15/5-1/)   | :large_blue_circle: A breeze compared to the previous puzzles | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box | Straightforward |
 | [5.2](15/5-2/)   | :green_circle: Although non-trivial, was easy to implement | :large_blue_circle: Synthesized right away | :large_blue_circle: Right out of the box | An *off by one* error initially slept in the RTL design |
 | [6.1](15/6-1/)   | :yellow_circle: Had to be clever for this one | :large_blue_circle: Synthesized right away | :green_circle: CDC exposed way too early results strobe event | Interesting on-board issue |
+| [6.2](15/6-2/)   | :yellow_circle: Modeling in Python saved me from trouble | :red_circle: Xilinx lists RAM resources in RAMB18 not RAMB36 :grimacing: | :large_blue_circle: Right out of the box | Large rework after noticing I'd run out of RAM blocks :confounded: |
 
 ## Symbology
 
