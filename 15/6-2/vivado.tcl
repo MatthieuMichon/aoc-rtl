@@ -196,7 +196,7 @@ proc ::load_inputs {arg_dict} {
 }
 
 proc ::read_result {} {
-    set result_width 24
+    set result_width 32
     set result 0x0
     puts -nonewline "Waiting for non-zero result... "
     set start_time [clock microseconds]

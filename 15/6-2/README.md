@@ -331,7 +331,7 @@ These results suggests that the routing was somewhat challenging and thought tha
 | 2       | 1626      | 1626       | :white_check_mark: OK |  |
 | 4       | 177882    | 177882     | :white_check_mark: OK |  |
 | 1 (5:5) | 87360     | 87360      | :white_check_mark: OK |  |
-| 4 (1:5) | 263616    | 264480     | :x: NG  |  |
+| 4 (2:5) | 263616    | 264480     | :x: NG  |  |
 | 2 (4:5) | 263616    | 264480     | :x: NG  | Removed `off` instruction which had no effect due to the `min` logic |
 
 The two following instructions cause the FPGA implementation to behave unexpectedly:
@@ -385,3 +385,21 @@ always_ff @(posedge clk) begin: sum_per_row
     end
 end
 ```
+
+| Lines   | Reference | Simulation | Before  | After                 | Remarks |
+|---------|-----------|------------|---------|-----------------------|---------|
+| 2 (4:5) | 263616    | 263616     | :x: NG  | :white_check_mark: OK |  |
+| 4 (2:5) | 263616    | 263616     | :x: NG  | :white_check_mark: OK |  |
+| 5       | 265242    | 265242     | :x: NG  | :white_check_mark: OK |  |
+| 10      | 225924    | 225924     | :x: NG  | :white_check_mark: OK | Contains a `toogle` instruction |
+| 18      | 906532    | 906532     | :x: NG  | :white_check_mark: OK |  |
+| 37      | 1156964   | 1156964    | :x: NG  | :white_check_mark: OK |  |
+| 75      | 3911906   | 3911906    | :x: NG  | :white_check_mark: OK |  |
+| 150     | 10211132  | 10211132   | :x: NG  | :white_check_mark: OK |  |
+| 300     | 17836115  | 1058899    | :x: NG  | :x: NG                | Significant difference hinting at an overflow? |
+
+The expected result with the complete 300-line input contents is over 16.7M which is the max unsigned value possible with 24 bits. My first action is checking the result width value, which sure enough was set to 24 bits.
+
+| Lines   | Reference | Simulation | Before  | After                 | Remarks |
+|---------|-----------|------------|---------|-----------------------|---------|
+| 300     | 17836115  | 17836115   | :x: NG  | :white_check_mark: OK | Result width increased to 32 |

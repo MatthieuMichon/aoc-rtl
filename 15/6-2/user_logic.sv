@@ -18,7 +18,7 @@ module user_logic (
         input wire conf_clk
 );
 
-localparam int RESULT_WIDTH = 24;
+localparam int RESULT_WIDTH = 32;
 localparam int UPSTREAM_BYPASS_BITS = 1; // ARM DAP controller in BYPASS mode
 localparam int INBOUND_DATA_WIDTH = $bits(byte);
 localparam int CDC_SYNC_STAGES = 3;
