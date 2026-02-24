@@ -8,6 +8,8 @@ A quick check of the [input contents file](input.txt) shows 339 instructions and
 
 After giving some thoughts, the decoding turned out to be simpler than expected. This is the case with Python, the FPGA implementation will likely be quite challenging.
 
+Assuming the following operations:
+
 ```py
 OPERATORS = {
     "AND",
@@ -17,6 +19,8 @@ OPERATORS = {
     "RSHIFT",
 }
 ```
+
+And the related decoding logic:
 
 ```py
 def decode_inputs(file: Path) -> Iterator[tuple[str, dict]]:
@@ -44,6 +48,59 @@ def decode_inputs(file: Path) -> Iterator[tuple[str, dict]]:
             yield (rhs, lhs)
 ```
 
+The core logic is a simple recursion loop:
+
+```py
+def user_logic(file: Path) -> int:
+    def get_signal(wire: str) -> int:
+        if wire in lut:
+            return lut[wire]
+        if wire.isdigit():
+            return int(wire)
+        instruction = instructions[wire]
+        operator = instruction["operator"]
+        if operator in ("let", "forward"):
+            value = get_signal(instruction["operands"][0])
+            lut[wire] = value
+        elif operator == "invert":
+            raw_value = get_signal(instruction["operands"][0])
+            value = ~raw_value & 65535
+            lut[wire] = value
+        elif operator == "and":
+            value1 = get_signal(instruction["operands"][0])
+            value2 = get_signal(instruction["operands"][1])
+            value = value1 & value2
+            lut[wire] = value
+        elif operator == "or":
+            value1 = get_signal(instruction["operands"][0])
+            value2 = get_signal(instruction["operands"][1])
+            value = value1 | value2
+            lut[wire] = value
+        elif operator == "lshift":
+            value = get_signal(instruction["operands"][0]) << get_signal(
+                instruction["operands"][1]
+            )
+            lut[wire] = value
+        elif operator == "rshift":
+            value = get_signal(instruction["operands"][0]) >> get_signal(
+                instruction["operands"][1]
+            )
+            lut[wire] = value
+        else:
+            assert False, f"Unknown operator: {operator}"
+        print(f"{wire=}, {instruction=} -> {value=}")
+        return value
+
+    lut = {}
+    instructions = dict(decode_inputs(file=file))
+    retval = get_signal("a")
+    return retval
+```
+
+Result using my custom input contents: **16076**
+
+### FPGA-friendly Python Implementation
+
 Doing some basic checks yields some insights:
 
 ```
@@ -52,4 +109,13 @@ Operators: operator=Counter({'and': 112, 'or': 80, 'rshift': 64, 'invert': 48, '
 Individual wires per length: Counter({2: 313, 1: 26})
 ```
 
-I have 26 wires named with a single letter which I did not catch during the quick inspection. Thankfully this not change memory storage requirements nor the tracking table since 10-bit words largely covers a 27x26 arrangement.
+I have 26 wires named with a single letter which I did not catch during the quick inspection. Thankfully this not change memory storage requirements nor the tracking table since 10-bit words largely covers a 27x26 arrangement. Thus will use the following entry structure:
+
+- Opcode: 4-bit
+  - 0b0000: NULL
+  - 0b0100: LET
+  - 0b0101: NOT
+  - 0b1000: AND
+  - 0b1001: OR
+  - 0b1010: LSHIFT
+  - 0b1011: RSHIFT

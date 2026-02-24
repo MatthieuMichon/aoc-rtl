@@ -58,11 +58,10 @@ def explore(file: Path) -> None:
 
 def user_logic(file: Path) -> int:
     def get_signal(wire: str) -> int:
-        print(f"### {wire=}")
-        if wire.isdigit():
-            return int(wire)
         if wire in lut:
             return lut[wire]
+        if wire.isdigit():
+            return int(wire)
         instruction = instructions[wire]
         operator = instruction["operator"]
         if operator in ("let", "forward"):
@@ -110,7 +109,7 @@ def main() -> int:
     explore_design_space = True
     if explore_design_space:
         explore(file=Path(file))
-    # print(f"Result: {user_logic(file=Path(file))}")
+    print(f"Result: {user_logic(file=Path(file))}")
     # print(f"FPGA Result: {fpga_user_logic(file=Path(file))}")
     return 0
 
