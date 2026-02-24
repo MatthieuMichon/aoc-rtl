@@ -112,10 +112,23 @@ Individual wires per length: Counter({2: 313, 1: 26})
 I have 26 wires named with a single letter which I did not catch during the quick inspection. Thankfully this not change memory storage requirements nor the tracking table since 10-bit words largely covers a 27x26 arrangement. Thus will use the following entry structure:
 
 - Opcode: 4-bit
-  - 0b0000: NULL
-  - 0b0100: LET
-  - 0b0101: NOT
-  - 0b1000: AND
-  - 0b1001: OR
-  - 0b1010: LSHIFT
-  - 0b1011: RSHIFT
+  - 0b000: NULL
+  - 0b001: LD
+  - 0b010: SET
+  - 0b101: NOT
+  - 0b100: AND
+  - 0b101: OR
+  - 0b110: LSHIFT
+  - 0b111: RSHIFT
+
+[//]: # (
+{reg: [
+    {bits: 3,  name: 'LD', attr: 1},
+    {bits: 16, name: 'immediate', attr: 'uint16'},
+    {bits: 1, attr: 0},
+    {bits: 16},
+    {bits: 1},
+], config: {hspace: 1400}}
+)
+
+![](ld-wavedrom.svg)
