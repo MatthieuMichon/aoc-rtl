@@ -102,6 +102,79 @@ def user_logic(file: Path) -> int:
     return retval
 
 
+def rtl_decode_inputs(file: Path):
+    scratch_str = ""
+    scratch_int = 0
+    first_operand_str = ""
+    first_operand_int = 0
+    second_operand_str = ""
+    second_operand_int = 0
+    is_rhs = False
+    wire = ""
+    opcode = ""
+    with open(file) as fh:
+        for i, line in enumerate(fh):
+            for j, char in enumerate(line):
+                if not is_rhs:
+                    if char.islower():
+                        scratch_str += char
+                    elif char.isdigit():
+                        scratch_int = (10 * scratch_int) + int(char)
+                    elif char == " ":
+                        if scratch_str:
+                            if not first_operand_str:
+                                first_operand_str = scratch_str
+                                scratch_str = ""
+                            elif not second_operand_str:
+                                second_operand_str = scratch_str
+                                scratch_str = ""
+                            else:
+                                raise ValueError(f"Error at row {i + 1}, col {j + 1}")
+                            scratch_str = ""
+                        elif scratch_int:
+                            if not first_operand_int:
+                                first_operand_int = scratch_int
+                                scratch_int = 0
+                            elif not second_operand_int:
+                                second_operand_int = scratch_int
+                                scratch_int = 0
+                            else:
+                                raise ValueError(f"Error at row {i + 1}, col {j + 1}")
+                            scratch_int = 0
+                    elif char.isupper() and not opcode:
+                        if char == "N":
+                            opcode = "NOT"
+                        elif char == "A":
+                            opcode = "AND"
+                        elif char == "O":
+                            opcode = "OR"
+                        elif char == "L":
+                            opcode = "LSHIFT"
+                        elif char == "R":
+                            opcode = "RSHIFT"
+                    elif char == ">":
+                        is_rhs = True
+                else:
+                    if char.islower():
+                        wire += char
+                    elif char == "\n":
+                        if not opcode:
+                            opcode = "LOAD"
+                            if first_operand_str:
+                                yield (wire, first_operand_str, opcode)
+                            else:
+                                yield (wire, first_operand_int, opcode)
+                        scratch_str = ""
+                        scratch_int = 0
+                        first_operand_str = ""
+                        first_operand_int = 0
+                        second_operand_str = ""
+                        second_operand_int = 0
+                        is_rhs = False
+                        wire = ""
+                        opcode = ""
+
+
 def main() -> int:
     os.chdir(Path(__file__).resolve().parent)
     file = "./input.txt" if len(sys.argv) < 2 else sys.argv[1]
@@ -110,7 +183,7 @@ def main() -> int:
     if explore_design_space:
         explore(file=Path(file))
     print(f"Result: {user_logic(file=Path(file))}")
-    # print(f"FPGA Result: {fpga_user_logic(file=Path(file))}")
+    instructions = list(rtl_decode_inputs(file=Path(file)))
     return 0
 
 
