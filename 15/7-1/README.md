@@ -116,12 +116,56 @@ Since recursion is involved, the solving logic will not be able to process inbou
 | Instruction | Short Hand | Encoding | First Operand                 | Second Operand                  | Remarks                          |
 |-------------|------------|----------|-------------------------------|---------------------------------|----------------------------------|
 | Null        | NOOP       | 0b000    | N/A                           | N/A                             | No further instructions in BRAM  |
-| Assign      | LOAD       | 0b010    | Wire (10-bit) or Int (16-bit) | N/A                             | Second operand value < 16        |
-| Invert      | INV        | 0b011    | Wire (10-bit)                 | N/A                             | Second operand value < 16        |
+| Assign      | LOAD       | 0b010    | Wire (10-bit) or Int (16-bit) | N/A                             |                                  |
+| Invert      | NOT        | 0b011    | Wire (10-bit)                 | N/A                             |                                  |
 | And         | AND        | 0b100    | Wire (10-bit)                 | Wire (10-bit) or Int (16-bit)   |                                  |
 | Or          | OR         | 0b101    | Wire (10-bit)                 | Wire (10-bit) or Int (16-bit)   |                                  |
 | Left Shift  | LSHIFT     | 0b110    | Wire (10-bit)                 | Int (16-bit)                    | Second operand value < 16        |
 | Right Shift | RSHIFT     | 0b111    | Wire (10-bit)                 | Int (16-bit)                    | Second operand value < 16        |
+
+![Operand Field Bitmap](instructions-wavedrom.svg)
+
+[//]: # (
+{reg: [
+  {bits: 3,  name: 'RSHIFT'},
+  {bits: 10,  name: 'First Operand \(wire\)'},
+  {bits: 6,  type:1},
+  {bits: 1,  name: '1'},
+  {bits: 16, name: 'Second Operand \(uint16\)'},
+  {bits: 1,  name: '0'},
+  {bits: 3,  name: 'LSHIFT'},
+  {bits: 10,  name: 'First Operand \(wire\)'},
+  {bits: 6,  type:1},
+  {bits: 1,  name: '1'},
+  {bits: 16, name: 'Second Operand \(uint16\)'},
+  {bits: 1,  name: '0'},
+  {bits: 3,  name: 'OR'},
+  {bits: 10,  name: 'First Operand \(wire\)'},
+  {bits: 6,  type:1},
+  {bits: 1,  name: '1'},
+  {bits: 16, name: 'Second Operand \(wire or uint16\)'},
+  {bits: 1,  name: 'T'},
+  {bits: 3,  name: 'AND'},
+  {bits: 10,  name: 'First Operand \(wire\)'},
+  {bits: 6,  type:1},
+  {bits: 1,  name: '1'},
+  {bits: 16, name: 'Second Operand \(wire or uint16\)'},
+  {bits: 1,  name: 'T'},
+  {bits: 3,  name: 'NOT'},
+  {bits: 10,  name: 'First Operand \(wire\)'},
+  {bits: 6,  type:1},
+  {bits: 1,  name: '1'},
+  {bits: 17,  type: 1},
+  {bits: 3,  name: 'LOAD'},
+  {bits: 16, name: 'First Operand \(wire or uint16\)'},
+  {bits: 1,  name: 'T'},
+  {bits: 17,  type: 1},
+  {bits: 3,  name: 'NOOP'},
+  {bits: 34,  type: 1},
+],
+config: {lanes: 7, compact: true}
+}
+)
 
 Operands are shown to be of two different types: integers or chars. I decided to use an extra bit for differentiating between these two types, which results in the following encodings:
 
@@ -139,39 +183,3 @@ Operands are shown to be of two different types: integers or chars. I decided to
 config: {lanes: 2, compact: true}
 }
 )
-
-I have 26 wires named with a single letter which I did not catch during the quick inspection. Thankfully this not change memory storage requirements nor the tracking table since 10-bit words largely covers a 27x26 arrangement. Assignation instructions (<VALUE> -> <WIRE>) have a 16-bit unsigned integer on the left-hand side.
-
-Thus will use the following entry structure:
-
-- Opcode: 3-bit
-  - 0b000: NOOP
-  - 0b001: LD
-  - 0b010: SET
-  - 0b101: NOT
-  - 0b100: AND
-  - 0b101: OR
-  - 0b110: LSHIFT
-  - 0b111: RSHIFT
-
-[//]: # (
-{reg: [
-    {bits: 3,  name: 'NOOP', attr: 0},
-    {bits: 16},
-    {bits: 1},
-    {bits: 16},
-    {bits: 1},
-], config: {hspace: 1400}}
-)
-
-![](noop-wavedrom.svg)
-
-[//]: # (
-{reg: [
-    {bits: 3,  name: 'LD', attr: 1},
-    {bits: 16, name: 'IMMEDIATE', attr: 'uint16'},
-    {bits: 18},
-], config: {hspace: 1400}}
-)
-
-![](ld-wavedrom.svg)
