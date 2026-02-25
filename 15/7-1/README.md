@@ -109,9 +109,42 @@ Operators: operator=Counter({'and': 112, 'or': 80, 'rshift': 64, 'invert': 48, '
 Individual wires per length: Counter({2: 313, 1: 26})
 ```
 
-I have 26 wires named with a single letter which I did not catch during the quick inspection. Thankfully this not change memory storage requirements nor the tracking table since 10-bit words largely covers a 27x26 arrangement. Thus will use the following entry structure:
+#### Instruction Translation
 
-- Opcode: 4-bit
+Since recursion is involved, the solving logic will not be able to process inbound data on the fly, meaning that instructions will have to be stored in BRAM. With 339 instructions and some mix of uint16, dual-char strings and variable instructions some thoughts will have to be put in the instruction decoding. Starting with the following instruction table:
+
+| Instruction | Short Hand | Encoding | First Operand                 | Second Operand                  | Remarks                          |
+|-------------|------------|----------|-------------------------------|---------------------------------|----------------------------------|
+| Null        | NOOP       | 0b000    | N/A                           | N/A                             | No further instructions in BRAM  |
+| Assign      | LOAD       | 0b010    | Wire (10-bit) or Int (16-bit) | N/A                             | Second operand value < 16        |
+| Invert      | INV        | 0b011    | Wire (10-bit)                 | N/A                             | Second operand value < 16        |
+| And         | AND        | 0b100    | Wire (10-bit)                 | Wire (10-bit) or Int (16-bit)   |                                  |
+| Or          | OR         | 0b101    | Wire (10-bit)                 | Wire (10-bit) or Int (16-bit)   |                                  |
+| Left Shift  | LSHIFT     | 0b110    | Wire (10-bit)                 | Int (16-bit)                    | Second operand value < 16        |
+| Right Shift | RSHIFT     | 0b111    | Wire (10-bit)                 | Int (16-bit)                    | Second operand value < 16        |
+
+Operands are shown to be of two different types: integers or chars. I decided to use an extra bit for differentiating between these two types, which results in the following encodings:
+
+![Operand Field Bitmap](operand-wavedrom.svg)
+
+[//]: # (
+{reg: [
+  {bits: 5,  name: 'second char'},
+  {bits: 5,  name: 'first char'},
+  {bits: 6, type: 1},
+  {bits: 1,  name: '1', type: 4},
+  {bits: 16,  name: 'uint16'},
+  {bits: 1,  name: '0', type: 4},
+],
+config: {lanes: 2, compact: true}
+}
+)
+
+I have 26 wires named with a single letter which I did not catch during the quick inspection. Thankfully this not change memory storage requirements nor the tracking table since 10-bit words largely covers a 27x26 arrangement. Assignation instructions (<VALUE> -> <WIRE>) have a 16-bit unsigned integer on the left-hand side.
+
+Thus will use the following entry structure:
+
+- Opcode: 3-bit
   - 0b000: NOOP
   - 0b001: LD
   - 0b010: SET
