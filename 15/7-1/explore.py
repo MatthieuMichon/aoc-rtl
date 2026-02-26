@@ -122,20 +122,20 @@ def rtl_decode_inputs(file: Path):
                         scratch_int = (10 * scratch_int) + int(char)
                     elif char == " ":
                         if scratch_str:
-                            if not first_operand_str:
+                            if not (first_operand_str or first_operand_int):
                                 first_operand_str = scratch_str
                                 scratch_str = ""
-                            elif not second_operand_str:
+                            elif not (second_operand_str or second_operand_int):
                                 second_operand_str = scratch_str
                                 scratch_str = ""
                             else:
                                 raise ValueError(f"Error at row {i + 1}, col {j + 1}")
                             scratch_str = ""
                         elif scratch_int:
-                            if not first_operand_int:
+                            if not (first_operand_int or first_operand_str):
                                 first_operand_int = scratch_int
                                 scratch_int = 0
-                            elif not second_operand_int:
+                            elif not (second_operand_int or second_operand_str):
                                 second_operand_int = scratch_int
                                 scratch_int = 0
                             else:
@@ -183,7 +183,12 @@ def rtl_decode_inputs(file: Path):
                                         opcode,
                                     )
                             else:
-                                pass
+                                yield (
+                                    wire,
+                                    (0, second_operand_int),
+                                    (1, first_operand_str),
+                                    opcode,
+                                )
 
                         scratch_str = ""
                         scratch_int = 0
