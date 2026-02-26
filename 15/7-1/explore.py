@@ -161,9 +161,30 @@ def rtl_decode_inputs(file: Path):
                         if not opcode:
                             opcode = "LOAD"
                             if first_operand_str:
-                                yield (wire, first_operand_str, opcode)
+                                yield (wire, (0, 0), (1, first_operand_str), opcode)
                             else:
-                                yield (wire, first_operand_int, opcode)
+                                yield (wire, (0, 0), (0, first_operand_int), opcode)
+                        else:
+                            if opcode == "NOT":
+                                yield (wire, (0, 0), (1, first_operand_str), opcode)
+                            elif opcode in ("AND", "OR"):
+                                if second_operand_str:
+                                    yield (
+                                        wire,
+                                        (1, second_operand_str),
+                                        (1, first_operand_str),
+                                        opcode,
+                                    )
+                                else:
+                                    yield (
+                                        wire,
+                                        (0, second_operand_int),
+                                        (1, first_operand_str),
+                                        opcode,
+                                    )
+                            else:
+                                pass
+
                         scratch_str = ""
                         scratch_int = 0
                         first_operand_str = ""
