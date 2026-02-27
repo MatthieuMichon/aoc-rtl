@@ -201,6 +201,112 @@ def rtl_decode_inputs(file: Path):
                         opcode = ""
 
 
+def rtl_user_logic(file: Path) -> int:
+    def dump_instructions(instructions: list) -> None:
+        def get_wire_value(wire: str) -> int:
+            retval: int = 0
+            for c in wire:
+                retval = (retval << 5) + ord(c) - ord("a") + 1
+            return retval
+
+        def get_opcode_value(opcode: str) -> int:
+            retval: int = 0
+            if opcode == "LOAD":
+                retval = 0b010
+            elif opcode == "NOT":
+                retval = 0b011
+            elif opcode == "AND":
+                retval = 0b100
+            elif opcode == "OR":
+                retval = 0b101
+            elif opcode == "LSHIFT":
+                retval = 0b110
+            elif opcode == "RSHIFT":
+                retval = 0b111
+            return retval
+
+        def get_operand_value(operand: tuple) -> int:
+            retval: int = 0
+            str_type = operand[0]
+            if not str_type:
+                retval = operand[1]
+            else:
+                retval = (1 << 16) + get_wire_value(operand[1])
+            return retval
+
+        def get_instruction_value(instruction: tuple) -> int:
+            sec_op, first_op, opcode = instruction
+            return (
+                (get_operand_value(sec_op) << 20)
+                | (get_operand_value(first_op) << 3)
+                | get_opcode_value(opcode)
+            )
+
+        for wire, sec_op, first_op, opcode in instructions:
+            instruction = (sec_op, first_op, opcode)
+            print(
+                f"{get_wire_value(wire):03x}: {get_instruction_value(instruction):010x}"
+            )
+
+    instructions = list(rtl_decode_inputs(file=file))
+    dump_instructions(instructions)
+    map = {
+        wire: (sec_op, first_op, opcode)
+        for wire, sec_op, first_op, opcode in instructions
+    }
+    solved_map = {}
+    TARGET_WIRE = "a"
+    while TARGET_WIRE not in solved_map:
+        print(f"{len(solved_map)}")
+        for wire, instruction in map.items():
+            if wire in solved_map.keys():
+                continue
+            if instruction[2] == "LOAD":
+                operand_is_str = instruction[1][0]
+                if operand_is_str:
+                    continue
+                solved_map[wire] = instruction[1][1]
+            elif instruction[2] == "NOT":
+                if instruction[1][1] not in solved_map:
+                    continue
+                solved_map[wire] = ~solved_map[instruction[1][1]]
+            elif instruction[2] == "AND":
+                if instruction[1][1] not in solved_map:
+                    continue
+                operand_is_str = instruction[0][0]
+                if not operand_is_str:
+                    solved_map[wire] = instruction[0][1] & solved_map[instruction[1][1]]
+                else:
+                    if instruction[0][1] not in solved_map:
+                        continue
+                    solved_map[wire] = (
+                        solved_map[instruction[0][1]] & solved_map[instruction[1][1]]
+                    )
+            elif instruction[2] == "OR":
+                if instruction[1][1] not in solved_map:
+                    continue
+                operand_is_str = instruction[0][0]
+                if not operand_is_str:
+                    solved_map[wire] = instruction[0][1] | solved_map[instruction[1][1]]
+                else:
+                    if instruction[0][1] not in solved_map:
+                        continue
+                    solved_map[wire] = (
+                        solved_map[instruction[0][1]] | solved_map[instruction[1][1]]
+                    )
+            elif instruction[2] == "LSHIFT":
+                if instruction[1][1] not in solved_map:
+                    continue
+                solved_map[wire] = solved_map[instruction[1][1]] << instruction[0][1]
+            elif instruction[2] == "RSHIFT":
+                if instruction[1][1] not in solved_map:
+                    continue
+                solved_map[wire] = solved_map[instruction[1][1]] >> instruction[0][1]
+            else:
+                assert False
+    return 0
+
+
 def main() -> int:
     os.chdir(Path(__file__).resolve().parent)
     file = "./input.txt" if len(sys.argv) < 2 else sys.argv[1]
@@ -209,7 +315,8 @@ def main() -> int:
     if explore_design_space:
         explore(file=Path(file))
     print(f"Result: {user_logic(file=Path(file))}")
-    instructions = list(rtl_decode_inputs(file=Path(file)))
+    # instructions = list(rtl_decode_inputs(file=Path(file)))
+    rtl_user_logic(file=Path(file))
     return 0
 
 
